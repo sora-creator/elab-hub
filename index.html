@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELAB</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5' },
+      teal: { 50:'#e1f5ee',500:'#1d9e75',600:'#0f6e56' },
+      coral: { 50:'#faece7',500:'#d85a30',600:'#993c1d' }
+    } } }
+  };
+</script>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f8fafc;}
+  .card{transition:transform .1s;}
+  .card:active{transform:scale(.98);}
+</style>
+</head>
+<body>
+<div class="mx-auto min-h-screen max-w-md px-5 py-8">
+  <header class="mb-6 text-center">
+    <span class="mb-2 inline-block rounded-full bg-slate-800 px-3 py-1 text-[11px] font-bold text-white">교사용</span>
+    <h1 class="text-xl font-extrabold text-slate-800">🧪 ELAB</h1>
+    <p class="mt-1 text-sm text-slate-600">단어암기 → 문법학습 → 시험보기</p>
+  </header>
+
+  <div class="space-y-4">
+    <a href="./vocab/index.html" class="card block rounded-3xl bg-white p-5 shadow">
+      <div class="mb-1 flex items-center gap-2">
+        <span class="rounded-lg bg-brand-50 px-2 py-1 text-xs font-bold text-brand-600">1</span>
+        <h2 class="text-base font-extrabold text-slate-800">📝 단어암기</h2>
+      </div>
+      <p class="text-xs text-slate-600">단어장을 만들고 링크로 테스트를 내주는 단어암기</p>
+    </a>
+
+    <a href="./grammar/index.html" class="card block rounded-3xl bg-white p-5 shadow">
+      <div class="mb-1 flex items-center gap-2">
+        <span class="rounded-lg bg-coral-50 px-2 py-1 text-xs font-bold text-coral-600">2</span>
+        <h2 class="text-base font-extrabold text-slate-800">🔍 문법학습</h2>
+      </div>
+      <p class="text-xs text-slate-600">모의고사 지문에서 원하는 문법이 쓰인 문장 찾기</p>
+    </a>
+
+    <a href="./exam/index.html" class="card block rounded-3xl bg-white p-5 shadow">
+      <div class="mb-1 flex items-center gap-2">
+        <span class="rounded-lg bg-teal-50 px-2 py-1 text-xs font-bold text-teal-600">3</span>
+        <h2 class="text-base font-extrabold text-slate-800">🖊️ 시험보기</h2>
+      </div>
+      <p class="text-xs text-slate-600">모의고사 PDF를 그대로 1문제씩 응시하는 시험보기</p>
+    </a>
+
+    <a href="./teacher/students.html" class="card block rounded-3xl bg-slate-800 p-5 shadow">
+      <div class="mb-1 flex items-center gap-2">
+        <span class="rounded-lg bg-white/10 px-2 py-1 text-xs font-bold text-white">👩‍🏫</span>
+        <h2 class="text-base font-extrabold text-white">학생 관리</h2>
+      </div>
+      <p class="text-xs text-slate-300">학생 로스터 등록 + 학생별 배정(단어·시험·문법)</p>
+    </a>
+
+    <a href="./teacher/dashboard.html" class="card block rounded-3xl bg-slate-800 p-5 shadow">
+      <div class="mb-1 flex items-center gap-2">
+        <span class="rounded-lg bg-white/10 px-2 py-1 text-xs font-bold text-white">📊</span>
+        <h2 class="text-base font-extrabold text-white">통합 대시보드</h2>
+      </div>
+      <p class="text-xs text-slate-300">단어암기 · 시험보기 결과를 한 화면에서 모아보기</p>
+    </a>
+  </div>
+
+  <p class="mt-8 text-center text-[11px] text-slate-500">각 카드는 독립된 페이지라 클릭한 것만 불러옵니다<br>학생들에게는 <code>student/index.html</code> 주소를 따로 공유하세요(이 화면과 다른 페이지예요)</p>
+</div>
+</body>
+</html>

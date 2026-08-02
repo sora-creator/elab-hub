@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>내 숙제 · ELAB</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5' },
+    teal: { 50:'#e1f5ee',500:'#1d9e75',600:'#0f6e56' },
+    coral: { 50:'#faece7',500:'#d85a30',600:'#993c1d' }
+  } } } };
+</script>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f8fafc;}
+  input[type=text],input[type=password]{padding:.7rem .9rem;border:2px solid #f1f5f9;background:#f8fafc;border-radius:.9rem;font-size:.95rem;outline:none;width:100%;text-align:center}
+  input[type=text]:focus,input[type=password]:focus{border-color:#a5b4fc}
+</style>
+</head>
+<body>
+<div class="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-5 py-8">
+
+  <div id="gateView" class="w-full text-center">
+    <div class="mb-1 text-2xl font-extrabold text-slate-800">📚 내 숙제</div>
+    <div class="mb-6 text-sm text-slate-600">ELAB · 이름과 PIN을 입력하세요</div>
+    <input type="text" id="inName" placeholder="이름" class="mb-3" />
+    <input type="password" id="inPin" placeholder="PIN" class="mb-4" />
+    <button id="btnGo" class="w-full rounded-xl bg-brand-500 py-3 text-sm font-bold text-white">확인</button>
+    <div id="gateStatus" class="mt-3 text-xs text-coral-500"></div>
+  </div>
+
+  <div id="myView" class="hidden w-full">
+    <div class="mb-5 text-center">
+      <div class="text-lg font-extrabold text-slate-800">👋 <span id="myName"></span>님, 안녕하세요</div>
+    </div>
+    <div class="space-y-3">
+      <div id="cardVocab" class="rounded-3xl bg-white p-5 shadow">
+        <div class="mb-1 text-xs font-extrabold text-brand-600">📝 단어암기</div>
+        <div id="vocabBody" class="text-sm text-slate-600">아직 배정된 게 없어요</div>
+      </div>
+      <div id="cardExam" class="rounded-3xl bg-white p-5 shadow">
+        <div class="mb-1 text-xs font-extrabold text-teal-600">🖊️ 시험보기</div>
+        <div id="examBody" class="text-sm text-slate-600">아직 배정된 게 없어요</div>
+      </div>
+      <div id="cardGrammar" class="rounded-3xl bg-white p-5 shadow">
+        <div class="mb-1 text-xs font-extrabold text-coral-600">🔍 문법학습</div>
+        <div id="grammarBody" class="text-sm text-slate-600">아직 배정된 게 없어요</div>
+      </div>
+      <div id="cardFinalQuiz" class="rounded-3xl bg-white p-5 shadow">
+        <div class="mb-1 text-xs font-extrabold text-brand-600">✅ 구분문제 테스트</div>
+        <div id="finalQuizBody" class="text-sm text-slate-600">아직 배정된 게 없어요</div>
+      </div>
+    </div>
+    <button id="btnBack" class="mt-5 w-full text-xs text-slate-600">← 다른 이름으로 다시 확인</button>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function uid(n) {
+    n = n || 10;
+    var c = 'PUBLIC_IDENTIFIER_REMOVED';
+    var s = '';
+    for (var i = 0; i < n; i++) s += c[Math.floor(Math.random() * c.length)];
+    return s;
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
+  function jsonpFetch(url, timeoutMs) {
+    timeoutMs = timeoutMs || 12000;
+    return new Promise(function (resolve) {
+      var cbName = '__sp_cb_' + uid(8);
+      var script = document.createElement('script');
+      var settled = false;
+      var cleanup = function () { delete window[cbName]; script.remove(); clearTimeout(timer); };
+      window[cbName] = function (data) { if (settled) return; settled = true; cleanup(); resolve(data); };
+      var timer = setTimeout(function () { if (settled) return; settled = true; cleanup(); resolve(null); }, timeoutMs);
+      script.onerror = function () { if (settled) return; settled = true; cleanup(); resolve(null); };
+      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+      document.body.appendChild(script);
+    });
+  }
+
+  var params = new URLSearchParams(location.search);
+  var hook = params.get('hook') || '';
+
+  function cardHtml(label, link) {
+    if (!link) return '아직 배정된 게 없어요';
+    return '<div class="mb-2 font-bold text-slate-700">' + esc(label || '') + '</div>' +
+      '<a href="' + esc(link) + '" class="inline-block rounded-xl bg-slate-800 px-4 py-2 text-xs font-bold text-white">시작하기 →</a>';
+  }
+
+  // name/pin을 인자로 주면(주소창의 ?name=&pin= 자동로그인 경로) 입력창 값 대신 그걸 쓴다.
+  async function checkIn(presetName, presetPin) {
+    var name = presetName != null ? presetName : document.getElementById('inName').value.trim();
+    var pin = presetPin != null ? presetPin : document.getElementById('inPin').value.trim();
+    var statusEl = document.getElementById('gateStatus');
+    if (!hook) {
+      statusEl.textContent = '잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.';
+      return;
+    }
+    if (!name || !pin) {
+      statusEl.textContent = '이름과 PIN을 모두 입력하세요.';
+      return;
+    }
+    statusEl.textContent = '';
+    document.getElementById('btnGo').disabled = true;
+    document.getElementById('btnGo').textContent = '확인 중...';
+
+    var r = await jsonpFetch(hook + '?action=fetchAssignment&name=' + encodeURIComponent(name) + '&pin=' + encodeURIComponent(pin));
+
+    document.getElementById('btnGo').disabled = false;
+    document.getElementById('btnGo').textContent = '확인';
+
+    if (!r || !r.found) {
+      statusEl.textContent = '이름 또는 PIN이 맞지 않아요. 선생님께 확인해주세요.';
+      return;
+    }
+
+    // 로그인 성공 시 주소창을 ?hook=...&name=...&pin=... 로 바꿔치기 -- 이 순간의
+    // 주소를 그대로 복사해서 보내면 그 링크를 여는 사람은(예: 그 학생 자신) 입력창 없이
+    // 바로 로그인된 상태로 들어옴(아래 자동로그인 블록이 이 파라미터를 보고 처리).
+    var newUrl = location.pathname + '?hook=' + encodeURIComponent(hook) +
+      '&name=' + encodeURIComponent(name) + '&pin=' + encodeURIComponent(pin);
+    history.replaceState(null, '', newUrl);
+
+    document.getElementById('myName').textContent = r.name;
+    document.getElementById('vocabBody').innerHTML = cardHtml(r.vocabLabel, r.vocabLink);
+    document.getElementById('examBody').innerHTML = cardHtml(r.examLabel, r.examLink);
+    document.getElementById('grammarBody').innerHTML = cardHtml(r.grammarLabel, r.grammarLink);
+    document.getElementById('finalQuizBody').innerHTML = cardHtml(r.finalQuizLabel, r.finalQuizLink);
+
+    document.getElementById('gateView').classList.add('hidden');
+    document.getElementById('myView').classList.remove('hidden');
+  }
+
+  document.getElementById('btnGo').addEventListener('click', function () { checkIn(); });
+  document.getElementById('inPin').addEventListener('keydown', function (e) { if (e.key === 'Enter') checkIn(); });
+  document.getElementById('btnBack').addEventListener('click', function () {
+    document.getElementById('myView').classList.add('hidden');
+    document.getElementById('gateView').classList.remove('hidden');
+    document.getElementById('inName').value = '';
+    document.getElementById('inPin').value = '';
+    // 뒤로가기 누르면 자동로그인 링크였더라도 다시 수동 입력 상태로 -- 주소도 name/pin 없이 원복
+    if (hook) history.replaceState(null, '', location.pathname + '?hook=' + encodeURIComponent(hook));
+  });
+
+  // 주소에 name/pin이 이미 있으면(공유받은 "로그인된 링크") 입력 없이 바로 로그인 시도
+  var presetName = params.get('name');
+  var presetPin = params.get('pin');
+  if (presetName && presetPin) {
+    document.getElementById('inName').value = presetName;
+    document.getElementById('inPin').value = presetPin;
+    checkIn(presetName, presetPin);
+  }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>통합 대시보드 · ELAB</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = { theme: { extend: { colors: {
+    brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5' },
+    teal: { 50:'#e1f5ee',500:'#1d9e75',600:'#0f6e56' }
+  } } } };
+</script>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f8fafc;}
+  input[type=text],select{padding:.55rem .7rem;border:2px solid #f1f5f9;background:#f8fafc;border-radius:.75rem;font-size:.85rem;outline:none;width:100%}
+  input[type=text]:focus,select:focus{border-color:#a5b4fc}
+  label.f{display:block;font-size:.72rem;font-weight:700;color:#475569;margin-bottom:.25rem}
+  th,td{text-align:left;padding:.5rem .6rem;border-bottom:1px solid #f1f5f9;font-size:.8rem;white-space:nowrap}
+  th{color:#475569;font-size:.7rem;font-weight:700}
+</style>
+</head>
+<body>
+<div class="mx-auto min-h-screen max-w-4xl px-5 py-8">
+  <header class="mb-6">
+    <a href="../index.html" class="text-xs text-slate-600">&larr; 허브로</a>
+    <h1 class="mt-1 text-xl font-extrabold text-slate-800">📊 통합 대시보드</h1>
+    <p class="mt-1 text-sm text-slate-600">단어암기 · 시험보기 결과를 한 곳에서 봅니다</p>
+  </header>
+
+  <section class="mb-5 rounded-3xl bg-white p-5 shadow">
+    <h2 class="mb-3 text-sm font-extrabold text-slate-700">⚙️ 설정 (허브 백엔드)</h2>
+    <div class="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_160px]">
+      <div>
+        <label class="f">웹훅 URL</label>
+        <input type="text" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+      </div>
+      <div>
+        <label class="f">비밀 토큰</label>
+        <input type="text" id="cfgToken" />
+      </div>
+    </div>
+    <button id="cfgSave" class="rounded-xl bg-slate-700 px-4 py-2 text-xs font-bold text-white">저장하고 새로고침</button>
+    <span id="cfgStatus" class="ml-2 text-xs text-teal-600"></span>
+  </section>
+
+  <section class="rounded-3xl bg-white p-5 shadow">
+    <div class="mb-3 flex flex-wrap items-end justify-between gap-2">
+      <h2 class="text-sm font-extrabold text-slate-700">📋 결과 모아보기</h2>
+      <div style="width:180px">
+        <label class="f">학생 필터</label>
+        <select id="nameFilter"><option value="">전체 학생</option></select>
+      </div>
+    </div>
+    <div id="status" class="mb-2 text-xs text-slate-600"></div>
+    <div class="overflow-x-auto">
+      <table class="w-full">
+        <thead>
+          <tr><th>날짜</th><th>학생</th><th>유형</th><th>범위 / 시험</th><th>점수</th><th>소요시간</th></tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  function uid(n) {
+    n = n || 10;
+    var c = 'PUBLIC_IDENTIFIER_REMOVED';
+    var s = '';
+    for (var i = 0; i < n; i++) s += c[Math.floor(Math.random() * c.length)];
+    return s;
+  }
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
+  function jsonpFetch(url, timeoutMs) {
+    timeoutMs = timeoutMs || 12000;
+    return new Promise(function (resolve) {
+      var cbName = '__db_cb_' + uid(8);
+      var script = document.createElement('script');
+      var settled = false;
+      var cleanup = function () { delete window[cbName]; script.remove(); clearTimeout(timer); };
+      window[cbName] = function (data) { if (settled) return; settled = true; cleanup(); resolve(data); };
+      var timer = setTimeout(function () { if (settled) return; settled = true; cleanup(); resolve(null); }, timeoutMs);
+      script.onerror = function () { if (settled) return; settled = true; cleanup(); resolve(null); };
+      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+      document.body.appendChild(script);
+    });
+  }
+
+  function cfg() {
+    var c = null;
+    try { c = JSON.parse(localStorage.getItem('hub.delivery') || 'null'); } catch (e) {}
+    if (!c) c = { url: '', token: '' };
+    return c;
+  }
+
+  function fmtDate(v) {
+    if (!v) return '';
+    var d = new Date(v);
+    if (isNaN(d.getTime())) return String(v);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  function fmtMs(ms) {
+    var n = Number(ms) || 0;
+    if (!n) return '';
+    var total = Math.round(n / 1000);
+    var m = Math.floor(total / 60), s = total % 60;
+    return m > 0 ? m + '분 ' + s + '초' : s + '초';
+  }
+
+  var allRows = [];
+
+  document.getElementById('cfgUrl').value = cfg().url || '';
+  document.getElementById('cfgToken').value = cfg().token || '';
+  document.getElementById('cfgSave').addEventListener('click', function () {
+    localStorage.setItem('hub.delivery', JSON.stringify({
+      url: document.getElementById('cfgUrl').value.trim(),
+      token: document.getElementById('cfgToken').value.trim()
+    }));
+    document.getElementById('cfgStatus').textContent = '저장했어요';
+    load();
+  });
+
+  document.getElementById('nameFilter').addEventListener('change', render);
+
+  function render() {
+    var pick = document.getElementById('nameFilter').value;
+    var rows = pick ? allRows.filter(function (r) { return r.name === pick; }) : allRows;
+    var tbody = document.getElementById('rows');
+    if (rows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" class="text-xs text-slate-600">결과가 없어요.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map(function (r) {
+      var badge = r.kind === 'vocab'
+        ? '<span class="rounded-md bg-brand-50 px-2 py-0.5 text-[11px] font-bold text-brand-600">📝 단어</span>'
+        : '<span class="rounded-md bg-teal-50 px-2 py-0.5 text-[11px] font-bold text-teal-600">🖊️ 시험</span>';
+      return '<tr>' +
+        '<td class="text-slate-600">' + esc(fmtDate(r.date)) + '</td>' +
+        '<td class="font-bold text-slate-700">' + esc(r.name) + '</td>' +
+        '<td>' + badge + '</td>' +
+        '<td class="text-slate-500">' + esc(r.label) + '</td>' +
+        '<td class="font-bold text-slate-700">' + esc(r.score) + '</td>' +
+        '<td class="text-slate-600">' + esc(r.time) + '</td>' +
+        '</tr>';
+    }).join('');
+  }
+
+  function fillNameFilter() {
+    var names = [];
+    allRows.forEach(function (r) { if (r.name && names.indexOf(r.name) === -1) names.push(r.name); });
+    names.sort();
+    var sel = document.getElementById('nameFilter');
+    var cur = sel.value;
+    sel.innerHTML = '<option value="">전체 학생</option>' + names.map(function (n) {
+      return '<option value="' + esc(n) + '"' + (n === cur ? ' selected' : '') + '>' + esc(n) + '</option>';
+    }).join('');
+  }
+
+  async function load() {
+    var c = cfg();
+    var statusEl = document.getElementById('status');
+    if (!c.url || !c.token) {
+      statusEl.textContent = '설정에 웹훅 URL/토큰을 먼저 저장하세요.';
+      return;
+    }
+    statusEl.textContent = '불러오는 중...';
+
+    var results = await Promise.all([
+      jsonpFetch(c.url + '?action=listVocabResults&token=' + encodeURIComponent(c.token)),
+      jsonpFetch(c.url + '?action=listAllExamResults&token=' + encodeURIComponent(c.token))
+    ]);
+    var vocab = results[0], exam = results[1];
+
+    if ((!vocab || vocab.error) && (!exam || exam.error)) {
+      statusEl.textContent = '결과를 불러오지 못했어요. URL/토큰과 백엔드 재배포 여부를 확인해주세요.';
+      return;
+    }
+    statusEl.textContent = '';
+
+    allRows = [];
+    ((vocab && vocab.results) || []).forEach(function (r) {
+      allRows.push({ kind: 'vocab', date: r.date, name: r.name, label: r.range || '', score: r.score || '', time: r.timeStr || '' });
+    });
+    ((exam && exam.results) || []).forEach(function (r) {
+      allRows.push({ kind: 'exam', date: r.date, name: r.name, label: r.title || '', score: r.score, time: fmtMs(r.totalTimeMs) });
+    });
+    allRows.sort(function (a, b) { return new Date(b.date) - new Date(a.date); });
+
+    fillNameFilter();
+    render();
+  }
+
+  window.__dashboardLoad = load; // 검증용
+  load();
+})();
+</script>
+</body>
+</html>

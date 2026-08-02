@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>문법학습 · ELAB</title>
+<style>
+  :root {
+    --blue: #2563eb;
+    --blue-dark: #1d4ed8;
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --muted: #475569;
+    --green: #16a34a;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+  }
+  .card h2 { font-size: 17px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+  .step-num {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--blue); color: white; font-size: 13px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: flex-end; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 13px; color: var(--muted); }
+  input[type=number], select, input[type=text] {
+    padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: #fff; color: var(--text);
+  }
+  input[type=file] { font-size: 14px; }
+  button {
+    background: var(--blue); color: white; border: none; border-radius: 8px;
+    padding: 10px 18px; font-size: 14px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
+  }
+  button:hover { background: var(--blue-dark); }
+  button:disabled { background: #cbd5e1; cursor: not-allowed; }
+  button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+  button.secondary:hover { background: #f1f5f9; }
+  button.danger { background: #fff; color: var(--red); border: 1px solid #fecaca; padding: 6px 12px; font-size: 13px; }
+  button.danger:hover { background: #fef2f2; }
+  .status { margin-top: 12px; font-size: 14px; padding: 10px 12px; border-radius: 8px; display: none; }
+  .status.show { display: block; }
+  .status.info { background: #eff6ff; color: var(--blue-dark); }
+  .status.success { background: #f0fdf4; color: var(--green); }
+  .status.error { background: #fef2f2; color: var(--red); }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+  .radio-group { display: flex; gap: 16px; align-items: center; }
+  .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
+  .checkbox-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px 14px; margin-top: 6px;
+  }
+  .checkbox-grid label {
+    display: flex; align-items: center; gap: 7px; font-size: 14px; cursor: pointer;
+  }
+  .result-item {
+    border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px;
+    margin-bottom: 8px; font-size: 14px;
+  }
+  .result-item .qno { color: var(--blue); font-weight: 700; font-size: 12px; margin-bottom: 4px; }
+  .result-item .tag-badges { margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .tag-badge {
+    display: inline-block; background: #eef2ff; color: #4338ca; font-size: 11px;
+    font-weight: 600; padding: 2px 8px; border-radius: 999px;
+  }
+  .tag-badge-warn { background: #fffbeb; color: #92400e; }
+  .tag-badge-verified { background: #ecfdf5; color: #047857; }
+  .result-item mark { background: #fef08a; padding: 0 2px; border-radius: 3px; }
+  .result-count { font-size: 14px; color: var(--muted); margin-bottom: 10px; }
+  .warn-banner {
+    background: #fffbeb; border: 1px solid #fde68a; color: #92400e;
+    padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: none;
+  }
+  .warn-banner.show { display: block; }
+  .help-text { font-size: 13px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
+  .gtab-btn {
+    background: none; border: none; box-shadow: none; color: var(--muted);
+    font-weight: 600; font-size: 14px; padding: 10px 16px; cursor: pointer;
+    border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 0;
+  }
+  .gtab-btn:hover { background: none; color: var(--text); }
+  .gtab-btn.gtab-active { color: var(--blue); border-bottom-color: var(--blue); }
+  textarea {
+    padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 14px; background: #fff; color: var(--text); font-family: inherit; resize: vertical;
+  }
+  .mcq-preview { margin: 10px 0; padding: 10px 12px; background: #eef2ff; border-radius: 8px; }
+  .mcq-preview-title { font-size: 12px; color: #4338ca; font-weight: 600; margin-bottom: 6px; }
+  .mcq-preview-item { font-size: 13px; margin-bottom: 3px; }
+  .mcq-preview-item b { color: var(--blue-dark); }
+  .video-embed { position: relative; width: 100%; padding-top: 56.25%; margin-bottom: 20px; border-radius: 12px; overflow: hidden; background:#000; }
+  .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .practice-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
+  .practice-sentence { font-size: 15px; margin-bottom: 12px; }
+  .mcq-item { margin-bottom: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; }
+  .mcq-phrase { font-weight: 700; color: var(--blue-dark); }
+  .mcq-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+  .mcq-options button { padding: 6px 12px; font-size: 13px; }
+  .mcq-options button.mcq-correct { background: var(--green); }
+  .mcq-options button.mcq-wrong { background: var(--red); }
+  .chunk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0; font-size: 15px; margin: 10px 0; line-height: 2.2; }
+  .chunk-word { padding: 2px 3px; }
+  .chunk-gap { display: inline-block; width: 10px; height: 20px; cursor: pointer; position: relative; vertical-align: middle; }
+  .chunk-gap::after { content: ''; position: absolute; left: 4px; top: 2px; bottom: 2px; width: 2px; background: transparent; }
+  .chunk-gap.chunk-on::after { background: var(--blue); }
+  .interp-box { margin-top: 10px; }
+  .interp-box textarea { width: 100%; }
+  .practice-submit-row { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
+  .practice-submitted { font-size: 13px; color: var(--green); font-weight: 600; }
+  .sub-table-wrap { overflow-x: auto; }
+  .final-folder-row { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 8px; font-size: 14px; }
+  .final-folder-row:hover { background: #f8fafc; }
+  .final-folder-row.cur { background: #eef2ff; }
+  .final-folder-row .fname { cursor: pointer; flex: 1; }
+  .final-folder-row .fname:hover { text-decoration: underline; }
+  .final-folder-row button { padding: 3px 9px; font-size: 11px; }
+  .final-file-row { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 8px; font-size: 14px; flex-wrap: wrap; }
+  .final-file-row:hover { background: #f8fafc; }
+  .final-file-row .flabel { flex: 1; min-width: 120px; }
+  .final-file-row button { padding: 3px 9px; font-size: 11px; }
+  .final-file-row input[type=text] { padding: 3px 6px; font-size: 12px; }
+  .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+  .modal-box { background: #fff; border-radius: 12px; padding: 20px; max-width: 420px; width: 90%; max-height: 70vh; overflow-y: auto; }
+  .modal-folder-row { padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  .modal-folder-row:hover { background: #f1f5f9; }
+</style>
+</head>
+<body>
+<div id="studentWrap" class="wrap" style="display:none">
+  <h1 id="stTitle">문법학습</h1>
+  <div id="stBody"></div>
+</div>
+<div id="teacherWrap" class="wrap">
+  <h1>🔍 문법학습 · 교사</h1>
+  <div class="subtitle">모의고사 PDF를 넣으면, 분사구문 / to부정사가 쓰인 문장만 뽑아드려요. 설치 없이 이 화면에서 바로 됩니다.</div>
+
+  <div class="tab-bar" style="display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border)">
+    <button data-gtab="accurate" class="gtab-btn gtab-active">🎯 문법 문장 찾기</button>
+    <button data-gtab="finals" class="gtab-btn">✅ 최종본 관리</button>
+    <button data-gtab="manage" class="gtab-btn">📥 공유한 세트 · 제출현황</button>
+    <button data-gtab="settings" class="gtab-btn">⚙️ 설정</button>
+  </div>
+
+  <div id="gtabPanel-accurate" class="gtab-panel">
+    <div class="card">
+      <h2>🎯 문법 문장 찾기: 구문분석기(spaCy) + 정규식(regex) 병행 — 더 정확해요</h2>
+      <div class="help-text" style="margin-top:0; margin-bottom:10px">
+        분사구문/to부정사/관계사절/수동태/동명사/명사절은 진짜 문장 구조를 분석하는
+        구문분석기(spaCy)로 판별하고, 나머지(비교구문/도치/가정법/강조구문/조동사+완료)는
+        패턴이 단순해서 정규식을 그대로 씁니다. 게다가 같은 문장을 정규식으로도 한 번 더
+        돌려서 spaCy와 판정이 갈리는 경우 ⚠️ 배지로 표시해줘요(아래 "① 정확한 태깅 결과
+        가져오기" 참고). 정확도가 가장 중요할 땐 이 방법을 쓰세요.
+      </div>
+      <ol style="margin:0 0 4px; padding-left:20px; font-size:14px; line-height:1.8">
+        <li><code>grammar/mockexam_db/grammar_gui.pyw</code>를 더블클릭해서 도구 창 열기</li>
+        <li>"① PDF 분석 (spaCy)" 탭에서 PDF를 선택 (파일명에서 연/월/학년 자동 인식) →
+          "분석해서 저장하기" 클릭</li>
+        <li>분석이 끝나면 PDF 옆에 생긴 JSON 파일을 아래에서 선택</li>
+      </ol>
+      <div class="help-text" style="margin-top:6px">
+        이렇게 가져온 회차는 목록에 <b>🎯 spaCy</b> 배지가 붙어요. (같은 도구의
+        "② Claude 검증" 탭으로 판정 불일치 문장을 추가로 검증할 수도 있어요.)
+      </div>
+    </div>
+
+    <div class="card">
+      <h2><span class="step-num">1</span> 정확한 태깅 결과 가져오기</h2>
+      <div class="help-text" style="margin-top:0">
+        파이썬 CLI(<code>export_json.py</code>)로 spaCy 기반 태깅을 미리 돌려서 만든 JSON 파일을 불러와요.
+        이렇게 가져온 문장은 <b>가져온 시점의 태그로 고정</b>돼요 — 나중에 문법 규칙이
+        추가되면 파이썬에서 다시 내보내 재가져오기 해야 반영돼요.
+      </div>
+      <input type="file" id="inImportJson" accept="application/json" style="margin-top:8px">
+      <div id="importStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div id="gtabPanel-settings" class="gtab-panel" style="display:none">
+    <div class="card">
+      <h2>⚙️ 설정 (학생 공유용 백엔드)</h2>
+      <div class="help-text" style="margin-top:0">시험보기 모듈과 같은 구글시트 웹훅 주소를 등록하면, 여기서 찾은 문장을 학생에게 공유 링크로 보낼 수 있어요.</div>
+      <div class="row">
+        <div class="field" style="flex:1; min-width:260px">
+          <label>웹훅 URL</label>
+          <input type="text" id="gh-url" placeholder="https://script.google.com/macros/s/.../exec" style="width:100%">
+        </div>
+        <div class="field" style="min-width:160px">
+          <label>비밀 토큰</label>
+          <input type="text" id="gh-token" style="width:100%">
+        </div>
+        <button id="gh-save" class="secondary">저장</button>
+      </div>
+      <div id="gh-status" class="status"></div>
+    </div>
+  </div>
+
+  <div id="gtabPanel-manage" class="gtab-panel" style="display:none">
+    <div class="card">
+      <h2>📥 공유했던 세트 목록 · 영상 링크</h2>
+      <div class="help-text" style="margin-top:0">
+        학생에게 공유한 문법 세트예요. 강의영상을 나중에 찍어 유튜브에 올리면, 여기서 링크만
+        붙여 저장하세요 — 학생이 이미 갖고 있는 공유 링크에 자동으로 영상이 떠요(다시 공유 안 해도 됨).
+      </div>
+      <div class="row"><button id="btnLoadSets" class="secondary">🔄 새로고침</button></div>
+      <div id="setsListWrap"><div class="empty">새로고침을 눌러주세요.</div></div>
+    </div>
+
+    <div class="card">
+      <h2>📝 제출현황 (해석 · 끊어읽기)</h2>
+      <div class="help-text" style="margin-top:0">
+        학생이 제출한 해석과 끊어읽기 결과예요. 채점은 안 돼 있어요 — 끊어읽기의 "정답 비교"만
+        참고용으로 표시되고, 이 화면은 교사만 봐요(학생 화면엔 절대 안 나가요).
+      </div>
+      <div class="row">
+        <div class="field" style="flex:1; min-width:220px">
+          <label>세트 선택</label>
+          <select id="subSetSelect" style="width:100%"><option value="">공유한 세트 목록을 먼저 새로고침하세요</option></select>
+        </div>
+        <button id="btnLoadSubmissions" class="secondary">불러오기</button>
+      </div>
+      <div id="submissionsWrap"><div class="empty">세트를 선택하고 "불러오기"를 눌러주세요.</div></div>
+    </div>
+  </div>
+
+  <div id="gtabPanel-finals" class="gtab-panel" style="display:none">
+    <div class="card">
+      <h2>✅ 최종본 업로드</h2>
+      <div class="help-text" style="margin-top:0">
+        "📋 구분문제 PPT 다운로드"로 받은 파일을 파워포인트/구글슬라이드에서 검토하고
+        (필요하면 슬라이드를 통째로 삭제하거나 문장을 고친 뒤) 그 최종본을 여기 올리세요.
+        학생은 단어테스트와 같은 형식의 객관식 시험으로 이걸 풀게 됩니다. 원본 pptx 파일은
+        저장하지 않고, 그 안의 문제 내용(문장·밑줄·보기·정답)만 추출해서 저장해요.
+        <b>아래에서 ✅ 표시된(선택된) 폴더 안에</b> 업로드돼요 — 폴더 이름을 클릭해서 바꿀 수 있어요.
+      </div>
+      <div id="finalDropZone" style="border:2px dashed var(--border); border-radius:10px; padding:24px; text-align:center; cursor:pointer; margin-bottom:10px">
+        <input type="file" id="finalPptxFile" accept=".pptx" multiple style="display:none">
+        <div id="finalDropZoneLabel" style="color:var(--muted); font-size:14px">📄 여기(또는 페이지 아무 곳)에 pptx 파일을 끌어다 놓거나 클릭해서 선택하세요 — 여러 개 한 번에 가능</div>
+      </div>
+      <div class="row">
+        <button id="btnUploadFinal" class="secondary">업로드</button>
+      </div>
+      <div id="finalUploadStatus" class="status"></div>
+    </div>
+
+    <div class="card">
+      <h2>📁 폴더 · 최종본</h2>
+      <div class="help-text" style="margin-top:0">
+        폴더와 최종본이 한 화면에 같이 나와요. 폴더 이름을 클릭하면 그 폴더가 ✅ 선택되어
+        업로드/새 폴더 대상이 바뀌고, "이동" 버튼으로 폴더·최종본 위치를 자유롭게 옮길 수
+        있어요. "학생 링크 복사"로 만든 링크를 <code>teacher/students.html</code>의 학생별
+        배정 화면 "✅ 구분문제 최종본" 칸에 붙여넣으면, 그 학생의 접속 포털에 시험 카드로 떠요.
+      </div>
+      <div id="finalBreadcrumb" style="margin-bottom:10px; font-size:14px"></div>
+      <div class="row">
+        <button id="btnNewFinalFolder" class="secondary">+ 새 폴더 (선택한 폴더 안에)</button>
+        <button id="btnLoadFinals" class="secondary">🔄 새로고침</button>
+      </div>
+      <div id="finalFolderTree"><div class="empty">새로고침을 눌러주세요.</div></div>
+    </div>
+  </div>
+
+  <div id="gtabSharedResults">
+  <div class="card">
+    <h2><span class="step-num">2</span> 저장된 모의고사 목록</h2>
+    <div id="examListWrap"><div class="empty">아직 저장된 모의고사가 없어요. 위에서 PDF를 넣어보세요.</div></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="step-num">3</span> 문장 찾기</h2>
+    <div class="row">
+      <div class="field" style="flex:1; min-width:200px">
+        <label>모의고사 선택</label>
+        <select id="inSearchExam" style="width:100%"></select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:14px">
+      <label>찾을 문법 (여러 개 선택 가능)</label>
+      <div class="help-text" style="margin-top:2px">체크한 문법 중 하나라도 해당되면 결과에 나와요.</div>
+      <div id="tagCheckboxes" class="checkbox-grid"></div>
+    </div>
+    <div class="row">
+      <button id="btnSelectAllTags" class="secondary">전체 선택</button>
+      <button id="btnClearAllTags" class="secondary">선택 해제</button>
+      <button id="btnSearch">찾기</button>
+      <button id="btnExport" class="secondary" style="display:none">결과 txt로 저장</button>
+      <button id="btnExportMcq" class="secondary" style="display:none">📋 구분문제 txt 다운로드</button>
+      <button id="btnExportPptx" class="secondary" style="display:none">🖼️ 구분문제 PPT 다운로드</button>
+    </div>
+    <div id="searchResults"></div>
+    <div id="shareBox" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
+      <div class="row">
+        <div class="field" style="flex:1; min-width:260px">
+          <label>강의영상 유튜브 링크 (선택, 나중에 "공유한 세트" 탭에서 추가/수정 가능)</label>
+          <input type="text" id="inShareVideo" placeholder="https://youtu.be/..." style="width:100%">
+        </div>
+        <button id="btnShare" class="secondary">🔗 학생에게 공유</button>
+      </div>
+      <div class="help-text" style="margin-top:-4px">각 문장 아래 "번역초안(학생 비공개)" 칸에 적어두면 공유 시 같이 저장돼요 — 학생 화면엔 절대 안 보여요.</div>
+      <div id="shareStatus" class="status"></div>
+    </div>
+  </div>
+
+  <div class="card" style="font-size:13px; color:var(--muted)">
+    이 도구는 정규식(패턴) 기반으로 문장을 판별해요. 대부분 정확하지만 가끔 놓치거나 잘못 잡을 수 있으니,
+    중요한 용도로 쓸 때는 결과를 한 번 눈으로 확인해 주세요.
+  </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js"></script>
+<script>
+// ============================================================================
+// CORE.JS (extraction + grammar tagging) -- inlined so this is a single file
+// ============================================================================
+/*
+ * Core extraction + grammar-tagging logic, shared by the browser app
+ * (mockexam_tool.html) and by the Node.js test harness. Pure JS, no DOM.
+ * This is a straight port of extract.py / regex_tagger.py.
+ */
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.MockExamCore = factory();
+  }
+})(typeof self !== 'undefined' ? self : this, function () {
+  'use strict';
+
+  // PUBLIC_IDENTIFIER_REMOVED verbs
+  const BASE_VERBS = new Set(["accept", "accomplish", "achieve", "acknowledge", "acquire", "adapt", "add", "adjust", "admire", "admit", "adopt", "advance", "advertise", "advise", "affect", "afford", "agree", "aim", "alert", "allow", "analyze", "announce", "annoy", "answer", "anticipate", "apologize", "appeal", "appear", "apply", "appoint", "approach", "approve", "argue", "arrange", "arrest", "arrive", "ask", "assemble", "assess", "assign", "assist", "assume", "assure", "attach", "attack", "attempt", "attend", "attract", "avoid", "award", "balance", "ban", "base", "battle", "be", "beat", "become", "begin", "behave", "believe", "belong", "bend", "bet", "bind", "bite", "blame", "bless", "block", "blow", "boil", "book", "boost", "bother", "bounce", "bow", "branch", "break", "breathe", "breed", "bring", "brush", "build", "bump", "burn", "burst", "bury", "buy", "calculate", "call", "campaign", "capture", "care", "carry", "carve", "catch", "cause", "celebrate", "challenge", "change", "charge", "chase", "chat", "cheat", "check", "cheer", "chew", "choke", "choose", "chop", "claim", "clap", "classify", "clean", "clear", "climb", "clip", "close", "coach", "collapse", "collect", "combine", "come", "command", "commit", "communicate", "compare", "compete", "complain", "complete", "compose", "comprise", "conclude", "conduct", "confess", "confirm", "connect", "conserve", "consider", "construct", "consult", "consume", "contact", "contain", "continue", "contribute", "convert", "convince", "cook", "cool", "cope", "copy", "correct", "correspond", "count", "cover", "crash", "create", "creep", "crush", "cry", "cure", "curve", "cut", "cycle", "damage", "dance", "date", "deal", "decide", "declare", "decorate", "defeat", "defend", "define", "delay", "delete", "deliver", "demand", "demonstrate", "deny", "depend", "deposit", "derive", "descend", "describe", "design", "desire", "despise", "destroy", "detect", "deteriorate", "determine", "develop", "devote", "die", "dig", "disappear", "discover", "discuss", "dislike", "display", "dispose", "dissolve", "distinguish", "distribute", "disturb", "dive", "divide", "do", "dominate", "donate", "doubt", "download", "drag", "drain", "draw", "dream", "dress", "drink", "drive", "drop", "dry", "earn", "ease", "eat", "edit", "educate", "elect", "eliminate", "embarrass", "embrace", "emerge", "emphasize", "employ", "empty", "enable", "encounter", "encourage", "endure", "enforce", "engage", "enhance", "enjoy", "enroll", "ensure", "enter", "entertain", "envy", "equip", "escape", "establish", "estimate", "evaluate", "examine", "exceed", "exchange", "exclude", "excuse", "execute", "exercise", "exhaust", "exhibit", "exist", "expand", "expect", "experience", "experiment", "explain", "explode", "explore", "export", "expose", "express", "extend", "extract", "face", "facilitate", "fade", "fail", "fall", "fasten", "fear", "feature", "feel", "fetch", "fight", "file", "fill", "film", "find", "finish", "fit", "fix", "flee", "float", "flood", "flow", "fly", "focus", "fold", "follow", "forbid", "force", "forecast", "foresee", "forgive", "form", "format", "found", "frame", "free", "freeze", "frighten", "fry", "fulfill", "fund", "gain", "gather", "generate", "get", "give", "glance", "glow", "go", "govern", "grab", "grant", "grasp", "greet", "grip", "grow", "guarantee", "guard", "guess", "guide", "handle", "hang", "happen", "harm", "harvest", "hate", "haunt", "have", "heal", "hear", "heat", "help", "hesitate", "hide", "hike", "hire", "hit", "hold", "honor", "hop", "hope", "hunt", "hurry", "hurt", "identify", "ignore", "illustrate", "imagine", "implement", "imply", "import", "impose", "impress", "improve", "include", "incorporate", "increase", "indicate", "influence", "inform", "inhabit", "inherit", "initiate", "injure", "inspect", "inspire", "install", "instruct", "insult", "insure", "integrate", "intend", "interact", "interfere", "interpret", "interrupt", "introduce", "invade", "invent", "invest", "investigate", "invite", "involve", "isolate", "issue", "join", "jump", "justify", "keep", "kill", "knit", "knock", "know", "label", "lack", "land", "last", "laugh", "launch", "lay", "lead", "lean", "leap", "learn", "leave", "lend", "let", "license", "lift", "light", "like", "limit", "link", "list", "listen", "live", "load", "lock", "log", "look", "loosen", "lose", "love", "lower", "maintain", "make", "manage", "manufacture", "march", "mark", "market", "marry", "match", "matter", "maximize", "mean", "measure", "meet", "melt", "mention", "merge", "migrate", "milk", "mind", "minimize", "mislead", "miss", "mix", "mold", "monitor", "mount", "move", "multiply", "murder", "name", "navigate", "need", "negotiate", "nod", "normalize", "notice", "notify", "nourish", "obey", "object", "observe", "obtain", "occupy", "occur", "offend", "offer", "omit", "open", "operate", "oppose", "order", "organize", "overcome", "overlap", "overlook", "overtake", "owe", "own", "pack", "paint", "park", "participate", "pass", "paste", "patrol", "pause", "pay", "peel", "penetrate", "perceive", "perform", "permit", "persist", "persuade", "phone", "pick", "picture", "pierce", "pile", "pin", "pinch", "pioneer", "pitch", "place", "plan", "plant", "play", "plead", "please", "plug", "plunge", "point", "poison", "poke", "polish", "pop", "pose", "position", "possess", "post", "postpone", "pound", "pour", "practice", "praise", "pray", "preach", "precede", "predict", "prefer", "prepare", "press", "pretend", "prevail", "prevent", "price", "print", "proceed", "process", "proclaim", "produce", "program", "progress", "prohibit", "project", "promise", "promote", "pronounce", "propose", "protect", "protest", "prove", "provide", "provoke", "publish", "pull", "pump", "punch", "punish", "purchase", "pursue", "push", "put", "qualify", "quit", "quote", "race", "radiate", "raise", "range", "rank", "rate", "reach", "react", "read", "realize", "rearrange", "reassure", "rebuild", "recall", "receive", "recognize", "recover", "recruit", "recycle", "redesign", "reduce", "refer", "reflect", "reform", "refresh", "refuse", "regard", "register", "regret", "regulate", "reinforce", "reject", "relate", "relax", "release", "relieve", "rely", "remain", "remark", "remember", "remind", "remove", "render", "renew", "rent", "repair", "repeat", "replace", "reply", "report", "represent", "reproduce", "request", "require", "rescue", "research", "resemble", "resent", "reserve", "reset", "reside", "resign", "resist", "resolve", "resort", "respect", "respond", "restore", "restrict", "resume", "retain", "retire", "retreat", "return", "reveal", "reverse", "review", "revise", "revive", "reward", "rid", "ride", "ring", "rise", "risk", "roast", "rob", "roll", "rot", "rotate", "rub", "ruin", "rule", "run", "rush", "sacrifice", "sail", "satisfy", "save", "say", "scan", "scare", "scatter", "schedule", "scold", "scrape", "scratch", "scream", "screen", "screw", "scrub", "seal", "search", "season", "seat", "secure", "see", "seek", "seem", "seize", "select", "sell", "send", "sense", "separate", "sequence", "serve", "set", "settle", "sew", "shake", "shape", "share", "shed", "shelter", "shift", "shine", "ship", "shock", "shoot", "shorten", "shout", "shove", "show", "shrink", "shrug", "sigh", "sign", "signal", "signify", "simplify", "sing", "sink", "sip", "sit", "site", "situate", "ski", "skip", "slam", "slap", "slice", "slide", "slip", "slow", "smell", "smile", "smoke", "smooth", "snap", "sneak", "sniff", "soak", "soar", "sob", "soften", "solve", "sort", "sound", "spare", "spark", "sparkle", "speak", "specialize", "specify", "speculate", "spell", "spend", "spill", "spin", "spit", "split", "spoil", "spot", "spray", "sprinkle", "spy", "squeeze", "stab", "stack", "stain", "stamp", "stand", "stare", "start", "starve", "state", "stay", "steal", "steer", "stick", "stimulate", "sting", "stir", "stitch", "stock", "stop", "store", "strain", "strap", "strengthen", "stress", "stretch", "strike", "strip", "strive", "stroke", "stroll", "structure", "struggle", "study", "stuff", "stumble", "subdue", "submit", "subscribe", "substitute", "succeed", "suck", "suffer", "suggest", "suit", "sum", "summarize", "summon", "supervise", "supply", "support", "suppose", "suppress", "surf", "surface", "surpass", "surprise", "surrender", "surround", "survey", "survive", "suspect", "suspend", "swallow", "swear", "sweat", "sweep", "swell", "swing", "switch", "symbolize", "sympathize", "synthesize", "tackle", "tag", "take", "talk", "tap", "target", "taste", "teach", "tear", "tease", "telephone", "tell", "temper", "tempt", "tend", "terrify", "test", "testify", "text", "thank", "thaw", "thicken", "thin", "think", "thread", "threaten", "thrill", "thrive", "thrust", "tidy", "tie", "tighten", "tilt", "time", "tip", "tire", "toast", "tolerate", "torture", "toss", "touch", "trace", "track", "trade", "trail", "train", "transfer", "transform", "transmit", "transport", "trap", "travel", "treasure", "treat", "tremble", "trick", "trigger", "trim", "trip", "triumph", "trouble", "trust", "try", "tuck", "tug", "tumble", "tune", "turn", "twist", "type", "undergo", "undermine", "understand", "undertake", "unify", "unite", "unlock", "unpack", "update", "upgrade", "uphold", "upset", "urge", "use", "utilize", "vacate", "value", "vanish", "vary", "venture", "verify", "vibrate", "view", "violate", "visit", "visualize", "voice", "volunteer", "vomit", "vote", "wait", "wake", "walk", "wander", "want", "warm", "warn", "wash", "waste", "watch", "wave", "weaken", "wear", "weave", "weep", "weigh", "welcome", "whisper", "whistle", "widen", "win", "wind", "wipe", "wish", "withdraw", "wither", "withstand", "witness", "wonder", "work", "worry", "wrap", "wreck", "wrestle", "wring", "write", "yell", "yield", "zoom"]);
+
+  const IRREGULAR_PAST_PARTICIPLES = new Set(["beaten", "been", "begun", "bent", "bet", "bitten", "bled", "blown", "born", "borne", "bought", "broken", "brought", "built", "burnt", "caught", "chosen", "clung", "come", "cost", "crept", "cut", "dealt", "done", "drawn", "dreamt", "driven", "drunk", "dug", "eaten", "fallen", "fed", "felt", "flown", "forbidden", "forgiven", "forgone", "forgotten", "forsaken", "fought", "found", "frozen", "given", "gone", "gotten", "grown", "had", "heard", "held", "hidden", "hit", "hung", "hurt", "kept", "knelt", "knit", "known", "laid", "leapt", "learnt", "led", "left", "lent", "let", "lit", "lost", "made", "meant", "met", "mistaken", "mown", "overcome", "paid", "proven", "put", "quit", "read", "rid", "ridden", "risen", "run", "rung", "said", "sat", "seen", "sent", "set", "sewn", "shaken", "shed", "shod", "shone", "shot", "shown", "shrunk", "shut", "slain", "slept", "slid", "smelt", "sold", "sought", "sown", "spent", "spilt", "spit", "split", "spoken", "spread", "sprung", "stolen", "stood", "stridden", "striven", "struck", "strung", "stuck", "stung", "stunk", "sung", "sunk", "swept", "swollen", "sworn", "swum", "swung", "taken", "taught", "thought", "thrown", "thrust", "told", "torn", "trodden", "understood", "undertaken", "upheld", "upset", "withdrawn", "withheld", "withstood", "woken", "won", "worn", "wound", "woven", "written", "wrought"]);
+
+  const ING_STOPWORDS = new Set(["according", "anything", "bedding", "beginning", "building", "ceiling", "clothing", "darling", "drawing", "during", "ending", "evening", "everything", "feeling", "gathering", "housing", "king", "meaning", "meeting", "morning", "nothing", "offering", "opening", "outstanding", "painting", "pudding", "reading", "ring", "setting", "sibling", "something", "spring", "string", "surrounding", "thing", "things", "training", "understanding", "warning", "wedding", "wing", "writing"]);
+
+  // PUBLIC_IDENTIFIER_REMOVED extraction
+  const MARKER_RE_SPLIT = /[❶-❿⓫-⓴]/;
+  const MARKER_RE_MATCH = /[❶-❿⓫-⓴]/g;
+  const KOREAN_RE = /[가-힣]/;
+  const QUESTION_HEADER_RE = /^(\d+(?:~\d+)?번)\s*\[(.+?)\]/;
+  const TRAILING_LABEL_RE = /\(\s*[A-E]\s*\)\s*$/;
+  const TERMINAL_PUNCT_RE_G = /[.!?]['"”’]?/g;
+  const QUESTION_NUM_RE = /(?<=[.!?])\s+\d{1,3}[.)]\s/;
+  const PUA_RE_G = /[\uE000-\uF8FF]+/g;
+  const SENT_SPLIT_RE = /(?<=[.!?])['"”’]?\s+(?=[A-Z"“‘(])/;
+  const CIRCLED_TRIM_RE = /[①-⑳\s]+$/;
+
+  function cleanMarkerText(raw) {
+    let text = raw.replace(PUA_RE_G, ' ');
+    text = text.replace(/\n/g, ' ');
+    text = text.replace(/\s+/g, ' ').trim();
+    return text;
+  }
+
+  function stripTrailingLabel(text) {
+    return text.replace(TRAILING_LABEL_RE, '').trim();
+  }
+
+  function cleanMarkerTextRaw(raw) {
+    return raw.split('\n').map(function (l) { return l.replace(/[ \t]+/g, ' ').trim(); }).join('\n');
+  }
+
+  function trimLastChunk(text) {
+    text = text.replace(PUA_RE_G, ' ');
+
+    const cutCandidates = [];
+    const koreanIdx = text.search(KOREAN_RE);
+    if (koreanIdx !== -1) cutCandidates.push(koreanIdx);
+    ['★', '*'].forEach(function (marker) {
+      const idx = text.indexOf(marker);
+      if (idx !== -1) cutCandidates.push(idx);
+    });
+    const qIdx = text.search(QUESTION_NUM_RE);
+    if (qIdx !== -1) cutCandidates.push(qIdx);
+    if (cutCandidates.length > 0) {
+      text = text.slice(0, Math.min.apply(null, cutCandidates));
+    }
+
+    text = text.replace(/\s+/g, ' ').trim();
+
+    const matches = Array.from(text.matchAll(TERMINAL_PUNCT_RE_G));
+    if (matches.length > 0) {
+      const last = matches[matches.length - 1];
+      text = text.slice(0, last.index + last[0].length);
+    }
+    text = text.trim();
+    text = text.replace(CIRCLED_TRIM_RE, '').trim();
+    if (!text) return [];
+
+    const pieces = text.split(SENT_SPLIT_RE).map(function (p) { return p.trim(); }).filter(Boolean);
+    return pieces.length ? pieces : [text];
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED tagger
+  function isBaseVerb(word) {
+    return BASE_VERBS.has(word.toLowerCase());
+  }
+
+  function isParticipleWord(word) {
+    const lw = word.toLowerCase();
+    if (ING_STOPWORDS.has(lw)) return false;
+    if (lw.endsWith('ing') && lw.length > 4) return true;
+    if (IRREGULAR_PAST_PARTICIPLES.has(lw)) return true;
+    if (lw.endsWith('ed') && lw.length > 3) return true;
+    return false;
+  }
+
+  function isPastParticipleWord(word) {
+    const lw = word.toLowerCase();
+    if (IRREGULAR_PAST_PARTICIPLES.has(lw)) return true;
+    if (lw.endsWith('ed') && lw.length > 3) return true;
+    return false;
+  }
+
+  function isGerundWord(word) {
+    const lw = word.toLowerCase();
+    if (ING_STOPWORDS.has(lw)) return false;
+    return lw.endsWith('ing') && lw.length > 4;
+  }
+
+  function clip(sentence, start, end, pad) {
+    return sentence.slice(start, Math.min(end + (pad || 0), sentence.length)).trim();
+  }
+
+  // ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
+  const TO_RE = /\bto\s+(?:not\s+|never\s+|fully\s+|really\s+)?([A-Za-z]+)\b/g;
+  function ruleToInfinitive(sentence) {
+    const hits = [];
+    let m;
+    TO_RE.lastIndex = 0;
+    while ((m = TO_RE.exec(sentence)) !== null) {
+      if (isBaseVerb(m[1])) hits.push({ text: sentence.slice(m.index, m.index + m[0].length), note: null });
+    }
+    return hits;
+  }
+
+  // ---- 분사구문 (participial clause) -----------------------------------
+  const SENT_INITIAL_RE = /^([A-Z][a-zA-Z]+),?\s/;
+  const MID_COMMA_RE = /,\s+([A-Za-z]+)\b/g;
+  const WITH_RE = /\bwith\s+(?:his|her|their|its|my|your|our|the|a|an)?\s*[A-Za-z]+(?:\s+[A-Za-z]+){0,2}\s+([A-Za-z]+)\b/g;
+  // after/before/since/while/when 은 전치사로도, 분사구문에서 접속사를 생략하지 않은 형태로도
+  // 쓰인다("After serving in the Navy, ~"). 전치사+동명사(by/of/for/... + -ing)와 겉보기엔
+  // 똑같아서 GERUND_PREP_RE에서는 이 단어들을 일부러 빼고 여기서 분사구문으로 잡는다.
+  const CONJ_PARTICIPLE_RE = /\b(after|before|since|while|when)\s+([a-zA-Z]+)\b/gi;
+  function participleTense(word) {
+    return isPastParticipleWord(word) ? 'past' : 'present';
+  }
+
+  // 분사구문 자체를 찾는 로직은 그대로 두고, 각 히트에 tense(present/past)를 붙여서
+  // 현재분사/과거분사 두 규칙이 이 결과를 나눠 가짐(구분문제가 이 둘을 비교하는 용도라
+  // 애초에 하나의 규칙으로 묶여 있으면 "구분"할 대상이 없어짐).
+  function participialClauseHitsWithTense(sentence) {
+    const hits = [];
+    const m0 = sentence.match(SENT_INITIAL_RE);
+    if (m0 && isParticipleWord(m0[1])) {
+      const searchWindow = sentence.slice(0, sentence.indexOf(m0[1]) + 60);
+      if (searchWindow.indexOf(',') !== -1) {
+        const commaIdx = sentence.indexOf(',');
+        if (commaIdx !== -1 && commaIdx < 80) {
+          hits.push({ text: sentence.slice(0, commaIdx + 1).trim(), note: '문두', tense: participleTense(m0[1]) });
+        }
+      }
+    }
+    let m;
+    MID_COMMA_RE.lastIndex = 0;
+    while ((m = MID_COMMA_RE.exec(sentence)) !== null) {
+      const word = m[1];
+      if (isParticipleWord(word) && !['and', 'but', 'or', 'so', 'which', 'who', 'that'].includes(word.toLowerCase())) {
+        hits.push({ text: clip(sentence, m.index, m.index + m[0].length, 40), note: '문중', tense: participleTense(word) });
+      }
+    }
+    WITH_RE.lastIndex = 0;
+    while ((m = WITH_RE.exec(sentence)) !== null) {
+      if (isParticipleWord(m[1])) {
+        hits.push({ text: sentence.slice(m.index, m.index + m[0].length).trim(), note: 'with 구문', tense: participleTense(m[1]) });
+      }
+    }
+    CONJ_PARTICIPLE_RE.lastIndex = 0;
+    while ((m = CONJ_PARTICIPLE_RE.exec(sentence)) !== null) {
+      const word = m[2];
+      if (!isParticipleWord(word)) continue;
+      const conj = m[1].toLowerCase();
+      if (m.index === 0) {
+        // 문두: 다음 콤마까지를 구절로("After serving in the US Navy during World War II,")
+        const commaIdx = sentence.indexOf(',');
+        const end = (commaIdx !== -1 && commaIdx < 100) ? commaIdx + 1 : m.index + m[0].length;
+        hits.push({ text: sentence.slice(0, end).trim(), note: '접속사(' + conj + ') 생략 안 함', tense: participleTense(word) });
+      } else {
+        hits.push({ text: clip(sentence, m.index, m.index + m[0].length, 40), note: '접속사(' + conj + ') 생략 안 함', tense: participleTense(word) });
+      }
+    }
+    return hits;
+  }
+
+  function stripTense(hits) {
+    return hits.map(function (h) { return { text: h.text, note: h.note }; });
+  }
+
+  function rulePresentParticipleClause(sentence) {
+    return stripTense(participialClauseHitsWithTense(sentence).filter(function (h) { return h.tense === 'present'; }));
+  }
+
+  function rulePastParticipleClause(sentence) {
+    return stripTense(participialClauseHitsWithTense(sentence).filter(function (h) { return h.tense === 'past'; }));
+  }
+
+  // ---- 관계사절 (relative clause) --------------------------------------
+  const REL_PRONOUN_RE = /\b(who|whom|whose|which)\b/g;
+  const REL_ADVERB_RE = /\b(the|a|an)\s+\w+\s+(where|when|why)\b/g;
+  function ruleRelativeClause(sentence) {
+    const hits = [];
+    let m;
+    REL_PRONOUN_RE.lastIndex = 0;
+    while ((m = REL_PRONOUN_RE.exec(sentence)) !== null) {
+      hits.push({ text: clip(sentence, m.index, m.index + m[0].length, 40), note: m[1] });
+    }
+    REL_ADVERB_RE.lastIndex = 0;
+    while ((m = REL_ADVERB_RE.exec(sentence)) !== null) {
+      hits.push({ text: clip(sentence, m.index, m.index + m[0].length, 40), note: '관계부사 ' + m[2] });
+    }
+    return hits;
+  }
+
+  // ---- 수동태 (passive voice) PUBLIC_IDENTIFIER_REMOVED
+  const PASSIVE_RE = /\b(is|are|was|were|am|be|been|being)\s+(?:not\s+|never\s+|also\s+)?([A-Za-z]+)\b/g;
+  function rulePassiveVoice(sentence) {
+    const hits = [];
+    let m;
+    PASSIVE_RE.lastIndex = 0;
+    while ((m = PASSIVE_RE.exec(sentence)) !== null) {
+      if (isPastParticipleWord(m[2])) {
+        hits.push({ text: sentence.slice(m.index, m.index + m[0].length).trim(), note: null });
+      }
+    }
+    return hits;
+  }
+
+  // ---- 동명사 (gerund) PUBLIC_IDENTIFIER_REMOVED
+  const GERUND_SUBJECT_RE = /^([A-Z][a-z]+ing)\s+(is|was|has|makes|means|helps|leads|takes|requires)\b/;
+  const GERUND_PREP_RE = /\b(by|of|for|in|on|about|without|instead of|besides|from)\s+([a-z]+ing)\b/g;
+  const GERUND_VERB_RE = /\b(enjoy|enjoys|enjoyed|consider|considers|considered|avoid|avoids|avoided|finish|finishes|finished|mind|minds|minded|suggest|suggests|suggested|recommend|recommends|recommended|keep|keeps|kept|practice|practices|practiced|imagine|imagines|imagined|deny|denies|denied|quit|quits|resist|resists|resisted|risk|risks|risked|give up|gave up|stop|stops|stopped|involve|involves|involved)\s+([a-z]+ing)\b/g;
+  function ruleGerund(sentence) {
+    const hits = [];
+    const m0 = sentence.match(GERUND_SUBJECT_RE);
+    if (m0 && isGerundWord(m0[1])) {
+      hits.push({ text: m0[0].trim(), note: '주어 역할' });
+    }
+    let m;
+    GERUND_PREP_RE.lastIndex = 0;
+    while ((m = GERUND_PREP_RE.exec(sentence)) !== null) {
+      if (isGerundWord(m[2])) {
+        hits.push({ text: sentence.slice(m.index, m.index + m[0].length).trim(), note: '전치사 + 동명사' });
+      }
+    }
+    GERUND_VERB_RE.lastIndex = 0;
+    while ((m = GERUND_VERB_RE.exec(sentence)) !== null) {
+      if (isGerundWord(m[2])) {
+        hits.push({ text: sentence.slice(m.index, m.index + m[0].length).trim(), note: '동사의 목적어' });
+      }
+    }
+    return hits;
+  }
+
+  // ---- 비교구문 (comparative / superlative) ------------------------------
+  const COMPARATIVE_ER_RE = /\b[a-z]{3,}er\s+than\b/gi;
+  const COMPARATIVE_MORE_RE = /\bmore\s+[a-z]+\s+than\b/gi;
+  const SUPERLATIVE_RE = /\b(the\s+)?most\s+[a-z]+\b|\bthe\s+[a-z]{3,}est\b/gi;
+  const AS_AS_RE = /\bas\s+[a-z]+\s+as\b/gi;
+  const THE_ER_THE_ER_RE = /\bthe\s+[a-z]+er\b[^.!?]*\bthe\s+[a-z]+er\b/gi;
+  function ruleComparative(sentence) {
+    const hits = [];
+    [
+      [COMPARATIVE_ER_RE, '비교급 (-er than)'],
+      [COMPARATIVE_MORE_RE, '비교급 (more ~ than)'],
+      [SUPERLATIVE_RE, '최상급'],
+      [AS_AS_RE, '원급 비교 (as~as)'],
+      [THE_ER_THE_ER_RE, 'the 비교급 the 비교급'],
+    ].forEach(function (pair) {
+      const re = pair[0], note = pair[1];
+      re.lastIndex = 0;
+      let m;
+      while ((m = re.exec(sentence)) !== null) {
+        hits.push({ text: m[0].trim(), note: note });
+        if (m[0].length === 0) re.lastIndex++;
+      }
+    });
+    return hits;
+  }
+
+  // ---- 도치구문 (inversion) PUBLIC_IDENTIFIER_REMOVED
+  const INVERSION_START_RE = /^(Never|Rarely|Seldom|Little|Hardly|Scarcely|Not only|No sooner|Nowhere|Not until|Only (?:then|after|when|by|in|through|later|recently)[^,]*)\b[^.!?]*\b(do|does|did|is|are|was|were|has|have|had|will|would|can|could|should|might)\b/;
+  const SO_SUCH_INVERSION_RE = /^(So|Such)\s+(?!it\b|he\b|she\b|they\b|we\b|I\b|you\b|there\b)[a-zA-Z]+\b[^.!?]*\b(is|are|was|were|did|does|do)\b/;
+  function ruleInversion(sentence) {
+    const hits = [];
+    let m = sentence.match(INVERSION_START_RE);
+    if (m) hits.push({ text: clip(sentence, 0, m[0].length, 20), note: null });
+    m = sentence.match(SO_SUCH_INVERSION_RE);
+    if (m) hits.push({ text: clip(sentence, 0, m[0].length, 20), note: null });
+    return hits;
+  }
+
+  // ---- 가정법 (subjunctive / conditional) --------------------------------
+  const IF_SUBJUNCTIVE_RE = /\bif\s+[^,.!?]*\b(were|had\s+[a-z]+ed|had\s+[a-z]+)\b/gi;
+  const MODAL_HAVE_PP_RE = /\b(would|could|might|should)\s+(?:not\s+)?have\s+([a-z]+)\b/gi;
+  const WISH_RE = /\bwish(?:ed)?\s+[^.!?]*\b(were|had|could)\b/gi;
+  const AS_IF_RE = /\b(as if|as though)\s+[^.!?]*\b(were|had)\b/gi;
+  function ruleSubjunctive(sentence) {
+    const hits = [];
+    [[IF_SUBJUNCTIVE_RE, 'if + 과거/과거완료'], [WISH_RE, 'wish + 가정법'], [AS_IF_RE, 'as if/as though']]
+      .forEach(function (pair) {
+        const re = pair[0], note = pair[1];
+        re.lastIndex = 0;
+        let m;
+        while ((m = re.exec(sentence)) !== null) {
+          hits.push({ text: m[0].trim(), note: note });
+        }
+      });
+    MODAL_HAVE_PP_RE.lastIndex = 0;
+    let m;
+    while ((m = MODAL_HAVE_PP_RE.exec(sentence)) !== null) {
+      if (isPastParticipleWord(m[2])) {
+        hits.push({ text: m[0].trim(), note: '조동사 + have p.p.' });
+      }
+    }
+    return hits;
+  }
+
+  // ---- 강조구문 (it ~ that emphasis) --------------------------------------
+  const EMPHATIC_RE = /\bIt\s+(is|was)\s+.{2,40}?\s+that\b/g;
+  function ruleEmphatic(sentence) {
+    const hits = [];
+    let m;
+    EMPHATIC_RE.lastIndex = 0;
+    while ((m = EMPHATIC_RE.exec(sentence)) !== null) {
+      hits.push({ text: m[0].trim(), note: null });
+    }
+    return hits;
+  }
+
+  // ---- 명사절 접속사 (that / whether / if) --------------------------------
+  const NOUN_CLAUSE_THAT_RE = /\b(know|knows|knew|think|thinks|thought|believe|believes|believed|say|says|said|hope|hopes|hoped|feel|feels|felt|realize|realizes|realized|notice|notices|noticed|find|finds|found|found|show|shows|showed|mean|means|meant|suggest|suggests|suggested|argue|argues|argued|claim|claims|claimed|admit|admits|admitted|deny|denies|denied|announce|announces|announced|report|reports|reported|assume|assumes|assumed|prove|proves|proved|discover|discovers|discovered)\s+that\b/g;
+  const NOUN_CLAUSE_WHETHER_RE = /\b(wonder|wonders|wondered|ask|asks|asked|know|knows|knew|decide|decides|decided|doubt|doubts|doubted)\s+(whether|if)\b/g;
+  function ruleNounClauseConjunction(sentence) {
+    const hits = [];
+    let m;
+    NOUN_CLAUSE_THAT_RE.lastIndex = 0;
+    while ((m = NOUN_CLAUSE_THAT_RE.exec(sentence)) !== null) {
+      hits.push({ text: m[0].trim(), note: 'that' });
+    }
+    NOUN_CLAUSE_WHETHER_RE.lastIndex = 0;
+    while ((m = NOUN_CLAUSE_WHETHER_RE.exec(sentence)) !== null) {
+      hits.push({ text: m[0].trim(), note: m[2] });
+    }
+    return hits;
+  }
+
+  // ---- 조동사 + have + p.p. (modal perfect) -------------------------------
+  const MODAL_PERFECT_RE = /\b(must|should|shouldn't|couldn't|wouldn't|can't|cannot|may|might)\s+(?:not\s+)?have\s+([a-z]+)\b/gi;
+  function ruleModalPerfect(sentence) {
+    const hits = [];
+    let m;
+    MODAL_PERFECT_RE.lastIndex = 0;
+    while ((m = MODAL_PERFECT_RE.exec(sentence)) !== null) {
+      if (isPastParticipleWord(m[2])) {
+        hits.push({ text: m[0].trim(), note: null });
+      }
+    }
+    return hits;
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED rules registry
+  // Add a new grammar point by appending to this array -- the browser UI
+  // reads this list to build its checkboxes automatically, so no HTML
+  // changes are needed to add more categories later.
+  const GRAMMAR_RULES = [
+    { id: 'presentParticiple', label: '분사구문(현재분사)', detect: rulePresentParticipleClause },
+    { id: 'pastParticiple', label: '분사구문(과거분사)', detect: rulePastParticipleClause },
+    { id: 'toInfinitive', label: 'to부정사', detect: ruleToInfinitive },
+    { id: 'relativeClause', label: '관계사절', detect: ruleRelativeClause },
+    { id: 'passiveVoice', label: '수동태', detect: rulePassiveVoice },
+    { id: 'gerund', label: '동명사', detect: ruleGerund },
+    { id: 'comparative', label: '비교구문', detect: ruleComparative },
+    { id: 'inversion', label: '도치구문', detect: ruleInversion },
+    { id: 'subjunctive', label: '가정법', detect: ruleSubjunctive },
+    { id: 'emphatic', label: '강조구문 (it~that)', detect: ruleEmphatic },
+    { id: 'nounClause', label: '명사절 접속사 (that/whether/if)', detect: ruleNounClauseConjunction },
+    { id: 'modalPerfect', label: '조동사 + have + p.p.', detect: ruleModalPerfect },
+  ];
+
+  function tagSentence(sentence) {
+    const out = {};
+    GRAMMAR_RULES.forEach(function (rule) {
+      out[rule.id] = rule.detect(sentence);
+    });
+    return out;
+  }
+
+  return {
+    GRAMMAR_RULES: GRAMMAR_RULES,
+    tagSentence: tagSentence,
+    _internal: { BASE_VERBS: BASE_VERBS, IRREGULAR_PAST_PARTICIPLES: IRREGULAR_PAST_PARTICIPLES, ING_STOPWORDS: ING_STOPWORDS },
+  };
+});
+
+</script>
+<script>
+// ============================================================================
+// APP GLUE (DOM, pdf.js wiring, localStorage "DB", search UI)
+// ============================================================================
+(function () {
+  'use strict';
+
+  // PUBLIC_IDENTIFIER_REMOVED shared hub 유틸
+  function uid(n) {
+    n = n || 10;
+    var c = 'PUBLIC_IDENTIFIER_REMOVED';
+    var s = '';
+    for (var i = 0; i < n; i++) s += c[Math.floor(Math.random() * c.length)];
+    return s;
+  }
+  function jsonpFetch(url, timeoutMs) {
+    timeoutMs = timeoutMs || 12000;
+    return new Promise(function (resolve) {
+      var cbName = '__gh_cb_' + uid(8);
+      var script = document.createElement('script');
+      var settled = false;
+      var cleanup = function () { delete window[cbName]; script.remove(); clearTimeout(timer); };
+      window[cbName] = function (data) { if (settled) return; settled = true; cleanup(); resolve(data); };
+      var timer = setTimeout(function () { if (settled) return; settled = true; cleanup(); resolve(null); }, timeoutMs);
+      script.onerror = function () { if (settled) return; settled = true; cleanup(); resolve(null); };
+      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+      document.body.appendChild(script);
+    });
+  }
+  async function hookPost(url, body) {
+    try {
+      await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+      return true;
+    } catch (e) { return false; }
+  }
+  function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+
+  function ghDeliveryCfg() {
+    var c = null;
+    try { c = JSON.parse(localStorage.getItem('grammarhub.delivery') || 'null'); } catch (e) {}
+    if (!c) c = { url: '', token: '' };
+    return c;
+  }
+  function ghSaveDelivery(c) { localStorage.setItem('grammarhub.delivery', JSON.stringify(c)); }
+
+  var DB_KEY = 'mockexam_gui_db_v2';
+  var OLD_DB_KEY = 'mockexam_gui_db_v1'; // pre-multi-grammar schema, read-only migration source
+  var RULES = MockExamCore.GRAMMAR_RULES;
+
+  // PUBLIC_IDENTIFIER_REMOVED 끊어읽기 공용 유틸
+  // 교사용(직독직해 자동생성 미리보기)과 학생용(끊어읽기 채점) 양쪽에서 같이 쓴다 —
+  // "문법 구조의 경계 = 의미단위 경계"라는 같은 전제를 공유해야 미리보기와 실제 학생
+  // 화면의 끊어읽기가 어긋나지 않는다.
+  function tokenizeWithOffsets(text) {
+    var words = [];
+    var re = /\S+/g;
+    var m;
+    while ((m = re.exec(text))) {
+      words.push({ text: m[0], start: m.index, end: m.index + m[0].length });
+    }
+    return words;
+  }
+
+  function wordIdxAtChar(words, charIdx) {
+    for (var i = 0; i < words.length; i++) {
+      if (charIdx >= words[i].start && charIdx < words[i].end) return i;
+    }
+    for (var j = 0; j < words.length; j++) { if (words[j].start >= charIdx) return j; }
+    return words.length - 1;
+  }
+
+  // 문장에 태깅된 구(분사구문/to부정사 등)의 시작·끝을 "단어 사이 끊어읽기 지점"으로 변환.
+  function correctChunkGaps(text, tags) {
+    var words = tokenizeWithOffsets(text);
+    var gaps = new Set();
+    Object.keys(tags || {}).forEach(function (tagId) {
+      (tags[tagId] || []).forEach(function (hit) {
+        var phrase = hit.text;
+        if (!phrase) return;
+        var charStart = text.indexOf(phrase);
+        if (charStart === -1) return;
+        var charEnd = charStart + phrase.length;
+        var wStart = wordIdxAtChar(words, charStart);
+        var wEnd = wordIdxAtChar(words, Math.max(charEnd - 1, charStart));
+        gaps.add(wStart);
+        gaps.add(wEnd + 1);
+      });
+    });
+    return { words: words, gaps: gaps };
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED 학생 모드: 최종본 구분문제 테스트
+  // ?finalQuiz=SETKEY&hook=... 로 들어오면(teacher/students.html 배정 카드 경유) 교사가
+  // 검토·업로드한 최종본 문제로 단어테스트와 같은 형식의 객관식 시험을 봄 — 오답은 맞출
+  // 때까지 큐 맨 뒤로 다시 넣고, 최초 시도 정답률로 채점, 결과는 선생님 시트로 전송.
+  var studyParams = new URLSearchParams(location.search);
+  var finalQuizKey = studyParams.get('finalQuiz');
+  if (finalQuizKey) {
+    document.getElementById('teacherWrap').style.display = 'none';
+    var fqWrap = document.getElementById('studentWrap');
+    fqWrap.style.display = 'block';
+    var fqBody = document.getElementById('stBody');
+    var fqHook = studyParams.get('hook') || '';
+    if (!fqHook) {
+      fqBody.innerHTML = '<div class="empty">잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.</div>';
+      return;
+    }
+    fqBody.innerHTML = '<div class="empty">불러오는 중...</div>';
+    var fqNums = studyParams.get('nums') || '';
+    var fqFetchUrl = fqHook + '?action=fetchGrammarFinal&key=' + encodeURIComponent(finalQuizKey);
+    if (fqNums) fqFetchUrl += '&nums=' + encodeURIComponent(fqNums);
+    jsonpFetch(fqFetchUrl).then(function (r) {
+      if (!r || !r.found) {
+        fqBody.innerHTML = '<div class="empty">시험 자료를 찾을 수 없어요. 선생님께 문의해주세요.</div>';
+        return;
+      }
+      document.getElementById('stTitle').textContent = '✅ ' + r.label;
+      document.title = 'VocaTest 형식 · ' + r.label;
+      var questions = r.questions || [];
+      if (questions.length === 0) {
+        fqBody.innerHTML = '<div class="empty">문제가 없어요.</div>';
+        return;
+      }
+
+      var fqState;
+
+      function renderFinalGate() {
+        fqBody.innerHTML =
+          '<div class="card">' +
+          '<div class="field"><label>이름을 입력하세요</label>' +
+          '<input type="text" id="fqName" placeholder="이름" style="max-width:220px" value="' + escapeHtml(localStorage.getItem('elab.studentName') || '') + '"></div>' +
+          '<div class="help-text" style="margin-top:8px">총 ' + questions.length + '개 문제 · 틀린 문제는 맞출 때까지 다시 나와요.</div>' +
+          '<button id="fqStart" style="margin-top:10px">시작하기 🚀</button>' +
+          '</div>';
+        document.getElementById('fqStart').addEventListener('click', function () {
+          var name = document.getElementById('fqName').value.trim();
+          if (!name) { alert('이름을 입력해주세요.'); return; }
+          localStorage.setItem('elab.studentName', name);
+          startFinalQuiz(name);
+        });
+      }
+
+      function startFinalQuiz(name) {
+        fqState = {
+          name: name,
+          queue: questions.map(function (q, i) {
+            return { srcLabel: q.srcLabel, text: q.text, phrase: q.phrase, options: q.options, correctIdx: q.correctIdx, qIdx: i };
+          }),
+          total: questions.length,
+          firstTryCorrect: 0,
+          attempted: {},
+          wrongList: [],
+          startedAt: Date.now()
+        };
+        renderFinalQuestion();
+      }
+
+      function renderFinalQuestion() {
+        if (fqState.queue.length === 0) { renderFinalResult(); return; }
+        var q = fqState.queue[0];
+        var phraseIdx = q.phrase ? q.text.indexOf(q.phrase) : -1;
+        var sentenceHtml = phraseIdx !== -1
+          ? escapeHtml(q.text.slice(0, phraseIdx)) + '<mark>' + escapeHtml(q.phrase) + '</mark>' + escapeHtml(q.text.slice(phraseIdx + q.phrase.length))
+          : escapeHtml(q.text);
+        fqBody.innerHTML =
+          '<div class="result-count">' + escapeHtml(q.srcLabel) + ' · 남은 문제 ' + fqState.queue.length + '개</div>' +
+          '<div class="practice-card">' +
+          '<div class="practice-sentence">' + sentenceHtml + '</div>' +
+          '<div class="mcq-options" id="fqOptions">' +
+          q.options.map(function (opt, i) {
+            return '<button type="button" class="secondary" data-choice="' + i + '">' + escapeHtml(opt) + '</button>';
+          }).join('') +
+          '</div>' +
+          '<div id="fqFeedback" style="margin-top:10px; font-weight:700"></div>' +
+          '</div>';
+        fqBody.querySelectorAll('#fqOptions button').forEach(function (btn) {
+          btn.addEventListener('click', function () { answerFinal(parseInt(btn.dataset.choice, 10)); });
+        });
+      }
+
+      function answerFinal(choiceIdx) {
+        var q = fqState.queue[0];
+        var correct = choiceIdx === q.correctIdx;
+        var firstAttempt = !fqState.attempted[q.qIdx];
+        fqState.attempted[q.qIdx] = true;
+        if (firstAttempt) {
+          if (correct) fqState.firstTryCorrect++;
+          else fqState.wrongList.push(q);
+        }
+        fqBody.querySelectorAll('#fqOptions button').forEach(function (btn) { btn.disabled = true; });
+        var fb = document.getElementById('fqFeedback');
+        fqState.queue.shift();
+        if (correct) {
+          fb.style.color = 'var(--green)';
+          fb.textContent = '✅ 정답이에요!';
+          setTimeout(renderFinalQuestion, 700);
+        } else {
+          fb.style.color = 'var(--red)';
+          fb.textContent = '❌ 정답은 "' + escapeHtml(q.options[q.correctIdx]) + '" 이에요.';
+          fqState.queue.push(q); // 맞출 때까지 큐 맨 뒤로 다시 넣음
+          setTimeout(renderFinalQuestion, 1500);
+        }
+      }
+
+      async function renderFinalResult() {
+        var pct = Math.round((fqState.firstTryCorrect / fqState.total) * 100);
+        var elapsedMs = Date.now() - fqState.startedAt;
+        var timeStr = Math.floor(elapsedMs / 60000) + '분 ' + Math.floor((elapsedMs % 60000) / 1000) + '초';
+        fqBody.innerHTML =
+          '<div class="card">' +
+          '<h2>🎉 ' + escapeHtml(fqState.name) + '님 결과</h2>' +
+          '<div class="help-text" style="margin-top:0">총 ' + fqState.total + '개 중 ' + fqState.firstTryCorrect + '개 정답 · ' + pct + '점</div>' +
+          '<div class="help-text">완주 시간: ' + timeStr + '</div>' +
+          (fqState.wrongList.length > 0
+            ? '<div style="margin-top:10px"><b>틀린 문제</b><ul style="margin:6px 0 0 18px; font-size:14px">' +
+              fqState.wrongList.map(function (q) { return '<li>' + escapeHtml(q.text) + '</li>'; }).join('') + '</ul></div>'
+            : '') +
+          '<button id="fqRetry" class="secondary" style="margin-top:14px">🔁 재시험 보기</button>' +
+          '</div>';
+        document.getElementById('fqRetry').addEventListener('click', renderFinalGate);
+        await hookPost(fqHook, {
+          action: 'submitGrammarFinalResult', token: r.submitToken, setKey: finalQuizKey,
+          name: fqState.name, score: pct, count: fqState.total,
+          wrong: fqState.wrongList.map(function (q) { return q.text; }), timeStr: timeStr
+        });
+      }
+
+      renderFinalGate();
+    });
+    return;
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED 학생 모드
+  // ?study=SETKEY&hook=... 로 들어오면 교사용 업로드/검색 화면 대신
+  // 배정된 문법 문장으로 연습(영상 · 구분문제 · 끊어읽기 · 해석 제출)을 하는 화면을 띄우고,
+  // 나머지 교사용 초기화는 건너뜀.
+  var studyKey = studyParams.get('study');
+  if (studyKey) {
+    document.getElementById('teacherWrap').style.display = 'none';
+    var studentWrap = document.getElementById('studentWrap');
+    studentWrap.style.display = 'block';
+    var stBody = document.getElementById('stBody');
+    var hook = studyParams.get('hook') || '';
+    // 이 아래 두 helper는 teacher 쪽 ruleById(아직 초기화 전 — 그 코드는 이 return 뒤에 있어서
+    // 학생 모드에선 절대 안 돎)에 의존하지 않도록 RULES에서 직접 만든다.
+    var stRuleById = {};
+    RULES.forEach(function (rule) { stRuleById[rule.id] = rule; });
+
+    function youtubeEmbedSrc(url) {
+      if (!url) return '';
+      var m = /(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([\w-]{6,})/.exec(url);
+      return m ? 'https://www.youtube.com/embed/' + m[1] : '';
+    }
+    // tokenizeWithOffsets/wordIdxAtChar/correctChunkGaps는 이제 바깥 스코프의 공용 버전을 그대로 씀
+    // (교사 쪽 직독직해 미리보기와 정확히 같은 끊어읽기 기준을 공유하기 위함).
+
+    function renderChunkRow(sIdx, words, correctGapsSize) {
+      var parts = [];
+      for (var i = 0; i <= words.length; i++) {
+        parts.push('<span class="chunk-gap" data-s="' + sIdx + '" data-gap="' + i + '"></span>');
+        if (i < words.length) parts.push('<span class="chunk-word">' + escapeHtml(words[i].text) + '</span>');
+      }
+      return '<div class="chunk-row" data-chunk-row="' + sIdx + '">' + parts.join('') + '</div>';
+    }
+
+    function renderMcq(sIdx, phraseIdx, phrase, correctId, optionIds) {
+      var options = optionIds.map(function (id) {
+        return '<button type="button" class="secondary" data-mcq="' + sIdx + ':' + phraseIdx + '" data-choice="' + id + '" data-correct="' + correctId + '">' +
+          escapeHtml(stRuleById[id] ? stRuleById[id].label : id) + '</button>';
+      }).join('');
+      return '<div class="mcq-item">' +
+        '<div>밑줄 친 <span class="mcq-phrase">' + escapeHtml(phrase) + '</span>은(는) 무엇일까요?</div>' +
+        '<div class="mcq-options" data-mcq-group="' + sIdx + ':' + phraseIdx + '">' + options + '</div>' +
+        '</div>';
+    }
+
+    if (!hook) {
+      stBody.innerHTML = '<div class="empty">잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.</div>';
+    } else {
+      stBody.innerHTML = '<div class="empty">불러오는 중...</div>';
+      jsonpFetch(hook + '?action=fetchGrammarSet&key=' + encodeURIComponent(studyKey)).then(function (r) {
+        if (!r || !r.found) {
+          stBody.innerHTML = '<div class="empty">공유된 문법 자료를 찾을 수 없어요.</div>';
+          return;
+        }
+        document.getElementById('stTitle').textContent = '📖 ' + r.tagLabel;
+        var sentences = r.sentences || [];
+        if (sentences.length === 0) {
+          stBody.innerHTML = '<div class="empty">문장이 없어요.</div>';
+          return;
+        }
+
+        var optionIds = (r.tag || '').split(',').filter(Boolean);
+        var chunkDataBySentence = {}; // sIdx -> {words, gaps(correct Set)}
+
+        var videoHtml = '';
+        var embedSrc = youtubeEmbedSrc(r.videoUrl);
+        if (embedSrc) {
+          videoHtml = '<div class="video-embed"><iframe src="' + embedSrc + '" allowfullscreen></iframe></div>';
+        }
+
+        var nameHtml = '<div class="card" style="margin-bottom:16px">' +
+          '<div class="field"><label>이름 (연습 제출할 때 필요해요)</label>' +
+          '<input type="text" id="stName" placeholder="이름을 입력하세요" style="max-width:220px" value="' + escapeHtml(localStorage.getItem('elab.studentName') || '') + '"></div>' +
+          '</div>';
+
+        var sentencesHtml = sentences.map(function (s, sIdx) {
+          var phraseItems = [];
+          Object.keys(s.tags || {}).forEach(function (tagId) {
+            (s.tags[tagId] || []).forEach(function (hit) {
+              phraseItems.push({ phrase: hit.text, correctId: tagId });
+            });
+          });
+          var mcqHtml = '';
+          if (optionIds.length >= 2 && phraseItems.length > 0) {
+            mcqHtml = phraseItems.map(function (item, pIdx) {
+              return renderMcq(sIdx, pIdx, item.phrase, item.correctId, optionIds);
+            }).join('');
+          }
+          var chunkInfo = correctChunkGaps(s.text, s.tags || {});
+          chunkDataBySentence[sIdx] = chunkInfo;
+          return '<div class="practice-card" data-sentence-idx="' + sIdx + '">' +
+            '<div class="practice-sentence">' + highlight(s.text, s.matches || []) + '</div>' +
+            mcqHtml +
+            '<div class="help-text" style="margin:10px 0 -4px">✂️ 끊어읽기: 의미 단위로 나뉘는 곳을 클릭해서 표시해보세요.</div>' +
+            renderChunkRow(sIdx, chunkInfo.words, chunkInfo.gaps.size) +
+            '<div class="interp-box"><label style="font-size:13px;color:var(--muted)">📝 해석 제출 (채점 없이 선생님이 수업시간에 같이 볼 거예요)</label>' +
+            '<textarea rows="2" data-interp-idx="' + sIdx + '" placeholder="이 문장을 해석해보세요"></textarea></div>' +
+            '<div class="practice-submit-row">' +
+            '<button type="button" class="secondary" data-submit-idx="' + sIdx + '">제출</button>' +
+            '<span class="practice-submitted" data-submitted-idx="' + sIdx + '" style="display:none">✅ 제출 완료</span>' +
+            '</div>' +
+            '</div>';
+        }).join('');
+
+        stBody.innerHTML = videoHtml + nameHtml +
+          '<div class="result-count">' + sentences.length + '개 문장</div>' + sentencesHtml;
+
+        // 구분문제: 클릭 즉시 정오 표시(간단한 개념확인이라 학생에게 바로 보여줌)
+        stBody.querySelectorAll('[data-mcq]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var groupSel = '[data-mcq-group="' + btn.dataset.mcq + '"]';
+            var group = stBody.querySelector(groupSel);
+            var correct = btn.dataset.correct;
+            group.querySelectorAll('button').forEach(function (b) {
+              b.classList.remove('mcq-correct', 'mcq-wrong');
+              b.disabled = true;
+            });
+            group.querySelectorAll('button').forEach(function (b) {
+              if (b.dataset.choice === correct) b.classList.add('mcq-correct');
+            });
+            if (btn.dataset.choice !== correct) btn.classList.add('mcq-wrong');
+          });
+        });
+
+        // 끊어읽기: 지점 클릭 토글(정오는 학생에게 안 보여주고 제출 시 서버로만 전송)
+        var studentGapsBySentence = {};
+        stBody.querySelectorAll('.chunk-gap').forEach(function (gapEl) {
+          var sIdx = gapEl.dataset.s;
+          if (!studentGapsBySentence[sIdx]) studentGapsBySentence[sIdx] = new Set();
+          gapEl.addEventListener('click', function () {
+            var gapIdx = parseInt(gapEl.dataset.gap, 10);
+            var set = studentGapsBySentence[sIdx];
+            if (set.has(gapIdx)) { set.delete(gapIdx); gapEl.classList.remove('chunk-on'); }
+            else { set.add(gapIdx); gapEl.classList.add('chunk-on'); }
+          });
+        });
+
+        stBody.querySelectorAll('[data-submit-idx]').forEach(function (btn) {
+          btn.addEventListener('click', async function () {
+            var sIdx = btn.dataset.submitIdx;
+            var name = (document.getElementById('stName').value || '').trim();
+            if (!name) { alert('이름을 먼저 입력해주세요.'); return; }
+            localStorage.setItem('elab.studentName', name);
+
+            var interp = stBody.querySelector('[data-interp-idx="' + sIdx + '"]').value || '';
+            var studentGaps = Array.from(studentGapsBySentence[sIdx] || []);
+            var correctGaps = Array.from(chunkDataBySentence[sIdx].gaps);
+            var chunkScore = studentGaps.filter(function (g) { return correctGaps.indexOf(g) !== -1; }).length;
+
+            btn.disabled = true;
+            btn.textContent = '제출 중...';
+            await hookPost(hook, {
+              action: 'submitGrammarPractice', token: r.submitToken,
+              setKey: studyKey, name: name, sentenceIndex: parseInt(sIdx, 10),
+              sentenceText: sentences[sIdx].text, interpretation: interp,
+              chunkStudent: studentGaps, chunkCorrect: correctGaps, chunkScore: chunkScore
+            });
+            btn.style.display = 'none';
+            stBody.querySelector('[data-submitted-idx="' + sIdx + '"]').style.display = 'inline';
+          });
+        });
+      });
+    }
+    return; // 교사용 초기화(파일 업로드, PDF 파서 경고 등)는 전부 건너뜀
+  }
+
+  // build the grammar checkbox list straight from the rules registry --
+  // adding a new grammar rule in core.js makes it show up here automatically
+  var checkboxWrap = document.getElementById('tagCheckboxes');
+  checkboxWrap.innerHTML = RULES.map(function (rule) {
+    return '<label><input type="checkbox" class="tagCheck" value="' + rule.id + '" checked> ' +
+      escapeHtml(rule.label) + '</label>';
+  }).join('');
+
+  function loadDB() {
+    try {
+      var raw = localStorage.getItem(DB_KEY);
+      if (raw) return JSON.parse(raw);
+      // one-time migration from the old (2-grammar) schema, if present --
+      // we only need questionNo/questionType/sentenceIndex/text, tags are
+      // now always computed fresh from the current rule set
+      var oldRaw = localStorage.getItem(OLD_DB_KEY);
+      if (oldRaw) {
+        var oldDb = JSON.parse(oldRaw);
+        var migrated = {
+          nextId: oldDb.nextId || 1,
+          exams: (oldDb.exams || []).map(function (e) {
+            return {
+              id: e.id, year: e.year, month: e.month, grade: e.grade,
+              sourceFile: e.sourceFile, ingestedAt: e.ingestedAt,
+              sentences: (e.sentences || []).map(function (s) {
+                return { questionNo: s.questionNo, questionType: s.questionType, sentenceIndex: s.sentenceIndex, text: s.text };
+              }),
+            };
+          }),
+        };
+        saveDB(migrated);
+        return migrated;
+      }
+      return { exams: [], nextId: 1 };
+    } catch (e) {
+      return { exams: [], nextId: 1 };
+    }
+  }
+
+  function saveDB(db) {
+    localStorage.setItem(DB_KEY, JSON.stringify(db));
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  function setStatus(el, kind, msg) {
+    el.className = 'status show ' + kind;
+    el.textContent = msg;
+  }
+
+  function formatDateTime(isoString) {
+    var d = new Date(isoString);
+    if (isNaN(d.getTime())) return '-';
+    var pad = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+      ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED import (spaCy JSON)
+  async function handleImportJson() {
+    var fileInput = document.getElementById('inImportJson');
+    var statusEl = document.getElementById('importStatus');
+    var file = fileInput.files[0];
+    if (!file) return;
+
+    try {
+      var text = await file.text();
+      var data = JSON.parse(text);
+      if (!data || !Array.isArray(data.sentences) || !data.year || !data.month || !data.grade) {
+        setStatus(statusEl, 'error', '올바른 형식의 JSON이 아니에요 (export_json.py로 만든 파일인지 확인해주세요).');
+        return;
+      }
+
+      var db = loadDB();
+      var importBackend = data.backend || 'spacy';
+      // 같은 (연도, 월, 학년, 원본 파일명, 분석방식) 조합일 때만 "같은 회차 재가져오기"로
+      // 보고 덮어씀 -- 파일명이 같아도 분석방식(spaCy/regex)이 다르면 별개 결과라서 새로 추가함.
+      var existingIdx = db.exams.findIndex(function (e) {
+        return e.year === data.year && e.month === data.month && e.grade === data.grade &&
+          e.sourceFile === data.sourceFile && e.backend === importBackend;
+      });
+      var wasOverwrite = existingIdx !== -1;
+      var examRecord = {
+        id: wasOverwrite ? db.exams[existingIdx].id : (db.nextId++),
+        year: data.year, month: data.month, grade: data.grade,
+        sourceFile: data.sourceFile || file.name,
+        ingestedAt: new Date().toISOString(),
+        backend: importBackend,
+        sentences: data.sentences,
+      };
+      if (wasOverwrite) {
+        db.exams[existingIdx] = examRecord;
+      } else {
+        db.exams.push(examRecord);
+      }
+      saveDB(db);
+
+      setStatus(statusEl, 'success',
+        (wasOverwrite ? '완료! (같은 원본 파일의 기존 회차를 덮어썼어요) ' : '완료! 새 회차로 추가했어요. ') +
+        '문장 ' + data.sentences.length + '개를 정확한 태깅 결과로 가져왔어요.');
+      renderExamList();
+      populateSearchExamSelect();
+      fileInput.value = '';
+    } catch (e) {
+      console.error(e);
+      setStatus(statusEl, 'error', 'JSON을 읽는 중 오류가 발생했어요: ' + e.message);
+    }
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED exam list
+  function renderExamList() {
+    var db = loadDB();
+    var wrap = document.getElementById('examListWrap');
+    if (db.exams.length === 0) {
+      wrap.innerHTML = '<div class="empty">아직 저장된 모의고사가 없어요. 위에서 PDF를 넣어보세요.</div>';
+      return;
+    }
+    var rows = db.exams
+      .slice()
+      .sort(function (a, b) { return a.year - b.year || a.month - b.month; })
+      .map(function (e) {
+        var badge = e.backend === 'spacy'
+          ? ' <span class="tag-badge" style="background:#ecfdf5;color:#047857">🎯 spaCy</span>'
+          : ' <span class="tag-badge" style="background:#f1f5f9;color:#475569">📝 regex</span>';
+        var ingestedLabel = e.ingestedAt ? formatDateTime(e.ingestedAt) : '-';
+        return '<tr>' +
+          '<td>' + e.year + '년</td>' +
+          '<td>' + e.month + '월</td>' +
+          '<td>' + escapeHtml(e.grade) + badge + '</td>' +
+          '<td>' + e.sentences.length + '문장</td>' +
+          '<td>' + ingestedLabel + '</td>' +
+          '<td><button class="danger" data-del="' + e.id + '">삭제</button></td>' +
+          '</tr>';
+      }).join('');
+    wrap.innerHTML =
+      '<table><thead><tr><th>연도</th><th>월</th><th>학년</th><th>문장 수</th><th>분석 시점</th><th></th></tr></thead>' +
+      '<tbody>' + rows + '</tbody></table>';
+
+    wrap.querySelectorAll('[data-del]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var id = parseInt(btn.getAttribute('data-del'), 10);
+        var db2 = loadDB();
+        db2.exams = db2.exams.filter(function (e) { return e.id !== id; });
+        saveDB(db2);
+        renderExamList();
+        populateSearchExamSelect();
+      });
+    });
+  }
+
+  function populateSearchExamSelect() {
+    var db = loadDB();
+    var sel = document.getElementById('inSearchExam');
+    var current = sel.value;
+    sel.innerHTML = '<option value="all">전체 모의고사</option>' +
+      db.exams
+        .slice()
+        .sort(function (a, b) { return a.year - b.year || a.month - b.month; })
+        .map(function (e) {
+          var backendLabel = e.backend === 'spacy' ? 'spaCy' : 'regex';
+          return '<option value="' + e.id + '">' + e.year + '년 ' + e.month + '월 ' + escapeHtml(e.grade) +
+            ' (' + backendLabel + ')' + '</option>';
+        }).join('');
+    if ([].some.call(sel.options, function (o) { return o.value === current; })) {
+      sel.value = current;
+    }
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED search
+  var lastResults = [];
+  var lastSelectedIds = []; // 구분문제 txt 다운로드용 — 검색 시점의 선택 문법 목록(옵션 순서 고정)
+  var ruleById = {};
+  RULES.forEach(function (r) { ruleById[r.id] = r; });
+
+  function highlight(text, phrases) {
+    var escaped = escapeHtml(text);
+    phrases
+      .slice()
+      .sort(function (a, b) { return b.length - a.length; })
+      .forEach(function (p) {
+        if (!p) return;
+        var esc = escapeHtml(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        escaped = escaped.replace(new RegExp(esc), function (m) { return '<mark>' + m + '</mark>'; });
+      });
+    return escaped;
+  }
+
+  function getSelectedRuleIds() {
+    return Array.prototype.slice.call(document.querySelectorAll('.tagCheck:checked')).map(function (cb) { return cb.value; });
+  }
+
+  function handleSearch() {
+    var db = loadDB();
+    var examSel = document.getElementById('inSearchExam').value;
+    var selectedIds = getSelectedRuleIds();
+    var out = document.getElementById('searchResults');
+    var exportBtn = document.getElementById('btnExport');
+    var exportMcqBtn = document.getElementById('btnExportMcq');
+    var exportPptxBtn = document.getElementById('btnExportPptx');
+    var shareBox = document.getElementById('shareBox');
+    lastSelectedIds = selectedIds;
+
+    if (selectedIds.length === 0) {
+      out.innerHTML = '<div class="empty">찾을 문법을 하나 이상 선택해주세요.</div>';
+      exportBtn.style.display = 'none';
+      exportMcqBtn.style.display = 'none';
+      exportPptxBtn.style.display = 'none';
+      shareBox.style.display = 'none';
+      return;
+    }
+
+    var exams = examSel === 'all' ? db.exams : db.exams.filter(function (e) { return String(e.id) === examSel; });
+
+    var results = [];
+    exams.forEach(function (e) {
+      e.sentences.forEach(function (s) {
+        // spaCy로 가져온 문장은 s.tags 필드 자체가 있음(매칭이 하나도 없어도 {}로 존재) —
+        // 그 경우 고정된 태깅 결과를 그대로 쓰고, 직접 올린 PDF(필드 자체가 없음)는 지금처럼
+        // 검색할 때마다 regex로 즉석 계산(최신 규칙 자동 반영)
+        var tags = s.tags !== undefined ? s.tags : MockExamCore.tagSentence(s.text);
+        // 판정 불일치는 "spaCy는 0개로 판정, regex는 찾음" 경우도 많은데, 그런 문장은
+        // spaCy 히트가 없어서 결과에서 통째로 빠지면 grammar_gui.pyw의 판정불일치
+        // 미리보기(tag_disagreements 테이블을 직접 조회 — spaCy 히트 개수 무관)와
+        // 웹앱 문장찾기가 서로 다른 문장을 보여주게 된다. 그래서 spaCy 확인(confirmed)과
+        // 불일치(disagreement)를 분리해서 둘 중 하나만 있어도 결과에 포함시킨다.
+        var confirmedRuleIds = selectedIds.filter(function (id) { return tags[id] && tags[id].length > 0; });
+        var disagreedIds = (s.disagreements || []).filter(function (id) { return selectedIds.indexOf(id) !== -1; });
+        var matchedRuleIds = confirmedRuleIds.slice();
+        disagreedIds.forEach(function (id) {
+          if (matchedRuleIds.indexOf(id) === -1) matchedRuleIds.push(id);
+        });
+        if (matchedRuleIds.length > 0) {
+          var hits = [];
+          var tagsForShare = {}; // 구분문제/끊어읽기 정답 계산용 — spaCy가 실제로 확인한 것만 저장
+          confirmedRuleIds.forEach(function (id) {
+            tagsForShare[id] = tags[id];
+            tags[id].forEach(function (h) { hits.push(h.text); });
+          });
+          // spaCy가 0개인 불일치 태그는 hits에 아무것도 안 들어가서 하이라이트가 텅 빔 --
+          // 최소한 regex가 찾은 구절이라도 보이게 채워서 왜 이 문장이 나왔는지 알 수 있게 함.
+          disagreedIds.forEach(function (id) {
+            if (!tags[id] || tags[id].length === 0) {
+              var regexHits = MockExamCore.tagSentence(s.text)[id] || [];
+              regexHits.forEach(function (h) { hits.push(h.text); });
+            }
+          });
+          var verifiedForIds = (s.claudeVerified || []).filter(function (v) {
+            return matchedRuleIds.indexOf(v.tag) !== -1;
+          });
+          results.push({
+            examLabel: e.year + '년 ' + e.month + '월 ' + e.grade + ' (' + (e.backend === 'spacy' ? 'spaCy' : 'regex') + ')',
+            examYear: e.year,
+            examMonth: e.month,
+            examGrade: e.grade,
+            questionNo: s.questionNo || '?',
+            text: s.text,
+            hits: hits,
+            tagsForShare: tagsForShare,
+            matchedLabels: confirmedRuleIds.map(function (id) { return ruleById[id].label; }),
+            disagreedLabels: disagreedIds.map(function (id) { return ruleById[id].label; }),
+            verifiedForIds: verifiedForIds,
+          });
+        }
+      });
+    });
+
+    // 모의고사(연/월/학년) 순 -> 그 안에서 문제번호 오름차순으로 정렬. questionNo는
+    // "26번"처럼 텍스트가 섞여 있어서 앞부분 숫자만 뽑아 숫자 비교(문자열 비교하면
+    // "10번"이 "2번"보다 앞에 오는 문제가 생김). 번호를 못 읽으면 맨 뒤로.
+    results.sort(function (a, b) {
+      if (a.examYear !== b.examYear) return a.examYear - b.examYear;
+      if (a.examMonth !== b.examMonth) return a.examMonth - b.examMonth;
+      if (a.examGrade !== b.examGrade) return a.examGrade < b.examGrade ? -1 : 1;
+      var ma = String(a.questionNo).match(/\d+/);
+      var mb = String(b.questionNo).match(/\d+/);
+      var qa = ma ? parseInt(ma[0], 10) : Infinity;
+      var qb = mb ? parseInt(mb[0], 10) : Infinity;
+      return qa - qb;
+    });
+
+    lastResults = results;
+
+    if (results.length === 0) {
+      out.innerHTML = '<div class="empty">조건에 맞는 문장을 찾지 못했어요.</div>';
+      exportBtn.style.display = 'none';
+      exportMcqBtn.style.display = 'none';
+      exportPptxBtn.style.display = 'none';
+      shareBox.style.display = 'none';
+      return;
+    }
+
+    var html = '<div class="result-count">' + results.length + '개 문장을 찾았어요</div>';
+    html += results.map(function (r, idx) {
+      var badges = r.matchedLabels.map(function (l) { return '<span class="tag-badge">' + escapeHtml(l) + '</span>'; }).join('');
+      if (r.disagreedLabels.length > 0) {
+        badges += '<span class="tag-badge tag-badge-warn" title="정규식과 spaCy의 판정이 달라요, 확인해보세요">⚠️ 판정 불일치: ' + escapeHtml(r.disagreedLabels.join(', ')) + '</span>';
+      }
+      if (r.verifiedForIds.length > 0) {
+        var verifyText = r.verifiedForIds.map(function (v) { return (ruleById[v.tag] ? ruleById[v.tag].label : v.tag) + ':' + v.verdict; }).join(', ');
+        badges += '<span class="tag-badge tag-badge-verified" title="Claude 검증 결과">✅ Claude 확인: ' + escapeHtml(verifyText) + '</span>';
+      }
+
+      // 구분문제 미리보기: 학생 화면에 자동 생성될 객관식 문제를 교사가 미리 확인할 수 있게
+      // 정답까지 그대로 보여줌(교사용이라 굳이 퀴즈로 안 만들고 정답-표시 목록으로 충분)
+      var phraseItems = [];
+      Object.keys(r.tagsForShare || {}).forEach(function (tagId) {
+        (r.tagsForShare[tagId] || []).forEach(function (hit) {
+          phraseItems.push({ phrase: hit.text, tagId: tagId, label: ruleById[tagId] ? ruleById[tagId].label : tagId });
+        });
+      });
+      r.phraseItems = phraseItems; // 구분문제 txt 다운로드에서 재사용
+      var mcqPreviewHtml = '';
+      if (selectedIds.length >= 2 && phraseItems.length > 0) {
+        mcqPreviewHtml = '<div class="mcq-preview"><div class="mcq-preview-title">👀 구분문제 미리보기 (학생 화면에 이 답으로 생성돼요)</div>' +
+          phraseItems.map(function (item) {
+            return '<div class="mcq-preview-item"><b>' + escapeHtml(item.phrase) + '</b> → ' + escapeHtml(item.label) + '</div>';
+          }).join('') + '</div>';
+      }
+
+      return '<div class="result-item">' +
+        '<div class="qno">[' + r.examLabel + ' · ' + escapeHtml(r.questionNo) + ']</div>' +
+        '<div class="tag-badges">' + badges + '</div>' +
+        '<div>' + highlight(r.text, r.hits) + '</div>' +
+        mcqPreviewHtml +
+        '</div>';
+    }).join('');
+    out.innerHTML = html;
+    exportBtn.style.display = 'inline-block';
+    var hasMcq = selectedIds.length >= 2 && lastResults.some(function (r) { return r.phraseItems && r.phraseItems.length > 0; });
+    exportMcqBtn.style.display = hasMcq ? 'inline-block' : 'none';
+    exportPptxBtn.style.display = hasMcq ? 'inline-block' : 'none';
+    shareBox.style.display = 'block';
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED 학생 공유
+  async function handleShare() {
+    var cfg = ghDeliveryCfg();
+    var statusEl = document.getElementById('shareStatus');
+    if (!cfg.url || !cfg.token) {
+      statusEl.className = 'status show error';
+      statusEl.textContent = '먼저 위 "설정"에 웹훅 URL과 토큰을 저장해주세요.';
+      return;
+    }
+    if (lastResults.length === 0) return;
+
+    var selectedIds = getSelectedRuleIds();
+    var tagLabel = selectedIds.map(function (id) { return ruleById[id].label; }).join(' · ');
+    var setKey = uid(12);
+    var videoUrl = (document.getElementById('inShareVideo').value || '').trim();
+    var sentences = lastResults.map(function (r) {
+      return { text: r.text, matches: r.hits, tags: r.tagsForShare };
+    });
+
+    statusEl.className = 'status show info';
+    statusEl.textContent = '공유 링크 만드는 중...';
+
+    await hookPost(cfg.url, {
+      action: 'saveGrammarSet', token: cfg.token,
+      setKey: setKey, tag: selectedIds.join(','), tagLabel: tagLabel, sentences: sentences,
+      videoUrl: videoUrl
+    });
+    await sleep(1000);
+
+    var check = await jsonpFetch(cfg.url + '?action=fetchGrammarSet&key=' + encodeURIComponent(setKey));
+    if (!check || !check.found) {
+      statusEl.className = 'status show error';
+      statusEl.textContent = '공유 링크 생성 확인에 실패했어요. 다시 시도해주세요.';
+      return;
+    }
+
+    var link = location.origin + location.pathname + '?study=' + setKey + '&hook=' + encodeURIComponent(cfg.url);
+    statusEl.className = 'status show success';
+    statusEl.innerHTML = '학생에게 공유할 링크: <br><input type="text" readonly value="' + escapeHtml(link) + '" style="width:100%;margin-top:6px" onclick="this.select()">';
+  }
+
+  function handleExport() {
+    if (lastResults.length === 0) return;
+    var lines = ['모의고사 문법 검색 결과 (' + lastResults.length + '개)', '='.repeat(50), ''];
+    lastResults.forEach(function (r) {
+      lines.push('[' + r.examLabel + ' · ' + r.questionNo + ' · ' + r.matchedLabels.join(', ') + '] ' + r.text);
+      lines.push('');
+    });
+    downloadTxt(lines.join('\n'), '모의고사_문법_검색결과.txt');
+  }
+
+  // 구분문제(2개 이상 문법을 비교하는 문제) txt 다운로드 — 수업 시간에 바로 나눠줄 수 있게
+  // 문제(정답 안 보이게 보기만 번호로)와 정답을 분리해서, 정답은 맨 마지막에 모아둠.
+  function handleExportMcq() {
+    if (lastResults.length === 0 || lastSelectedIds.length < 2) return;
+    var optionIds = lastSelectedIds;
+    var circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
+    var optionsLine = optionIds.map(function (id, i) { return circled[i] + ' ' + ruleById[id].label; }).join('   ');
+    var lines = [
+      '구분문제 — ' + optionIds.map(function (id) { return ruleById[id].label; }).join(' · '),
+      '='.repeat(50),
+      '', '※ 밑줄 친 부분이 어떤 문법인지 골라 번호를 쓰세요.', ''
+    ];
+    // PPT 다운로드와 번호를 맞추기 위해 한 문장에 밑줄이 여러 개여도 (a)(b)로 묶지 않고
+    // 밑줄 하나당 번호 하나씩 평탄화함(PPT는 "1문항씩 슬라이드" 원칙이라 항목마다 슬라이드가
+    // 따로 생기므로, 여기서도 똑같이 나눠야 두 다운로드의 문항 번호·순서가 일치함).
+    var answerLines = [];
+    var qNum = 0;
+    lastResults.forEach(function (r) {
+      if (!r.phraseItems || r.phraseItems.length === 0) return;
+      var qLabel = String(r.questionNo);
+      if (!/번$/.test(qLabel)) qLabel += '번'; // questionNo가 이미 "43~45번"처럼 "번"을 포함하면 중복으로 안 붙임
+      var srcLabel = r.examYear + '년 ' + r.examMonth + '월 ' + r.examGrade + ' · ' + qLabel;
+      r.phraseItems.forEach(function (item) {
+        qNum++;
+        lines.push(qNum + '. [' + srcLabel + '] ' + r.text);
+        lines.push('   밑줄: "' + item.phrase + '"');
+        lines.push('   ' + optionsLine);
+        lines.push('');
+        var correctIdx = optionIds.indexOf(item.tagId);
+        answerLines.push(qNum + '. ' + circled[correctIdx]);
+      });
+    });
+    if (qNum === 0) return;
+    lines.push('='.repeat(50));
+    lines.push('정답');
+    lines.push('='.repeat(50));
+    lines = lines.concat(answerLines);
+    downloadTxt(lines.join('\n'), '구분문제.txt');
+  }
+
+  // 구분문제 PPT 다운로드 — txt와 같은 문제 풀(phraseItems)을 슬라이드 1문항씩으로 만듦.
+  // 구글 슬라이드는 .pptx를 그대로 열 수 있어서(드라이브에 올리면 자동 변환), 여기서 직접
+  // .pptx를 만들어 다운로드만 하면 교사가 그걸 구글 드라이브에 올려서 쓰면 된다.
+  async function handleExportPptx() {
+    if (lastResults.length === 0 || lastSelectedIds.length < 2) return;
+    if (typeof PptxGenJS === 'undefined') {
+      alert('PPT 생성 라이브러리를 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해주세요.');
+      return;
+    }
+    var optionIds = lastSelectedIds;
+    var circled = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
+    var optionsLine = optionIds.map(function (id, i) { return circled[i] + ' ' + ruleById[id].label; }).join('     ');
+
+    // txt 다운로드와 달리 한 문장에 여러 밑줄이 있어도 슬라이드는 "1문항씩" 원칙대로
+    // 평탄화해서 항목마다 슬라이드 한 장(문항 번호도 1,2,3... 이어서 붙임)
+    var questions = [];
+    lastResults.forEach(function (r) {
+      if (!r.phraseItems || r.phraseItems.length === 0) return;
+      var qLabel = String(r.questionNo);
+      if (!/번$/.test(qLabel)) qLabel += '번';
+      var srcLabel = r.examYear + '년 ' + r.examMonth + '월 ' + r.examGrade + ' · ' + qLabel;
+      r.phraseItems.forEach(function (item) {
+        questions.push({ srcLabel: srcLabel, text: r.text, phrase: item.phrase, correctIdx: optionIds.indexOf(item.tagId) });
+      });
+    });
+    if (questions.length === 0) return;
+
+    var pptx = new PptxGenJS();
+    pptx.defineLayout({ name: 'WIDE', width: 10, height: 5.63 });
+    pptx.layout = 'WIDE';
+
+    questions.forEach(function (q) {
+      var slide = pptx.addSlide();
+      slide.addText(q.srcLabel, { x: 0.4, y: 0.25, w: 9.2, h: 0.35, fontSize: 12, color: '94A3B8' });
+      // 문제번호는 고정 텍스트("1.")가 아니라 파워포인트/구글슬라이드 내장 "슬라이드 번호"
+      // 필드로 넣음 — 나중에 교사가 슬라이드를 중간에 삭제해도(예: 5번 삭제) 뒤 슬라이드들의
+      // 번호가 6,7,8...에서 5,6,7...로 자동으로 당겨짐(고정 텍스트였다면 수동으로 다 고쳐야 함).
+      slide.slideNumber = { x: 0.4, y: 0.7, w: 0.5, h: 0.5, fontSize: 20, bold: true, color: '2563EB' };
+      slide.addText(buildTextRuns(q.text, q.phrase), {
+        x: 0.95, y: 0.7, w: 8.65, h: 2.6, fontSize: 20, valign: 'top', lineSpacingMultiple: 1.3
+      });
+      slide.addText(optionsLine, { x: 0.4, y: 3.6, w: 9.2, h: 0.8, fontSize: 22, bold: true, align: 'center' });
+      // 정답은 화면에 안 보이고 발표자만 보는 슬라이드 노트에 — 수업 중 학생 화면을
+      // 공유해도 정답이 안 보이고, 교사는 발표자 보기에서 바로 확인 가능
+      slide.addNotes('정답: ' + circled[q.correctIdx] + ' ' + ruleById[optionIds[q.correctIdx]].label);
+    });
+
+    await pptx.writeFile({ fileName: '구분문제.pptx' });
+  }
+
+  // 문장 안에서 phrase(정답 판정 대상 구절)를 찾아 그 부분만 굵게/밑줄 표시한
+  // PptxGenJS 텍스트런 배열로 분리
+  function buildTextRuns(text, phrase) {
+    var idx = phrase ? text.indexOf(phrase) : -1;
+    if (idx === -1) return [{ text: text }];
+    var runs = [];
+    if (idx > 0) runs.push({ text: text.slice(0, idx) });
+    runs.push({ text: phrase, options: { bold: true, underline: { style: 'sng' }, color: '2563EB' } });
+    if (idx + phrase.length < text.length) runs.push({ text: text.slice(idx + phrase.length) });
+    return runs;
+  }
+
+  function downloadTxt(content, filename) {
+    var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  // PUBLIC_IDENTIFIER_REMOVED init
+  (function initSettings() {
+    var cfg = ghDeliveryCfg();
+    document.getElementById('gh-url').value = cfg.url || '';
+    document.getElementById('gh-token').value = cfg.token || '';
+    document.getElementById('gh-save').addEventListener('click', function () {
+      ghSaveDelivery({ url: document.getElementById('gh-url').value.trim(), token: document.getElementById('gh-token').value.trim() });
+      var statusEl = document.getElementById('gh-status');
+      statusEl.className = 'status show success';
+      statusEl.textContent = '저장했어요.';
+    });
+  })();
+
+  // PUBLIC_IDENTIFIER_REMOVED tabs
+  document.querySelectorAll('.gtab-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.gtab-btn').forEach(function (b) { b.classList.remove('gtab-active'); });
+      document.querySelectorAll('.gtab-panel').forEach(function (p) { p.style.display = 'none'; });
+      btn.classList.add('gtab-active');
+      document.getElementById('gtabPanel-' + btn.dataset.gtab).style.display = '';
+      // 저장된 모의고사 목록·문장 찾기는 두 입력 방법 탭에는 계속 필요하지만
+      // 설정/공유관리 탭에서는 안 쓰이므로 그때만 숨김
+      var hideShared = btn.dataset.gtab === 'settings' || btn.dataset.gtab === 'manage' || btn.dataset.gtab === 'finals';
+      document.getElementById('gtabSharedResults').style.display = hideShared ? 'none' : '';
+      if (btn.dataset.gtab === 'manage') loadGrammarSets();
+      if (btn.dataset.gtab === 'finals') loadFinalsAndFolders();
+    });
+  });
+
+  // PUBLIC_IDENTIFIER_REMOVED 공유한 세트 관리
+  async function loadGrammarSets() {
+    var cfg = ghDeliveryCfg();
+    var wrap = document.getElementById('setsListWrap');
+    var sel = document.getElementById('subSetSelect');
+    if (!cfg.url || !cfg.token) {
+      wrap.innerHTML = '<div class="empty">먼저 "설정" 탭에 웹훅 URL/토큰을 저장해주세요.</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
+    var r = await jsonpFetch(cfg.url + '?action=listGrammarSets&token=' + encodeURIComponent(cfg.token));
+    if (!r || r.error || !r.sets) {
+      wrap.innerHTML = '<div class="empty">불러오지 못했어요.</div>';
+      return;
+    }
+    if (r.sets.length === 0) {
+      wrap.innerHTML = '<div class="empty">아직 공유한 세트가 없어요.</div>';
+      sel.innerHTML = '<option value="">공유한 세트가 없어요</option>';
+      return;
+    }
+    wrap.innerHTML = '<div class="sub-table-wrap"><table><thead><tr><th>문법</th><th>생성일</th><th>학생 링크</th><th>유튜브 링크</th><th></th></tr></thead><tbody>' +
+      r.sets.map(function (s, idx) {
+        var link = location.origin + location.pathname + '?study=' + s.setKey + '&hook=' + encodeURIComponent(cfg.url);
+        return '<tr>' +
+          '<td>' + escapeHtml(s.tagLabel) + '</td>' +
+          '<td>' + formatDateTime(s.createdAt) + '</td>' +
+          '<td><input type="text" readonly value="' + escapeHtml(link) + '" style="width:160px" onclick="this.select()"></td>' +
+          '<td><input type="text" data-video-idx="' + idx + '" value="' + escapeHtml(s.videoUrl || '') + '" placeholder="https://youtu.be/..." style="width:180px"></td>' +
+          '<td><button class="secondary" data-save-video="' + idx + '">저장</button></td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
+    wrap.querySelectorAll('[data-save-video]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var idx = parseInt(btn.dataset.saveVideo, 10);
+        var input = wrap.querySelector('[data-video-idx="' + idx + '"]');
+        btn.textContent = '저장 중...';
+        await hookPost(cfg.url, { action: 'saveGrammarVideo', token: cfg.token, setKey: r.sets[idx].setKey, videoUrl: input.value.trim() });
+        btn.textContent = '저장됨';
+        setTimeout(function () { btn.textContent = '저장'; }, 1500);
+      });
+    });
+    sel.innerHTML = r.sets.map(function (s) {
+      return '<option value="' + escapeHtml(s.setKey) + '">' + escapeHtml(s.tagLabel) + ' (' + formatDateTime(s.createdAt) + ')</option>';
+    }).join('');
+  }
+
+  async function loadGrammarSubmissions() {
+    var cfg = ghDeliveryCfg();
+    var wrap = document.getElementById('submissionsWrap');
+    var setKey = document.getElementById('subSetSelect').value;
+    if (!cfg.url || !cfg.token) {
+      wrap.innerHTML = '<div class="empty">먼저 "설정" 탭에 웹훅 URL/토큰을 저장해주세요.</div>';
+      return;
+    }
+    if (!setKey) {
+      wrap.innerHTML = '<div class="empty">세트를 선택해주세요.</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="empty">불러오는 중...</div>';
+    var r = await jsonpFetch(cfg.url + '?action=listGrammarSubmissions&key=' + encodeURIComponent(setKey) + '&token=' + encodeURIComponent(cfg.token));
+    if (!r || r.error || !r.submissions) {
+      wrap.innerHTML = '<div class="empty">불러오지 못했어요.</div>';
+      return;
+    }
+    if (r.submissions.length === 0) {
+      wrap.innerHTML = '<div class="empty">아직 제출한 학생이 없어요.</div>';
+      return;
+    }
+    wrap.innerHTML = '<div class="sub-table-wrap"><table><thead><tr><th>제출시각</th><th>이름</th><th>문장</th><th>해석(학생 제출)</th><th>끊어읽기 일치</th></tr></thead><tbody>' +
+      r.submissions.map(function (s) {
+        var chunkInfo = (s.chunkCorrect && s.chunkCorrect.length)
+          ? (s.chunkScore != null ? s.chunkScore : '-') + ' / ' + s.chunkCorrect.length + ' 지점'
+          : '-';
+        return '<tr>' +
+          '<td>' + formatDateTime(s.date) + '</td>' +
+          '<td>' + escapeHtml(s.name) + '</td>' +
+          '<td style="max-width:260px">' + escapeHtml(s.sentenceText) + '</td>' +
+          '<td style="max-width:220px">' + escapeHtml(s.interpretation || '(제출 안 함)') + '</td>' +
+          '<td>' + chunkInfo + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
+  }
+
+  document.getElementById('btnLoadSets').addEventListener('click', loadGrammarSets);
+  document.getElementById('btnLoadSubmissions').addEventListener('click', loadGrammarSubmissions);
+
+  // PUBLIC_IDENTIFIER_REMOVED 최종본 업로드(PPT 파싱)
+  var FINAL_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
+
+  // "구분문제 PPT 다운로드"가 만든 pptx를 그대로(또는 검토 후 슬라이드 삭제/수정한 채로)
+  // 다시 읽어들여 문제 배열로 복원한다. pptx는 zip이라 JSZip으로 직접 풀어서 읽는다
+  // (pptxgenjs 번들이 JSZip을 전역에 노출시켜서 별도 라이브러리 없이 바로 씀).
+  // 슬라이드 번호는 파일명이 아니라 presentation.xml의 실제 표시 순서를 따르고, 정답은
+  // 각 슬라이드 자신의 rels로 연결된 노트 슬라이드에서 찾아서, 파워포인트에서 슬라이드를
+  // 삭제/재배열해도 항상 올바른 문제·정답 쌍이 나오게 한다.
+  // pptx XML의 &amp; &lt; &gt; &quot; &apos; &#39; 같은 엔티티를 원문자로 되돌림
+  // (안 그러면 "couldn't"가 "couldn&apos;t"로 그대로 파싱됨)
+  function decodeXmlEntities(s) {
+    var ta = document.createElement('textarea');
+    ta.innerHTML = s;
+    return ta.value;
+  }
+
+  // .rels XML의 <Relationship Id=.. Type=.. Target=..> 를 속성 순서에 상관없이 파싱.
+  // pptxgenjs가 만든 파일은 항상 Id→Type→Target 순서였지만, 파워포인트/구글슬라이드로
+  // 열었다가 다시 저장하면 속성 순서가 바뀔 수 있어서(실제로 이것 때문에 슬라이드 하나가
+  // "정답 표시를 못 찾음"으로 파싱 실패했음) 순서에 의존하지 않게 각 속성을 따로 찾는다.
+  function parseRelationships(relsXml) {
+    var rels = [];
+    var eltRe = /<Relationship\b[^>]*\/?>/g;
+    var m;
+    while ((m = eltRe.exec(relsXml))) {
+      var tag = m[0];
+      var id = (/\bId="([^"]*)"/.exec(tag) || [])[1];
+      var type = (/\bType="([^"]*)"/.exec(tag) || [])[1];
+      var target = (/\bTarget="([^"]*)"/.exec(tag) || [])[1];
+      rels.push({ id: id, type: type || '', target: target || '' });
+    }
+    return rels;
+  }
+
+  async function parseGrammarFinalPptx(file) {
+    var buf = await file.arrayBuffer();
+    var zip = await JSZip.loadAsync(buf);
+
+    var presXml = await zip.file('ppt/presentation.xml').async('string');
+    var presRelsXml = await zip.file('ppt/_rels/presentation.xml.rels').async('string');
+    var relIdToTarget = {};
+    parseRelationships(presRelsXml).forEach(function (rel) { relIdToTarget[rel.id] = rel.target; });
+    var m;
+    var slideOrder = [];
+    var sldIdRe = /<p:sldId[^>]*r:id="([^"]+)"/g;
+    while ((m = sldIdRe.exec(presXml))) {
+      var target = relIdToTarget[m[1]];
+      if (target) slideOrder.push('ppt/' + target.replace(/^\.?\//, ''));
+    }
+
+    var questions = [];
+    for (var i = 0; i < slideOrder.length; i++) {
+      var slideFile = zip.file(slideOrder[i]);
+      if (!slideFile) continue;
+      var xml = await slideFile.async('string');
+
+      var phraseMatch = /<a:rPr[^>]*u="sng"[^>]*>[\s\S]*?<a:t>([^<]*)<\/a:t>/.exec(xml);
+      var phrase = phraseMatch ? decodeXmlEntities(phraseMatch[1]) : '';
+
+      // 슬라이드 번호 필드(<a:fld>)는 문장 텍스트가 아니므로 제외하고 나머지 <a:t>만 순서대로
+      var withoutFld = xml.replace(/<a:fld[\s\S]*?<\/a:fld>/g, '');
+      var texts = [];
+      var tRe = /<a:t>([^<]*)<\/a:t>/g;
+      while ((m = tRe.exec(withoutFld))) texts.push(decodeXmlEntities(m[1]));
+      if (texts.length < 2) {
+        questions.push({ srcLabel: texts[0] || ('(' + (i + 1) + '번째 슬라이드)'), text: '', phrase: '', options: [], correctIdx: -1, parseError: '슬라이드에서 텍스트를 거의 못 읽음(서식이 많이 바뀐 것 같아요)' });
+        continue;
+      }
+
+      // 보기 줄(①②...)을 "마지막 텍스트런"이 아니라 실제로 동그라미 숫자가 들어있는
+      // 런을 찾아서 판단 -- PowerPoint에서 텍스트가 길어져 두 줄로 자동 개행되면 보기
+      // 줄이 텍스트런 2개로 쪼개질 수 있는데, 위치로만 판단하면 그중 하나가 문장 쪽으로
+      // 잘못 섞여 들어가서 보기를 못 읽는 문제가 있었음.
+      var circledRe = /[①②③④⑤⑥⑦⑧]/;
+      var optionsStartIdx = -1;
+      for (var k = 1; k < texts.length; k++) {
+        if (circledRe.test(texts[k])) { optionsStartIdx = k; break; }
+      }
+      var srcLabel = texts[0];
+      var sentenceText, optionsLine;
+      if (optionsStartIdx === -1) {
+        // 동그라미 숫자를 하나도 못 찾으면(예상 밖 서식) 예전 방식으로 폴백
+        optionsLine = texts[texts.length - 1];
+        sentenceText = texts.slice(1, texts.length - 1).join('');
+      } else {
+        sentenceText = texts.slice(1, optionsStartIdx).join('');
+        optionsLine = texts.slice(optionsStartIdx).join(' ');
+      }
+
+      var options = [];
+      var optRe = /([①②③④⑤⑥⑦⑧])\s*([^①②③④⑤⑥⑦⑧]+)/g;
+      while ((m = optRe.exec(optionsLine))) options.push(m[2].trim());
+
+      var correctIdx = -1;
+      var slideFileName = slideOrder[i].split('/').pop();
+      var slideRelsFile = zip.file('ppt/slides/_rels/' + slideFileName + '.rels');
+      if (slideRelsFile) {
+        var relsXml = await slideRelsFile.async('string');
+        var notesRel = parseRelationships(relsXml).find(function (rel) { return rel.type.indexOf('notesSlide') !== -1; });
+        if (notesRel) {
+          var notesTarget = notesRel.target.replace(/^(\.\.\/)+/, '');
+          var notesFile = zip.file('ppt/' + notesTarget);
+          if (notesFile) {
+            var notesXml = await notesFile.async('string');
+            // 파워포인트/구글 슬라이드에서 노트를 편집하면 "정답: ①"이 여러 <a:t> 런으로
+            // 쪼개질 수 있어(옵션 줄과 같은 문제) 원본 XML에 정규식을 바로 돌리면 놓칠 수
+            // 있음 -> 텍스트 런들을 먼저 다 뽑아 이어붙인 뒤 그 위에서 찾는다.
+            var notesTexts = [];
+            var ntRe = /<a:t>([^<]*)<\/a:t>/g;
+            var nm;
+            while ((nm = ntRe.exec(notesXml))) notesTexts.push(decodeXmlEntities(nm[1]));
+            var notesJoined = notesTexts.join('');
+            var ansMatch = /정답\s*:?\s*([①②③④⑤⑥⑦⑧])/.exec(notesJoined) || /정답\s*:?\s*([①②③④⑤⑥⑦⑧])/.exec(notesXml);
+            if (ansMatch) correctIdx = FINAL_CIRCLED.indexOf(ansMatch[1]);
+          }
+        }
+      }
+
+      questions.push({ srcLabel: srcLabel, text: sentenceText, phrase: phrase, options: options, correctIdx: correctIdx });
+    }
+    return questions;
+  }
+
+  var curFinalFolder = '';       // '' = 최상위
+  var allFinalFolders = [];      // {folderId,name,parentId,createdAt}[]
+  var allFinalsCache = [];       // {setKey,label,createdAt,questionCount,folderId}[]
+
+  function finalFolderChildren(parentId) {
+    return allFinalFolders.filter(function (f) { return (f.parentId || '') === parentId; });
+  }
+  function finalFolderById(id) {
+    return allFinalFolders.find(function (f) { return f.folderId === id; });
+  }
+  function finalFolderPath(id) {
+    var path = [];
+    var cur = id ? finalFolderById(id) : null;
+    while (cur) {
+      path.unshift(cur);
+      cur = cur.parentId ? finalFolderById(cur.parentId) : null;
+    }
+    return path;
+  }
+  // 폴더 자신 + 모든 하위 폴더 id (이동 시 자기 자신의 하위로 못 옮기게 막는 데 씀)
+  function finalFolderDescendantIds(id) {
+    var ids = [id];
+    var changed = true;
+    while (changed) {
+      changed = false;
+      allFinalFolders.forEach(function (f) {
+        if (ids.indexOf(f.folderId) === -1 && ids.indexOf(f.parentId || '') !== -1) {
+          ids.push(f.folderId);
+          changed = true;
+        }
+      });
+    }
+    return ids;
+  }
+
+  // 폴더를 고르는 작은 모달(최종본 이동 / 폴더 이동에 공용으로 씀). excludeIds에 든
+  // 폴더(자기 자신 + 하위 폴더 등)는 목록에서 뺀다.
+  function openFolderPickerModal(excludeIds, onPick) {
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    function level(parentId, depth) {
+      return finalFolderChildren(parentId)
+        .filter(function (f) { return excludeIds.indexOf(f.folderId) === -1; })
+        .map(function (f) {
+          return '<div class="modal-folder-row" style="padding-left:' + (10 + depth * 18) + 'px" data-pick="' + escapeHtml(f.folderId) + '">📁 ' + escapeHtml(f.name) + '</div>' +
+            level(f.folderId, depth + 1);
+        }).join('');
+    }
+    var rowsHtml = '<div class="modal-folder-row" data-pick="">📂 전체(최상위)</div>' + level('', 0);
+    overlay.innerHTML = '<div class="modal-box"><h3 style="margin-top:0">이동할 위치 선택</h3>' + rowsHtml +
+      '<div class="row" style="margin-top:12px; justify-content:flex-end"><button class="secondary" id="modalCancelBtn">취소</button></div></div>';
+    document.body.appendChild(overlay);
+    overlay.querySelectorAll('[data-pick]').forEach(function (row) {
+      row.addEventListener('click', function () {
+        document.body.removeChild(overlay);
+        onPick(row.dataset.pick);
+      });
+    });
+    overlay.querySelector('#modalCancelBtn').addEventListener('click', function () { document.body.removeChild(overlay); });
+  }
+
+  async function loadFinalsAndFolders() {
+    var cfg = ghDeliveryCfg();
+    var treeWrap = document.getElementById('finalFolderTree');
+    if (!cfg.url || !cfg.token) {
+      treeWrap.innerHTML = '<div class="empty">먼저 "설정" 탭에 웹훅 URL/토큰을 저장해주세요.</div>';
+      return;
+    }
+    treeWrap.innerHTML = '<div class="empty">불러오는 중...</div>';
+    var folderRes = await jsonpFetch(cfg.url + '?action=listGrammarFinalFolders&token=' + encodeURIComponent(cfg.token));
+    var finalsRes = await jsonpFetch(cfg.url + '?action=listGrammarFinals&token=' + encodeURIComponent(cfg.token));
+    allFinalFolders = (folderRes && folderRes.folders) || [];
+    allFinalsCache = (finalsRes && finalsRes.finals) || [];
+    renderFinalBreadcrumb();
+    renderFinalTree();
+  }
+
+  function renderFinalBreadcrumb() {
+    var el = document.getElementById('finalBreadcrumb');
+    var path = finalFolderPath(curFinalFolder);
+    var html = '<span class="final-crumb" data-crumb="" style="cursor:pointer; text-decoration:underline">📂 전체</span>';
+    path.forEach(function (f) {
+      html += ' › <span class="final-crumb" data-crumb="' + escapeHtml(f.folderId) + '" style="cursor:pointer; text-decoration:underline">' + escapeHtml(f.name) + '</span>';
+    });
+    el.innerHTML = html;
+    el.querySelectorAll('[data-crumb]').forEach(function (span) {
+      span.addEventListener('click', function () {
+        curFinalFolder = span.dataset.crumb;
+        renderFinalBreadcrumb();
+        renderFinalTree();
+      });
+    });
+  }
+
+  // 폴더 트리와 최종본 목록을 한 화면에 같이 그린다(폴더 밑에 그 폴더에 속한 최종본이
+  // 바로 이어서 나옴) -- 예전엔 "폴더" 카드와 "최종본 목록" 카드가 따로 있었는데, 목록
+  // 카드는 현재 선택된 폴더(curFinalFolder) 것만 보여줘서 트리에서 최종본이 안 보이는
+  //것처럼 느껴졌음. 하나로 합쳐서 트리를 내려가며 바로바로 확인 가능하게 함.
+  function renderFinalTree() {
+    var treeWrap = document.getElementById('finalFolderTree');
+    var cfg = ghDeliveryCfg();
+    function countIn(folderId) {
+      var ids = finalFolderDescendantIds(folderId);
+      return allFinalsCache.filter(function (x) { return ids.indexOf(x.folderId || '') !== -1; }).length;
+    }
+    function finalRowHtml(f, depth) {
+      return '<div class="final-file-row" style="padding-left:' + (depth * 18 + 18) + 'px">' +
+        '<span class="flabel">📄 ' + escapeHtml(f.label) + '</span>' +
+        '<span style="color:var(--muted); font-size:12px">' + f.questionCount + '문항 · ' + formatDateTime(f.createdAt) + '</span>' +
+        '<input type="text" data-final-nums="' + escapeHtml(f.setKey) + '" placeholder="예: 1,3,5(비우면 전체)" style="width:140px">' +
+        '<button class="secondary" data-final-link="' + escapeHtml(f.setKey) + '">🔗 학생 링크 복사</button>' +
+        '<button class="secondary" data-final-rename="' + escapeHtml(f.setKey) + '">✎ 이름변경</button>' +
+        '<button class="secondary" data-final-move="' + escapeHtml(f.setKey) + '">이동</button>' +
+        '<button class="danger" data-final-del="' + escapeHtml(f.setKey) + '">삭제</button>' +
+        '</div>';
+    }
+    function level(parentId, depth) {
+      var html = finalFolderChildren(parentId).map(function (f) {
+        var isCur = f.folderId === curFinalFolder;
+        return '<div class="final-folder-row' + (isCur ? ' cur' : '') + '" style="padding-left:' + (depth * 18) + 'px">' +
+          '<span class="fname" data-select-folder="' + escapeHtml(f.folderId) + '">📁 ' + escapeHtml(f.name) + (isCur ? ' ✅' : '') + '</span>' +
+          '<span style="color:var(--muted); font-size:12px">(' + countIn(f.folderId) + '개)</span>' +
+          '<button class="secondary" data-rename-folder="' + escapeHtml(f.folderId) + '">이름변경</button>' +
+          '<button class="secondary" data-move-folder="' + escapeHtml(f.folderId) + '">이동</button>' +
+          '<button class="danger" data-del-folder="' + escapeHtml(f.folderId) + '">삭제</button>' +
+          '</div>' + level(f.folderId, depth + 1);
+      }).join('');
+      html += allFinalsCache.filter(function (x) { return (x.folderId || '') === parentId; })
+        .map(function (f) { return finalRowHtml(f, depth); }).join('');
+      return html;
+    }
+    var rootIsCur = curFinalFolder === '';
+    var rootHtml = '<div class="final-folder-row' + (rootIsCur ? ' cur' : '') + '">' +
+      '<span class="fname" data-select-folder="">📂 전체(최상위)' + (rootIsCur ? ' ✅' : '') + '</span></div>';
+    var bodyHtml = level('', 0);
+    treeWrap.innerHTML = rootHtml + (bodyHtml || '<div class="empty" style="padding-left:18px">폴더도 최종본도 아직 없어요.</div>');
+
+    treeWrap.querySelectorAll('[data-select-folder]').forEach(function (span) {
+      span.addEventListener('click', function () {
+        curFinalFolder = span.dataset.selectFolder;
+        renderFinalBreadcrumb();
+        renderFinalTree();
+      });
+    });
+    treeWrap.querySelectorAll('[data-rename-folder]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var f = finalFolderById(btn.dataset.renameFolder);
+        var name = prompt('새 폴더 이름', f ? f.name : '');
+        if (!name || !name.trim()) return;
+        await hookPost(cfg.url, { action: 'renameGrammarFinalFolder', token: cfg.token, folderId: btn.dataset.renameFolder, name: name.trim() });
+        await sleep(600);
+        loadFinalsAndFolders();
+      });
+    });
+    treeWrap.querySelectorAll('[data-move-folder]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var folderId = btn.dataset.moveFolder;
+        openFolderPickerModal(finalFolderDescendantIds(folderId), async function (targetFolderId) {
+          await hookPost(cfg.url, { action: 'moveGrammarFinalFolder', token: cfg.token, folderId: folderId, parentId: targetFolderId });
+          await sleep(600);
+          loadFinalsAndFolders();
+        });
+      });
+    });
+    treeWrap.querySelectorAll('[data-del-folder]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        if (!confirm('이 폴더와 하위 폴더를 전부 삭제할까요? (안에 있던 최종본은 삭제되지 않고 최상위로 옮겨져요)')) return;
+        await hookPost(cfg.url, { action: 'deleteGrammarFinalFolder', token: cfg.token, folderId: btn.dataset.delFolder });
+        await sleep(600);
+        if (finalFolderDescendantIds(btn.dataset.delFolder).indexOf(curFinalFolder) !== -1) curFinalFolder = '';
+        loadFinalsAndFolders();
+      });
+    });
+    treeWrap.querySelectorAll('[data-final-link]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var f = allFinalsCache.find(function (x) { return x.setKey === btn.dataset.finalLink; });
+        var numsInput = treeWrap.querySelector('[data-final-nums="' + btn.dataset.finalLink + '"]');
+        var nums = numsInput ? numsInput.value.trim() : '';
+        var link = location.origin + location.pathname + '?finalQuiz=' + f.setKey + '&hook=' + encodeURIComponent(cfg.url);
+        if (nums) link += '&nums=' + encodeURIComponent(nums);
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(link).catch(function () {});
+        }
+        var orig = btn.textContent;
+        btn.textContent = '복사됨!';
+        setTimeout(function () { btn.textContent = orig; }, 1500);
+      });
+    });
+    treeWrap.querySelectorAll('[data-final-rename]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        var f = allFinalsCache.find(function (x) { return x.setKey === btn.dataset.finalRename; });
+        var name = prompt('새 이름표', f ? f.label : '');
+        if (!name || !name.trim()) return;
+        await hookPost(cfg.url, { action: 'renameGrammarFinal', token: cfg.token, setKey: btn.dataset.finalRename, label: name.trim() });
+        await sleep(600);
+        loadFinalsAndFolders();
+      });
+    });
+    treeWrap.querySelectorAll('[data-final-move]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        openFolderPickerModal([], async function (targetFolderId) {
+          await hookPost(cfg.url, { action: 'moveGrammarFinal', token: cfg.token, setKey: btn.dataset.finalMove, folderId: targetFolderId });
+          await sleep(600);
+          loadFinalsAndFolders();
+        });
+      });
+    });
+    treeWrap.querySelectorAll('[data-final-del]').forEach(function (btn) {
+      btn.addEventListener('click', async function () {
+        if (!confirm('이 최종본을 삭제할까요? 이미 배정받은 학생 링크는 더 이상 안 열려요.')) return;
+        await hookPost(cfg.url, { action: 'deleteGrammarFinal', token: cfg.token, setKey: btn.dataset.finalDel });
+        await sleep(800);
+        loadFinalsAndFolders();
+      });
+    });
+  }
+
+  document.getElementById('btnNewFinalFolder').addEventListener('click', async function () {
+    var cfg = ghDeliveryCfg();
+    if (!cfg.url || !cfg.token) { alert('설정에 웹훅 URL/토큰을 먼저 저장하세요.'); return; }
+    var name = prompt('새 폴더 이름');
+    if (!name || !name.trim()) return;
+    await hookPost(cfg.url, { action: 'createGrammarFinalFolder', token: cfg.token, folderId: uid(12), name: name.trim(), parentId: curFinalFolder });
+    await sleep(600);
+    loadFinalsAndFolders();
+  });
+
+  // ---- 드래그앤드롭 업로드 (여러 파일 + 페이지 전체 범위) ----
+  var finalDropZone = document.getElementById('finalDropZone');
+  var finalDropZoneLabel = document.getElementById('finalDropZoneLabel');
+  var finalPptxFileInput = document.getElementById('finalPptxFile');
+  var DEFAULT_DROPZONE_TEXT = '📄 여기(또는 페이지 아무 곳)에 pptx 파일을 끌어다 놓거나 클릭해서 선택하세요 — 여러 개 한 번에 가능';
+
+  function updateFinalDropZoneLabel() {
+    var files = finalPptxFileInput.files;
+    if (!files || files.length === 0) {
+      finalDropZoneLabel.textContent = DEFAULT_DROPZONE_TEXT;
+    } else if (files.length === 1) {
+      finalDropZoneLabel.textContent = '📄 ' + files[0].name;
+    } else {
+      finalDropZoneLabel.textContent = '📄 ' + files.length + '개 파일 선택됨: ' + Array.prototype.map.call(files, function (f) { return f.name; }).join(', ');
+    }
+  }
+
+  // 드래그해 온 항목 중 .pptx만 골라 DataTransfer로 다시 묶어서 file input에 반영
+  function applyDroppedFiles(fileList) {
+    var pptxFiles = Array.prototype.filter.call(fileList, function (f) { return /\.pptx$/i.test(f.name); });
+    if (pptxFiles.length === 0) return;
+    var dt = new DataTransfer();
+    pptxFiles.forEach(function (f) { dt.items.add(f); });
+    finalPptxFileInput.files = dt.files;
+    updateFinalDropZoneLabel();
+  }
+
+  function isFinalsTabActive() {
+    return document.getElementById('gtabPanel-finals').style.display !== 'none';
+  }
+
+  finalDropZone.addEventListener('click', function () { finalPptxFileInput.click(); });
+  finalPptxFileInput.addEventListener('change', updateFinalDropZoneLabel);
+
+  // 드롭존 자체(작은 박스) 하이라이트는 그대로 유지
+  finalDropZone.addEventListener('dragover', function (e) { e.preventDefault(); });
+  finalDropZone.addEventListener('drop', function (e) {
+    e.preventDefault();
+    e.stopPropagation(); // 아래 document 리스너까지 안 내려가게(중복 처리 방지)
+    applyDroppedFiles(e.dataTransfer.files);
+  });
+
+  // 페이지 전체 어디에 놓아도 업로드되게: "최종본 관리" 탭을 보고 있을 때만 동작하고,
+  // 드래그 중엔 전체 화면에 반투명 안내를 띄워서 "여기에 놓으면 된다"는 걸 보여준다.
+  var pageDropOverlay = document.createElement('div');
+  pageDropOverlay.textContent = '📄 pptx 파일을 놓으면 "최종본 관리"에 업로드됩니다';
+  pageDropOverlay.style.cssText = 'position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; background:rgba(37,99,235,0.12); border:4px dashed #2563eb; font-size:20px; font-weight:700; color:#1d4ed8; pointer-events:none;';
+  document.body.appendChild(pageDropOverlay);
+  var pageDragDepth = 0; // dragenter/dragleave가 자식 요소마다 중첩 발생해서 카운터로 관리
+
+  document.addEventListener('dragenter', function (e) {
+    if (!isFinalsTabActive()) return;
+    pageDragDepth++;
+    pageDropOverlay.style.display = 'flex';
+  });
+  document.addEventListener('dragover', function (e) {
+    if (!isFinalsTabActive()) return;
+    e.preventDefault(); // 이걸 안 하면 브라우저가 파일을 새 탭으로 열어버림
+  });
+  document.addEventListener('dragleave', function () {
+    if (!isFinalsTabActive()) return;
+    pageDragDepth = Math.max(0, pageDragDepth - 1);
+    if (pageDragDepth === 0) pageDropOverlay.style.display = 'none';
+  });
+  document.addEventListener('drop', function (e) {
+    if (!isFinalsTabActive()) return;
+    e.preventDefault();
+    pageDragDepth = 0;
+    pageDropOverlay.style.display = 'none';
+    applyDroppedFiles(e.dataTransfer.files);
+  });
+
+  async function handleUploadFinal() {
+    var cfg = ghDeliveryCfg();
+    var statusEl = document.getElementById('finalUploadStatus');
+    if (!cfg.url || !cfg.token) {
+      setStatus(statusEl, 'error', '먼저 "설정" 탭에 웹훅 URL/토큰을 저장해주세요.');
+      return;
+    }
+    var files = Array.prototype.slice.call(finalPptxFileInput.files);
+    if (files.length === 0) {
+      setStatus(statusEl, 'error', 'pptx 파일을 먼저 선택해주세요.');
+      return;
+    }
+
+    var okCount = 0, failMessages = [];
+    for (var i = 0; i < files.length; i++) {
+      var file = files[i];
+      var label = file.name.replace(/\.pptx$/i, '');
+      setStatus(statusEl, 'info', '(' + (i + 1) + '/' + files.length + ') "' + label + '" 읽는 중...');
+
+      var questions;
+      try {
+        questions = await parseGrammarFinalPptx(file);
+      } catch (e) {
+        console.error(e);
+        failMessages.push(label + ': 읽기 오류(' + e.message + ')');
+        continue;
+      }
+      if (questions.length === 0) {
+        failMessages.push(label + ': 문제를 하나도 못 읽음');
+        continue;
+      }
+      var invalid = questions
+        .map(function (q, idx) { return { q: q, idx: idx }; })
+        .filter(function (item) { return item.q.options.length < 2 || item.q.correctIdx < 0 || item.q.parseError; });
+      if (invalid.length > 0) {
+        var detail = invalid.slice(0, 5).map(function (item) {
+          var reason = item.q.parseError ? item.q.parseError
+            : item.q.options.length < 2 ? '보기를 ' + item.q.options.length + '개밖에 못 읽음'
+            : '정답 표시(①②..)를 못 찾음';
+          return (item.idx + 1) + '번(' + (item.q.srcLabel || '출처 불명') + '): ' + reason;
+        }).join(' / ');
+        if (invalid.length > 5) detail += ' 외 ' + (invalid.length - 5) + '개';
+        failMessages.push(label + ': ' + invalid.length + '개 슬라이드 실패 — ' + detail);
+        continue;
+      }
+
+      var setKey = uid(12);
+      await hookPost(cfg.url, { action: 'saveGrammarFinal', token: cfg.token, setKey: setKey, label: label, questions: questions, folderId: curFinalFolder });
+      await sleep(800);
+      var check = await jsonpFetch(cfg.url + '?action=fetchGrammarFinal&key=' + encodeURIComponent(setKey));
+      if (!check || !check.found) {
+        failMessages.push(label + ': 저장 확인 실패');
+        continue;
+      }
+      okCount++;
+    }
+
+    if (failMessages.length === 0) {
+      setStatus(statusEl, 'success', '완료! ' + okCount + '개 최종본을 저장했어요.');
+    } else {
+      setStatus(statusEl, okCount > 0 ? 'info' : 'error',
+        okCount + '개 성공, ' + failMessages.length + '개 실패 — ' + failMessages.join(' / '));
+    }
+    finalPptxFileInput.value = '';
+    updateFinalDropZoneLabel();
+    loadFinalsAndFolders();
+  }
+
+  document.getElementById('btnUploadFinal').addEventListener('click', handleUploadFinal);
+  document.getElementById('btnLoadFinals').addEventListener('click', loadFinalsAndFolders);
+
+  document.getElementById('inImportJson').addEventListener('change', handleImportJson);
+  document.getElementById('btnSearch').addEventListener('click', handleSearch);
+  document.getElementById('btnExport').addEventListener('click', handleExport);
+  document.getElementById('btnExportMcq').addEventListener('click', handleExportMcq);
+  document.getElementById('btnExportPptx').addEventListener('click', handleExportPptx);
+  document.getElementById('btnShare').addEventListener('click', handleShare);
+  document.getElementById('btnSelectAllTags').addEventListener('click', function () {
+    document.querySelectorAll('.tagCheck').forEach(function (cb) { cb.checked = true; });
+  });
+  document.getElementById('btnClearAllTags').addEventListener('click', function () {
+    document.querySelectorAll('.tagCheck').forEach(function (cb) { cb.checked = false; });
+  });
+
+  renderExamList();
+  populateSearchExamSelect();
+})();
+</script>
+</body>
+</html>

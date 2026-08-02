@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>시험보기 · ELAB</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      brand: { 50:'#eef2ff',100:'#e0e7ff',400:'#818cf8',500:'#6366f1',600:'#4f46e5' },
+      coral: { 200:'#fecaca',400:'#f87171',500:'#ef4444' },
+      grass: { 400:'#4ade80',500:'#22c55e' }
+    } } }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f8fafc;}
+  .btn3d{--btn-edge:#4338ca;position:relative;border-radius:1rem;font-weight:800;box-shadow:0 4px 0 var(--btn-edge);transition:transform .05s,box-shadow .05s;}
+  .btn3d:active{transform:translateY(3px);box-shadow:0 1px 0 var(--btn-edge);}
+  .btn3d:disabled{opacity:.45;cursor:not-allowed;}
+  .boundary-line{position:absolute;left:0;right:0;height:0;border-top:3px dashed #ef4444;cursor:row-resize;}
+  .boundary-line:hover{border-top-color:#dc2626;}
+  .boundary-tag{position:absolute;left:4px;top:-11px;background:#ef4444;color:#fff;font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;white-space:nowrap;}
+  .qimg{max-width:100%;display:block;border-radius:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:9998;padding:16px;}
+</style>
+</head>
+<body>
+<div id="app" class="mx-auto min-h-screen max-w-md pb-16"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =====================================================================
+   공통 유틸 (VocaTest 관습 재사용)
+===================================================================== */
+function uid(n){ n=n||10; const c='PUBLIC_IDENTIFIER_REMOVED'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
+
+let toastTimer=null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.style.opacity='0'; }, 2200);
+}
+
+// 확인창 (native confirm 대신 — 미리보기/임베드 환경에서 차단될 수 있어 자체 구현)
+function askConfirm(msg){
+  return new Promise(resolve=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop';
+    wrap.innerHTML = `
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+        <p class="mb-4 whitespace-pre-line text-sm font-bold text-slate-700">${esc(msg)}</p>
+        <div class="flex gap-2">
+          <button data-a="0" class="btn3d flex-1 bg-slate-100 py-2.5 text-sm text-slate-600" style="--btn-edge:#cbd5e1">취소</button>
+          <button data-a="1" class="btn3d flex-1 bg-brand-500 py-2.5 text-sm text-white">확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', e=>{
+      const b = e.target.closest('button');
+      if(!b && e.target!==wrap) return;
+      const ok = b ? b.dataset.a==='1' : false;
+      wrap.remove();
+      resolve(ok);
+    });
+  });
+}
+
+function askPrompt(msg, def){
+  return new Promise(resolve=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop';
+    wrap.innerHTML = `
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+        <p class="mb-3 whitespace-pre-line text-sm font-bold text-slate-700">${esc(msg)}</p>
+        <input id="ap-input" value="${esc(def||'')}" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <div class="flex gap-2">
+          <button data-a="0" class="btn3d flex-1 bg-slate-100 py-2.5 text-sm text-slate-600" style="--btn-edge:#cbd5e1">취소</button>
+          <button data-a="1" class="btn3d flex-1 bg-brand-500 py-2.5 text-sm text-white">확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    const input = wrap.querySelector('#ap-input');
+    input.focus(); input.select();
+    const submit = ok=>{ const v = input.value; wrap.remove(); resolve(ok? v : null); };
+    wrap.addEventListener('click', e=>{
+      const b = e.target.closest('button');
+      if(!b && e.target!==wrap) return;
+      submit(b ? b.dataset.a==='1' : false);
+    });
+    input.addEventListener('keydown', e=>{ if(e.key==='Enter') submit(true); });
+  });
+}
+
+// JSONP GET (Apps Script 응답을 CORS 없이 읽기 위함)
+function jsonpFetch(url, timeoutMs){
+  timeoutMs = timeoutMs || 12000;
+  return new Promise(resolve=>{
+    const cbName = '__mx_cb_' + uid(8);
+    const script = document.createElement('script');
+    let settled = false;
+    const cleanup = ()=>{ delete window[cbName]; script.remove(); clearTimeout(timer); };
+    window[cbName] = data=>{ if(settled) return; settled=true; cleanup(); resolve(data); };
+    const timer = setTimeout(()=>{ if(settled) return; settled=true; cleanup(); resolve(null); }, timeoutMs);
+    script.onerror = ()=>{ if(settled) return; settled=true; cleanup(); resolve(null); };
+    script.src = url + (url.includes('?')?'&':'?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+
+// POST (no-cors — 응답 확인 불가, 전송 시도만)
+async function hookPost(url, body){
+  try{
+    await fetch(url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+    return true;
+  }catch(e){ return false; }
+}
+
+async function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+/* =====================================================================
+   설정 저장소 (교사 웹훅 URL/토큰, 만든 시험 목록 — localStorage)
+===================================================================== */
+function deliveryCfg(){
+  let c=null;
+  try{ c=JSON.parse(localStorage.getItem('mockexam.delivery')||'null'); }catch(e){}
+  if(!c) c = { url:'', token:'' };
+  return c;
+}
+function saveDelivery(c){ localStorage.setItem('mockexam.delivery', JSON.stringify(c)); }
+
+function myExams(){
+  try{ return JSON.parse(localStorage.getItem('mockexam.myExams')||'[]'); }catch(e){ return []; }
+}
+function saveMyExam(entry){
+  const list = myExams();
+  const idx = list.findIndex(x=>x.examKey===entry.examKey);
+  if(idx===-1) list.unshift(entry); else list[idx]=entry;
+  localStorage.setItem('mockexam.myExams', JSON.stringify(list));
+}
+
+/* =====================================================================
+   PDF → 문항 자동 분리 + 이미지 크롭
+===================================================================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const HEADER_PATTERNS = [
+  /^(\d{1,2})(?:[~\-](\d{1,2}))?\s*번/,
+  /^(\d{1,2})(?:[~\-](\d{1,2}))?\.(?!\d)/
+];
+
+// PDF 파일명에서 연도/월/학년을 자동으로 읽어서 시험 이름표를 자동으로 채우는 데 씀
+// (grammar/index.html의 guessFromFilename과 같은 규칙)
+const GRADE_DIGIT_RE = /([123])\s*학년/;
+const GRADE_DIRECT_RE = /(고[123])/;
+const YEAR_RE = /(20\d{2})\s*년/;
+const MONTH_RE = /(?<!\d)(\d{1,2})\s*월/;
+
+function guessFromFilename(filename){
+  let grade = null, m;
+  m = GRADE_DIGIT_RE.exec(filename);
+  if(m) grade = '고'+m[1];
+  else { m = GRADE_DIRECT_RE.exec(filename); if(m) grade = m[1]; }
+
+  let year = null;
+  m = YEAR_RE.exec(filename);
+  if(m) year = parseInt(m[1], 10);
+
+  let month = null;
+  m = MONTH_RE.exec(filename);
+  if(m) month = parseInt(m[1], 10);
+
+  return { year, month, grade };
+}
+
+function matchHeaderNum(str){
+  const t = (str||'').trim();
+  for(const re of HEADER_PATTERNS){
+    const m = re.exec(t);
+    if(m) return { num: parseInt(m[1], 10), endNum: m[2] ? parseInt(m[2], 10) : null };
+  }
+  return null;
+}
+
+// PDF 파일(ArrayBuffer) →
+// { pageCanvases: [canvas...], markers: [{pageIdx,y,num}], optionFives: [{pageIdx,y}],
+//   groupRanges: [{pageIdx,y,startNum,endNum}] }
+async function analyzePdf(arrayBuffer, onProgress){
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const pageCanvases = [];
+  const markers = [];
+  const optionFives = []; // 각 문항의 "⑤" 보기 줄 위치 -- 문항 이미지를 여기서 끊는 데 씀
+  const groupRanges = []; // "41~42번"처럼 여러 문항이 지문을 공유한다는 안내줄 위치
+  const RENDER_SCALE = 2.0; // 화질 확보용 렌더 스케일(최종 이미지는 나중에 폭 기준으로 다시 축소)
+  const OPTION_END_PAD = 6; // ⑤ 줄 아래로 살짝 여유(디센더 포함)를 두고 자름
+
+  for(let pageIdx=0; pageIdx<pdf.numPages; pageIdx++){
+    if(onProgress) onProgress(pageIdx+1, pdf.numPages);
+    const page = await pdf.getPage(pageIdx+1);
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    const ctx = canvas.getContext('2d');
+    await page.render({ canvasContext: ctx, viewport }).promise;
+    pageCanvases.push(canvas);
+
+    const textContent = await page.getTextContent();
+    // pdf.js가 "18번"을 "18"+"번" 등 여러 조각(run)으로 쪼갤 수 있으므로,
+    // 같은 줄의 조각을 전부 x좌표 순으로 이어붙인 뒤 그 줄 전체 문자열로 헤더를 판정한다.
+    const byLine = {};
+    for(const item of textContent.items){
+      if(!item.str || !item.str.trim()) continue;
+      const [vx, vy] = viewport.convertToViewportPoint(item.transform[4], item.transform[5]);
+      const lineKey = Math.round(vy/4)*4; // 4px 이내는 같은 줄로 취급
+      if(!byLine[lineKey]) byLine[lineKey] = { vy, parts: [], maxHeight: 0 };
+      byLine[lineKey].parts.push({ vx, str:item.str });
+      byLine[lineKey].maxHeight = Math.max(byLine[lineKey].maxHeight, item.height || 0);
+    }
+    Object.values(byLine).forEach(({vy, parts, maxHeight})=>{
+      parts.sort((a,b)=>a.vx-b.vx);
+      const lineText = parts.map(p=>p.str).join('').trim();
+      const headerMatch = matchHeaderNum(lineText);
+      if(headerMatch!=null){
+        // vy는 텍스트 기준선(baseline) 좌표라 그대로 쓰면 번호줄 중간~아래에서 잘림.
+        // 줄 높이만큼 위로 올려서 번호줄 "앞(위)"에서 잘리게 함.
+        const lineTopY = Math.max(0, vy - maxHeight*RENDER_SCALE);
+        if(headerMatch.endNum!=null && headerMatch.endNum > headerMatch.num){
+          // "41~42번"처럼 범위가 있는 줄은 여러 문항이 지문을 공유한다는 안내줄이지 그 자체가
+          // 문항 시작은 아님 -- 각 문항의 진짜 시작줄("41." "42.")은 지문 뒤에 따로 나온다.
+          groupRanges.push({ pageIdx, y: lineTopY, startNum: headerMatch.num, endNum: headerMatch.endNum });
+        }else{
+          markers.push({ pageIdx, y: lineTopY, num: headerMatch.num });
+        }
+      }
+      if(/^⑤/.test(lineText)){
+        optionFives.push({ pageIdx, y: vy + OPTION_END_PAD });
+      }
+    });
+  }
+
+  markers.sort((a,b)=> a.pageIdx-b.pageIdx || a.y-b.y);
+  optionFives.sort((a,b)=> a.pageIdx-b.pageIdx || a.y-b.y);
+  groupRanges.sort((a,b)=> a.pageIdx-b.pageIdx || a.y-b.y);
+  // 같은 문항번호가 지문 안에서 또 언급돼 중복 감지된 경우(번호가 이미 나온 적 있고 바로 다음 줄인 경우 등) 방지:
+  // 문항번호가 오름차순으로 등장하는 것만 신뢰(역행하면 버림 — 지문 속 "1번째" 같은 오탐 방지)
+  const filtered = [];
+  let lastNum = 0;
+  for(const m of markers){
+    if(m.num > lastNum || (m.num===1 && lastNum===0)){
+      filtered.push(m);
+      lastNum = m.num;
+    }
+  }
+  return { pageCanvases, markers: filtered, optionFives, groupRanges };
+}
+
+// start(현재 문항 시작)와 nextMarker(다음 문항 시작, 없으면 null) 사이에 있는 "⑤" 줄 중
+// 가장 마지막 것을 찾는다 -- 있으면 그 지점에서 자르고, 없으면(서술형/듣기 등) null을 반환해
+// 기존처럼 다음 문항 시작 지점(또는 페이지 끝)까지 쓰게 한다.
+function findOptionFiveEnd(start, nextMarker, optionFives){
+  let found = null;
+  for(const m of optionFives){
+    const afterStart = (m.pageIdx > start.pageIdx) || (m.pageIdx===start.pageIdx && m.y > start.y);
+    if(!afterStart) continue;
+    if(nextMarker){
+      const beforeNext = (m.pageIdx < nextMarker.pageIdx) || (m.pageIdx===nextMarker.pageIdx && m.y < nextMarker.y);
+      if(!beforeNext) continue;
+    }
+    if(!found || m.pageIdx > found.pageIdx || (m.pageIdx===found.pageIdx && m.y > found.y)){
+      found = m;
+    }
+  }
+  return found;
+}
+
+// 세로로 이미지 조각을 이어붙여 하나의 캔버스로 합침 (문항이 페이지 경계를 넘는 경우)
+function stitchVertical(pieces){ // pieces: [{canvas, sy, sh}]  sy=자를 시작y, sh=자를 높이
+  const width = Math.max(...pieces.map(p=>p.canvas.width));
+  const totalHeight = pieces.reduce((sum,p)=>sum+p.sh, 0);
+  const out = document.createElement('canvas');
+  out.width = width;
+  out.height = Math.max(1, totalHeight);
+  const ctx = out.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0,0,width,out.height);
+  let y = 0;
+  for(const p of pieces){
+    if(p.sh<=0) continue;
+    ctx.drawImage(p.canvas, 0, p.sy, p.canvas.width, p.sh, 0, y, p.canvas.width, p.sh);
+    y += p.sh;
+  }
+  return out;
+}
+
+// [from, to) 구간을 캔버스 조각들로 잘라 pieces 배열로 반환 (페이지 경계를 넘는 경우도 처리)
+// from/to는 {pageIdx, y} 형태. to가 없으면 from이 속한 페이지의 끝까지.
+function sliceRegion(pageCanvases, from, to){
+  const pieces = [];
+  if(!to || to.pageIdx===from.pageIdx){
+    const endY = to ? to.y : pageCanvases[from.pageIdx].height;
+    pieces.push({ canvas: pageCanvases[from.pageIdx], sy: from.y, sh: Math.max(0, endY-from.y) });
+  }else{
+    // 시작 페이지: from.y ~ 페이지 끝
+    pieces.push({ canvas: pageCanvases[from.pageIdx], sy: from.y, sh: pageCanvases[from.pageIdx].height-from.y });
+    // 중간 페이지 전체
+    for(let p=from.pageIdx+1; p<to.pageIdx; p++){
+      pieces.push({ canvas: pageCanvases[p], sy: 0, sh: pageCanvases[p].height });
+    }
+    // 마지막 페이지: 0 ~ to.y
+    pieces.push({ canvas: pageCanvases[to.pageIdx], sy: 0, sh: to.y });
+  }
+  return pieces;
+}
+
+// num이 속하는 공유 지문 그룹(예: 41~42번)을 찾는다. 없으면 null.
+function findGroupFor(num, groupRanges){
+  if(!groupRanges) return null;
+  let best = null;
+  for(const g of groupRanges){
+    if(num>=g.startNum && num<=g.endNum){
+      if(!best || g.pageIdx>best.pageIdx || (g.pageIdx===best.pageIdx && g.y>best.y)) best = g;
+    }
+  }
+  return best;
+}
+
+// markers 기준으로 문항별 이미지(dataURL)를 만든다
+// optionFives가 있으면 각 문항의 "⑤" 보기 줄 바로 뒤에서 끊고, 없는 문항(서술형/듣기 등)은
+// 기존처럼 다음 문항 시작 지점(또는 페이지 끝)까지 자른다.
+// groupRanges가 있으면 41~42, 43~45처럼 지문을 공유하는 문항들은 전부 그 지문을 같이
+// 보여준다(그룹의 첫 문항이 아니면, 지문 부분 + 자기 자신의 문항/보기를 이어붙임 -- 그
+// 사이에 낀 앞 문항들의 문항/보기는 건너뜀).
+function buildQuestionImages(pageCanvases, markers, optionFives, groupRanges){
+  const questions = [];
+  for(let i=0;i<markers.length;i++){
+    const start = markers[i];
+    const nextMarker = markers[i+1] || null;
+    const fiveEnd = optionFives ? findOptionFiveEnd(start, nextMarker, optionFives) : null;
+    const end = fiveEnd || nextMarker;
+
+    let pieces;
+    const group = findGroupFor(start.num, groupRanges);
+    if(group){
+      const groupStartPt = { pageIdx: group.pageIdx, y: group.y };
+      if(start.num === group.startNum){
+        // 그룹의 첫 문항: 지문 안내줄부터 자기 끝까지 통째로
+        pieces = sliceRegion(pageCanvases, groupStartPt, end);
+      }else{
+        // 그룹의 이후 문항: 지문(그룹 시작~첫 문항 시작) + 자기 자신(자기 시작~자기 끝)을 이어붙임
+        const firstSubMarker = markers.find(m=>m.num===group.startNum) || groupStartPt;
+        pieces = [
+          ...sliceRegion(pageCanvases, groupStartPt, firstSubMarker),
+          ...sliceRegion(pageCanvases, start, end),
+        ];
+      }
+    }else{
+      pieces = sliceRegion(pageCanvases, start, end);
+    }
+
+    const stitched = stitchVertical(pieces);
+    // 최종 이미지 폭을 줄여 용량 절약(가로 1000px 기준)
+    const targetW = 1000;
+    let finalCanvas = stitched;
+    if(stitched.width > targetW){
+      const scale = targetW/stitched.width;
+      const small = document.createElement('canvas');
+      small.width = targetW;
+      small.height = Math.round(stitched.height*scale);
+      small.getContext('2d').drawImage(stitched, 0,0,small.width,small.height);
+      finalCanvas = small;
+    }
+    questions.push({
+      num: start.num,
+      dataUrl: finalCanvas.toDataURL('image/jpeg', 0.72),
+      answer: null
+    });
+  }
+  return questions;
+}
+
+/* =====================================================================
+   라우팅
+===================================================================== */
+function boot(){
+  const params = new URLSearchParams(location.search);
+  const session = params.get('session');
+  if(session){
+    StudentApp.init(session, params.get('hook')||'', params.get('nums')||'');
+  }else{
+    TeacherApp.init();
+  }
+}
+
+/* =====================================================================
+   교사 앱
+===================================================================== */
+const TeacherApp = {
+  tab: 'make',
+  draft: null, // { pageCanvases, markers, questions, title, range }
+
+  init(){
+    this.render();
+  },
+
+  render(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <header class="sticky top-0 z-10 bg-white/90 px-5 pb-3 pt-6 backdrop-blur">
+        <h1 class="text-lg font-extrabold text-slate-800">🖊️ 시험보기 · 교사</h1>
+        <nav class="mt-3 flex gap-1.5 rounded-2xl bg-slate-100 p-1">
+          ${['make','exams','settings'].map(t=>`
+            <button data-tab="${t}" class="flex-1 rounded-xl px-2 py-2 text-xs font-bold ${this.tab===t?'bg-white shadow text-brand-600':'text-slate-600'}">
+              ${t==='make'?'시험 만들기':t==='exams'?'결과':'설정'}
+            </button>`).join('')}
+        </nav>
+      </header>
+      <main class="px-5 pt-3" id="tab-root"></main>
+    `;
+    $all('[data-tab]', app).forEach(b=>b.addEventListener('click', ()=>{ this.tab=b.dataset.tab; this.render(); }));
+    const root = document.getElementById('tab-root');
+    if(this.tab==='make') this.renderMake(root);
+    else if(this.tab==='exams') ResultsTab.render(root);
+    else SettingsTab.render(root);
+  },
+
+  renderMake(root){
+    if(!this.draft){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-1 text-base font-extrabold">PDF 업로드</h2>
+          <p class="mb-3 text-xs text-slate-600">모의고사 PDF를 올리면 문항을 자동으로 나눠 이미지로 만들어요. 문항번호(예: 18번, 18.)를 기준으로 나눕니다.</p>
+          <input id="pdf-input" type="file" accept="application/pdf" class="mb-3 w-full rounded-xl border-2 border-dashed border-slate-200 p-4 text-sm" />
+          <div id="pdf-progress" class="hidden text-xs font-bold text-brand-500"></div>
+        </section>`;
+      const input = document.getElementById('pdf-input');
+      input.addEventListener('change', async ()=>{
+        const file = input.files[0];
+        if(!file) return;
+        const progress = document.getElementById('pdf-progress');
+        progress.classList.remove('hidden');
+        progress.textContent = '분석 중...';
+        const buf = await file.arrayBuffer();
+        const { pageCanvases, markers, optionFives, groupRanges } = await analyzePdf(buf, (cur,total)=>{ progress.textContent = `페이지 분석 중 (${cur}/${total})`; });
+        if(markers.length===0){
+          toast('문항 번호를 찾지 못했어요. PDF 표기 방식이 다를 수 있어요.');
+          progress.classList.add('hidden');
+          return;
+        }
+        const questions = buildQuestionImages(pageCanvases, markers, optionFives, groupRanges);
+
+        // 파일명에서 연/월/학년을 읽어 시험 이름표를 자동으로 채우고, 문항 번호 범위도
+        // 방금 감지한 문항들에서 자동으로 계산해준다 (직접 입력 안 해도 되게).
+        const guessed = guessFromFilename(file.name);
+        const autoTitle = (guessed.year && guessed.month && guessed.grade)
+          ? `${guessed.year}년 ${guessed.month}월 ${guessed.grade} 모의고사` : '';
+        const nums = questions.map(q=>q.num);
+        const autoRange = nums.length
+          ? (Math.min(...nums)===Math.max(...nums) ? `${nums[0]}번` : `${Math.min(...nums)}~${Math.max(...nums)}번`)
+          : '';
+
+        this.draft = { pageCanvases, markers, optionFives, groupRanges, questions,
+          title: autoTitle, range: autoRange, step:'preview' };
+        this.render();
+      });
+      return;
+    }
+    if(this.draft.step==='preview') return BoundaryEditor.render(root, this.draft, ()=>this.render());
+    if(this.draft.step==='answers') return AnswerStep.render(root, this.draft, ()=>this.render());
+    if(this.draft.step==='publish') return PublishStep.render(root, this.draft, ()=>{ this.draft=null; this.tab='exams'; this.render(); });
+  }
+};
+
+/* --------- 1단계: 문항 미리보기 + 경계선 보정 --------- */
+const BoundaryEditor = {
+  render(root, draft, rerender){
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-4 shadow">
+        <div class="mb-3 flex items-center justify-between">
+          <h2 class="text-base font-extrabold">문항 확인 (${draft.questions.length}개 감지)</h2>
+          <div class="flex gap-1.5">
+            <button id="be-preview" class="btn3d bg-brand-500 px-3 py-1.5 text-xs text-white">👀 학생 화면으로 보기</button>
+            <button id="be-rebuild" class="btn3d bg-slate-100 px-3 py-1.5 text-xs text-slate-600" style="--btn-edge:#cbd5e1">🔄 다시 자르기</button>
+          </div>
+        </div>
+        <p class="mb-3 text-xs leading-relaxed text-slate-600">각 문항 이미지가 올바른지 확인하세요. 잘못 잘렸으면 이미지 위 <b class="text-coral-500">빨간 점선</b>을 드래그해서 경계를 옮기거나, 아래 목록에서 경계를 추가/삭제할 수 있어요. "학생 화면으로 보기"를 누르면 학생이 문제 풀 때 보게 될 화면 그대로(한 문제씩, 답 고르는 버튼까지) 미리 볼 수 있어요.</p>
+        <div id="be-pages" class="space-y-4"></div>
+        <div class="mt-4 flex gap-2">
+          <button id="be-cancel" class="btn3d flex-1 bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">처음부터</button>
+          <button id="be-next" class="btn3d flex-1 bg-brand-500 py-3 text-sm text-white">다음: 정답 입력 →</button>
+        </div>
+      </section>`;
+    this.renderPages(root, draft);
+    document.getElementById('be-preview').addEventListener('click', ()=>{
+      PreviewStudentView.render(root, draft, ()=> this.render(root, draft, rerender));
+    });
+    document.getElementById('be-cancel').addEventListener('click', async ()=>{
+      if(await askConfirm('처음부터 다시 만들까요? 지금까지의 작업이 사라져요.')){ draft.step=null; TeacherApp.draft=null; rerender(); }
+    });
+    document.getElementById('be-next').addEventListener('click', ()=>{
+      draft.step = 'answers';
+      rerender();
+    });
+    document.getElementById('be-rebuild').addEventListener('click', ()=>{
+      draft.questions = buildQuestionImages(draft.pageCanvases, draft.markers, draft.optionFives, draft.groupRanges);
+      rerender();
+    });
+  },
+
+  renderPages(root, draft){
+    const wrap = document.getElementById('be-pages');
+    wrap.innerHTML = '';
+    const DISPLAY_W = 340;
+    draft.pageCanvases.forEach((canvas, pageIdx)=>{
+      const scale = DISPLAY_W / canvas.width;
+      const holder = document.createElement('div');
+      holder.className = 'relative overflow-hidden rounded-xl border border-slate-100';
+      holder.style.width = DISPLAY_W+'px';
+      holder.style.height = Math.round(canvas.height*scale)+'px';
+      const img = document.createElement('img');
+      img.src = canvas.toDataURL('image/jpeg', 0.6);
+      img.style.width = '100%';
+      img.style.display = 'block';
+      holder.appendChild(img);
+      holder.dataset.pageIdx = pageIdx;
+
+      draft.markers.filter(m=>m.pageIdx===pageIdx).forEach(marker=>{
+        const line = document.createElement('div');
+        line.className = 'boundary-line';
+        line.style.top = Math.round(marker.y*scale)+'px';
+        line.innerHTML = `<span class="boundary-tag">${marker.num}번 ✕</span>`;
+        line.dataset.num = marker.num;
+        this.bindDrag(line, holder, marker, scale, canvas.height);
+        holder.appendChild(line);
+      });
+
+      holder.addEventListener('dblclick', async e=>{
+        if(e.target.closest('.boundary-line')) return;
+        const rect = holder.getBoundingClientRect();
+        const yInDisplay = e.clientY - rect.top;
+        const realY = yInDisplay/scale;
+        const numStr = await askPrompt('새 경계의 문항번호를 입력하세요 (예: 21)');
+        if(!numStr) return;
+        const num = parseInt(numStr, 10);
+        if(!num) return toast('숫자를 입력해주세요');
+        draft.markers.push({ pageIdx, y: realY, num });
+        draft.markers.sort((a,b)=> a.pageIdx-b.pageIdx || a.y-b.y);
+        this.renderPages(root, draft);
+      });
+
+      wrap.appendChild(holder);
+    });
+  },
+
+  bindDrag(line, holder, marker, scale, canvasHeight){
+    line.addEventListener('click', async e=>{
+      if(e.offsetY!=null && e.target.tagName==='SPAN'){
+        if(await askConfirm(marker.num+'번 경계를 삭제할까요? (앞 문항과 합쳐져요)')){
+          const idx = TeacherApp.draft.markers.indexOf(marker);
+          if(idx>-1) TeacherApp.draft.markers.splice(idx,1);
+          this.renderPages(document.getElementById('tab-root'), TeacherApp.draft);
+        }
+      }
+    });
+    let dragging = false;
+    line.addEventListener('mousedown', e=>{
+      if(e.target.tagName==='SPAN') return; // 삭제 버튼 클릭은 드래그로 취급 안 함
+      dragging = true;
+      e.preventDefault();
+    });
+    const onMove = e=>{
+      if(!dragging) return;
+      const rect = holder.getBoundingClientRect();
+      let y = (e.clientY - rect.top);
+      y = Math.max(0, Math.min(rect.height, y));
+      line.style.top = y+'px';
+      marker.y = y/scale;
+    };
+    const onUp = ()=>{ dragging=false; };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }
+};
+
+/* --------- 문항 확인 화면에서: 학생이 실제로 풀 때 보는 화면 그대로 미리보기 ---------
+   StudentApp.renderQuestion()과 같은 레이아웃(문항 이미지 + ①~⑤ 버튼, 한 문항씩)을 쓰되,
+   서버에 올리기 전(로컬 dataUrl)에도 볼 수 있고, 실제 제출/채점 없이 이전/다음으로 자유롭게
+   넘나들 수 있게 한 것. 여기서 누르는 답은 미리보기 전용이라 실제 draft.questions[i].answer에는
+   저장 안 됨(나중에 "정답 입력" 단계에서 입력하는 정답과 안 섞이게). */
+const PreviewStudentView = {
+  render(root, draft, onClose){
+    this.draft = draft;
+    this.onClose = onClose;
+    this.idx = 0;
+    this.previewAnswers = draft.questions.map(()=>null);
+    this.paint(root);
+  },
+
+  paint(root){
+    const q = this.draft.questions[this.idx];
+    const total = this.draft.questions.length;
+    root.innerHTML = `
+      <section class="rounded-3xl bg-slate-800 p-4 shadow">
+        <div class="mb-3 flex items-center justify-between">
+          <button id="pv-close" class="text-xs font-bold text-white/80">✕ 미리보기 닫기</button>
+          <span class="text-xs font-bold text-white/60">학생 화면 미리보기 (실제 제출 안 됨)</span>
+        </div>
+        <div class="rounded-3xl bg-white p-4">
+          <div class="mb-3 text-center text-xs font-bold text-slate-600">${this.idx+1} / ${total} · ${q.num}번</div>
+          <div class="mb-4 max-h-[55vh] overflow-y-auto rounded-2xl border border-slate-100">
+            <img class="qimg" src="${q.dataUrl}" />
+          </div>
+          <div class="mb-3 grid grid-cols-5 gap-2">
+            ${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="pv-ans btn3d py-3.5 text-base shadow ${this.previewAnswers[this.idx]===n?'bg-brand-500 text-white':'bg-white text-slate-700'}" style="--btn-edge:${this.previewAnswers[this.idx]===n?'#1d4ed8':'#e2e8f0'}">${'①②③④⑤'[n-1]}</button>`).join('')}
+          </div>
+          <div class="flex gap-2">
+            <button id="pv-prev" class="btn3d flex-1 bg-slate-100 py-2.5 text-xs text-slate-600" style="--btn-edge:#cbd5e1" ${this.idx===0?'disabled':''}>← 이전</button>
+            <button id="pv-next" class="btn3d flex-1 bg-brand-500 py-2.5 text-xs text-white" ${this.idx===total-1?'disabled':''}>다음 →</button>
+          </div>
+        </div>
+      </section>`;
+    document.getElementById('pv-close').addEventListener('click', ()=> this.onClose());
+    document.getElementById('pv-prev').addEventListener('click', ()=>{ if(this.idx>0){ this.idx--; this.paint(root); } });
+    document.getElementById('pv-next').addEventListener('click', ()=>{ if(this.idx<total-1){ this.idx++; this.paint(root); } });
+    $all('.pv-ans', root).forEach(b=>b.addEventListener('click', ()=>{
+      this.previewAnswers[this.idx] = +b.dataset.n;
+      this.paint(root);
+    }));
+  }
+};
+
+/* --------- 2단계: 정답 입력 --------- */
+const AnswerStep = {
+  // 정답이 없는 문항 중 번호가 가장 빠른 것 (빠른 입력창에 다음 번호를 자동으로 채우는 데 씀)
+  firstUnanswered(draft){
+    const sorted = draft.questions.slice().sort((a,b)=>a.num-b.num);
+    const u = sorted.find(q=>!q.answer);
+    return u ? u.num : null;
+  },
+
+  render(root, draft, rerender){
+    const nextNum = this.firstUnanswered(draft);
+    const answeredCount = draft.questions.filter(q=>q.answer).length;
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-4 shadow">
+        <h2 class="mb-3 text-base font-extrabold">정답 입력</h2>
+        <label class="mb-1 block text-xs font-bold text-slate-500">시험 이름표 ${draft.title?'<span class="font-normal text-slate-400">(파일명에서 자동으로 채웠어요, 필요하면 고치세요)</span>':''}</label>
+        <input id="as-title" value="${esc(draft.title||'')}" placeholder="예: 2025년 9월 고2 모의고사" class="mb-3 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <label class="mb-1 block text-xs font-bold text-slate-500">범위 표시(선택)</label>
+        <input id="as-range" value="${esc(draft.range||'')}" placeholder="예: 18~45번" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+
+        <div class="mb-4 rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50 p-3">
+          <label class="mb-1 block text-xs font-bold text-brand-600">⚡ 빠른 입력 (문항번호,정답 입력 후 Enter) — ${answeredCount}/${draft.questions.length}개 입력됨</label>
+          <textarea id="as-quick" rows="1" autocomplete="off" placeholder="예: 18,3" class="w-full resize-none rounded-xl border-2 border-slate-100 bg-white px-3 py-2 text-sm font-mono outline-none focus:border-brand-400">${esc(nextNum?nextNum+',':'')}</textarea>
+          <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Enter를 누르면 자동으로 다음 문항번호가 채워져요. 여러 줄을 한 번에 붙여넣어도 돼요(줄마다 "번호,정답", Shift+Enter로 줄바꿈).
+            아래에서 각 문항 이미지를 보고 버튼으로 눌러 입력할 수도 있어요.</p>
+        </div>
+
+        <div id="as-list" class="space-y-3"></div>
+        <div class="mt-4 flex gap-2">
+          <button id="as-back" class="btn3d flex-1 bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">← 뒤로</button>
+          <button id="as-next" class="btn3d flex-1 bg-brand-500 py-3 text-sm text-white">다음: 게시 →</button>
+        </div>
+      </section>`;
+    document.getElementById('as-title').addEventListener('input', e=>{ draft.title = e.target.value; });
+    document.getElementById('as-range').addEventListener('input', e=>{ draft.range = e.target.value; });
+
+    const list = document.getElementById('as-list');
+    draft.questions.forEach((q, idx)=>{
+      const row = document.createElement('div');
+      row.className = 'rounded-2xl border border-slate-100 p-3';
+      row.innerHTML = `
+        <div class="mb-2 flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-500">${idx+1}. ${q.num}번</span>
+        </div>
+        <img class="qimg mb-2" src="${q.dataUrl}" />
+        <div class="flex gap-1.5">
+          ${[1,2,3,4,5].map(n=>`<button data-idx="${idx}" data-n="${n}" class="ans-btn flex-1 rounded-xl border-2 py-2 text-sm font-bold ${q.answer===n?'border-brand-500 bg-brand-50 text-brand-600':'border-slate-100 text-slate-600'}">${'①②③④⑤'[n-1]}</button>`).join('')}
+        </div>`;
+      list.appendChild(row);
+    });
+    list.addEventListener('click', e=>{
+      const b = e.target.closest('.ans-btn');
+      if(!b) return;
+      draft.questions[+b.dataset.idx].answer = +b.dataset.n;
+      this.render(root, draft, rerender);
+    });
+
+    // ⚡ 빠른 입력: "18,3" 형식(줄마다 여러 개 붙여넣기도 가능) → Enter로 한 번에 적용,
+    // 적용 뒤엔 다음 미입력 문항번호를 자동으로 채워서 계속 이어 입력할 수 있게 함.
+    const quick = document.getElementById('as-quick');
+    quick.focus();
+    quick.setSelectionRange(quick.value.length, quick.value.length);
+    quick.addEventListener('keydown', e=>{
+      if(e.key!=='Enter' || e.shiftKey) return; // Shift+Enter는 줄바꿈(여러 줄 직접 입력용)으로 남겨둠
+      e.preventDefault();
+      const raw = quick.value.trim();
+      if(!raw) return;
+      const lines = raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      let applied = 0, unknown = [];
+      lines.forEach(line=>{
+        const m = line.match(/^(\d{1,2})\s*[,.\s]\s*([1-5])$/);
+        if(!m){ unknown.push(line); return; }
+        const num = parseInt(m[1], 10);
+        const q = draft.questions.find(q=>q.num===num);
+        if(!q){ unknown.push(line); return; }
+        q.answer = parseInt(m[2], 10);
+        applied++;
+      });
+      if(applied===0) return toast('형식을 확인해주세요 (예: 18,3)');
+      if(unknown.length) toast(`${unknown.length}개는 문항번호를 못 찾았어요: ${unknown.join(', ')}`);
+      this.render(root, draft, rerender);
+    });
+
+    document.getElementById('as-back').addEventListener('click', ()=>{ draft.step='preview'; rerender(); });
+    document.getElementById('as-next').addEventListener('click', ()=>{
+      draft.title = document.getElementById('as-title').value.trim();
+      draft.range = document.getElementById('as-range').value.trim();
+      if(!draft.title) return toast('시험 이름표를 입력해주세요');
+      // 정답 없이도 게시할 수 있게 함 -- 나중에 "결과" 탭에서 채점 전에 언제든 정답을 추가/수정할 수 있음.
+      const missing = draft.questions.filter(q=>!q.answer).length;
+      if(missing>0) toast(`정답 없는 문항 ${missing}개는 나중에 "결과" 탭에서 입력할 수 있어요`);
+      draft.step = 'publish';
+      rerender();
+    });
+  }
+};
+
+/* --------- 3단계: 게시 ---------
+   게시 작업 상태(draft.publish)를 draft 자체에 저장해두고 진행한다 -- 교사가 게시 도중에
+   "결과"/"설정" 등 다른 탭으로 갔다가 "시험 만들기" 탭으로 돌아와도(TeacherApp.render()가
+   화면을 통째로 새로 그리므로 예전 DOM 참조는 끊김) 실제 업로드/저장 네트워크 작업 자체는
+   draft 객체에 매달린 채 백그라운드에서 계속 진행되고, 돌아왔을 때 진행 상황을 그대로
+   이어서 보여줄 수 있다. render()를 다시 부를 때마다 draft.publish.status를 보고 화면만
+   새로 그리고, 진행 중인 작업을 절대 새로 또 시작하지 않는다(중복 게시 방지).
+*/
+const PublishStep = {
+  // 지금 화면에 게시 단계가 떠 있으면 진행 상황을 반영하고, 다른 탭을 보는 중이면 DOM이
+  // 없으니 조용히 무시한다(작업 자체는 아래 runJob이 계속 이어서 함).
+  paintProgress(draft){
+    const progress = document.getElementById('ps-progress');
+    const btn = document.getElementById('ps-go');
+    if(!progress || !btn) return;
+    if(draft.publish && draft.publish.status==='running'){
+      progress.classList.remove('hidden');
+      progress.textContent = draft.publish.message;
+      btn.disabled = true;
+    }
+  },
+
+  async runJob(draft){
+    const cfg = deliveryCfg();
+    draft.publish = { status:'running', message:'시작하는 중...', link:null, error:null };
+    this.paintProgress(draft);
+    try{
+      const examKey = draft.publish.examKey = uid(14);
+      const imageKeys = draft.questions.map((_, i)=> examKey+'-'+i);
+
+      for(let i=0;i<draft.questions.length;i++){
+        draft.publish.message = `이미지 업로드 중... (${i+1}/${draft.questions.length})`;
+        this.paintProgress(draft);
+        await hookPost(cfg.url, { action:'uploadImage', token: cfg.token, imageKey: imageKeys[i], dataUrl: draft.questions[i].dataUrl });
+        await sleep(150); // Apps Script 동시 실행 제한 여유
+      }
+
+      draft.publish.message = '업로드 확인 중...';
+      this.paintProgress(draft);
+      let allOk = true;
+      for(let i=0;i<imageKeys.length;i++){
+        let found = false;
+        for(let attempt=0; attempt<6 && !found; attempt++){
+          const r = await jsonpFetch(cfg.url + '?action=imageStatus&key=' + encodeURIComponent(imageKeys[i]));
+          if(r && r.found) found = true;
+          else await sleep(700);
+        }
+        if(!found) allOk = false;
+      }
+      if(!allOk){
+        draft.publish = { status:'error', message:'', link:null, error:'일부 이미지 업로드 확인에 실패했어요. 다시 시도해주세요.' };
+        this.repaint(draft);
+        return;
+      }
+
+      draft.publish.message = '시험 정보 저장 중...';
+      this.paintProgress(draft);
+      const questionNums = draft.questions.map(q=>q.num);
+      const answers = draft.questions.map(q=>q.answer);
+      await hookPost(cfg.url, {
+        action: 'saveExam', token: cfg.token, examKey,
+        title: draft.title, range: draft.range,
+        questionCount: draft.questions.length,
+        answers, questionNums,
+        imageKeys, expiresAt: 0
+      });
+      await sleep(1000);
+
+      const link = location.origin + location.pathname + '?session=' + examKey + '&hook=' + encodeURIComponent(cfg.url);
+      const answersComplete = answers.every(a=>a!=null);
+      saveMyExam({ examKey, title: draft.title, range: draft.range, count: draft.questions.length,
+        link, createdAt: Date.now(), questionNums, answers, answersComplete });
+
+      draft.publish = { status:'done', message:'', link, error:null };
+      this.repaint(draft);
+    }catch(e){
+      draft.publish = { status:'error', message:'', link:null, error:(e&&e.message)||String(e) };
+      this.repaint(draft);
+    }
+  },
+
+  // 지금 화면이 게시 단계면 draft.publish.status에 맞춰 다시 그림 (다른 탭이면 무시)
+  repaint(draft){
+    const root = document.getElementById('tab-root');
+    if(!root || TeacherApp.tab!=='make' || !TeacherApp.draft || TeacherApp.draft.step!=='publish') return;
+    this.render(root, draft, this._onDone);
+  },
+
+  render(root, draft, onDone){
+    this._onDone = onDone; // repaint()에서 재사용
+    const cfg = deliveryCfg();
+    if(!cfg.url || !cfg.token){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-2 text-base font-extrabold">먼저 백엔드 설정이 필요해요</h2>
+          <p class="mb-3 text-xs text-slate-600">설정 탭에서 구글시트 웹훅 URL과 토큰을 먼저 등록해주세요.</p>
+          <button id="ps-goto" class="btn3d w-full bg-brand-500 py-3 text-sm text-white">설정으로 이동</button>
+        </section>`;
+      document.getElementById('ps-goto').addEventListener('click', ()=>{ TeacherApp.tab='settings'; TeacherApp.render(); });
+      return;
+    }
+
+    const status = draft.publish ? draft.publish.status : 'idle';
+
+    if(status==='done'){
+      const link = draft.publish.link;
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-2 text-base font-extrabold text-grass-500">✅ 게시 완료!</h2>
+          <p class="mb-2 text-xs text-slate-600">아래 링크를 학생에게 공유하세요.</p>
+          <div class="mb-3 break-all rounded-xl bg-slate-50 p-3 text-xs text-slate-600">${esc(link)}</div>
+          <button id="ps-copy" class="btn3d mb-2 w-full bg-brand-500 py-3 text-sm text-white">🔗 링크 복사</button>
+          <button id="ps-done" class="btn3d w-full bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">결과 탭으로</button>
+        </section>`;
+      document.getElementById('ps-copy').addEventListener('click', ()=>{
+        navigator.clipboard.writeText(link).then(()=>toast('복사했어요')).catch(()=>toast('복사 실패'));
+      });
+      document.getElementById('ps-done').addEventListener('click', onDone);
+      return;
+    }
+
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-5 shadow">
+        <h2 class="mb-2 text-base font-extrabold">게시하기</h2>
+        <p class="mb-4 text-xs text-slate-600">문항 ${draft.questions.length}개를 서버에 올리고 시험을 만들어요. 문항 수에 따라 시간이 좀 걸릴 수 있어요.
+          다른 탭으로 이동해도 게시는 백그라운드에서 계속 진행돼요.</p>
+        ${status==='error' ? `<p class="mb-3 text-xs font-bold text-coral-500">${esc(draft.publish.error)}</p>` : ''}
+        <div id="ps-progress" class="mb-4 ${status==='running'?'':'hidden'} text-xs font-bold text-brand-500">${status==='running'?esc(draft.publish.message):''}</div>
+        <button id="ps-go" class="btn3d w-full bg-brand-500 py-3 text-sm text-white" ${status==='running'?'disabled':''}>${status==='error'?'🔁 다시 게시하기':'🚀 게시하기'}</button>
+      </section>`;
+
+    document.getElementById('ps-go').addEventListener('click', ()=>{
+      if(draft.publish && draft.publish.status==='running') return; // 중복 실행 방지
+      this.runJob(draft); // await 안 함 -- 화면을 벗어나도 이 Promise는 계속 진행됨
+      this.render(root, draft, onDone); // 즉시 진행 중 화면으로 갱신
+    });
+  }
+};
+
+/* --------- 설정 탭 --------- */
+const SettingsTab = {
+  render(root){
+    const cfg = deliveryCfg();
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-5 shadow">
+        <h2 class="mb-1 text-base font-extrabold">백엔드 설정</h2>
+        <p class="mb-3 text-xs leading-relaxed text-slate-600"><b>sheet_backend.gs</b>를 구글시트 Apps Script에 배포한 뒤, 그 웹앱 주소와 스크립트 속성에 등록한 TOKEN을 여기 입력하세요.</p>
+        <label class="mb-1 block text-xs font-bold text-slate-500">웹훅 URL</label>
+        <input id="st-url" value="${esc(cfg.url)}" placeholder="https://script.google.com/macros/s/.../exec" class="mb-3 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <label class="mb-1 block text-xs font-bold text-slate-500">토큰</label>
+        <input id="st-token" value="${esc(cfg.token)}" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 font-mono text-xs outline-none focus:border-brand-400" />
+        <button id="st-save" class="btn3d w-full bg-brand-500 py-3 text-sm text-white">저장</button>
+      </section>`;
+    document.getElementById('st-save').addEventListener('click', ()=>{
+      saveDelivery({ url: document.getElementById('st-url').value.trim(), token: document.getElementById('st-token').value.trim() });
+      toast('저장했어요');
+    });
+  }
+};
+
+/* --------- 결과 탭 --------- */
+const ResultsTab = {
+  // x.answersComplete가 명시적으로 있으면 그걸 따르고(이 기능 이후 만든 시험),
+  // 없으면(이 기능 전에 만든 옛날 시험 -- 그때는 정답 없이 게시하는 게 불가능했음) 완료로 간주.
+  answerStatus(x){
+    if(x.answersComplete===false){
+      const missing = (x.answers||[]).filter(a=>a==null).length;
+      return { complete:false, missing };
+    }
+    return { complete:true, missing:0 };
+  },
+
+  render(root){
+    const exams = myExams();
+    if(exams.length===0){
+      root.innerHTML = `<section class="rounded-3xl bg-white p-5 text-center text-sm text-slate-600 shadow">아직 만든 시험이 없어요.</section>`;
+      return;
+    }
+    root.innerHTML = `
+      <section class="space-y-3">
+        ${exams.map(x=>{
+          const st = this.answerStatus(x);
+          const canEditAnswers = Array.isArray(x.questionNums) && x.questionNums.length>0;
+          return `
+          <div class="rounded-3xl bg-white p-4 shadow">
+            <div class="mb-1 flex items-center justify-between">
+              <h3 class="text-sm font-extrabold text-slate-700">${esc(x.title)}</h3>
+              <span class="text-[11px] font-bold text-slate-600">${x.count}문항</span>
+            </div>
+            <div class="mb-2 flex items-center gap-2">
+              <p class="text-xs text-slate-600">${esc(x.range||'')}</p>
+              <span class="rounded-full px-2 py-0.5 text-[10px] font-bold ${st.complete?'bg-grass-500/10 text-grass-600':'bg-coral-400/10 text-coral-500'}">
+                ${st.complete?'✅ 정답 입력완료':'⚠️ 정답 미입력 '+st.missing+'개'}
+              </span>
+            </div>
+            <div class="mb-2 flex gap-2">
+              <button data-key="${x.examKey}" class="rt-view btn3d flex-1 bg-brand-500 py-2 text-xs text-white">결과 보기</button>
+              <button data-link="${esc(x.link)}" class="rt-copy btn3d flex-1 bg-slate-100 py-2 text-xs text-slate-600" style="--btn-edge:#cbd5e1">링크 복사</button>
+            </div>
+            <div class="flex gap-2">
+              <button data-key="${x.examKey}" class="rt-preview btn3d flex-1 bg-slate-100 py-2 text-xs text-slate-600" style="--btn-edge:#cbd5e1">👀 미리보기</button>
+              ${canEditAnswers ? `<button data-key="${x.examKey}" class="rt-ans btn3d flex-1 ${st.complete?'bg-slate-100 text-slate-600':'bg-coral-400 text-white'}" ${st.complete?'style="--btn-edge:#cbd5e1"':''}>${st.complete?'정답 수정':'정답 입력'}</button>` : ''}
+            </div>
+            <div class="rt-detail mt-3 hidden" data-key="${x.examKey}"></div>
+            <div class="rt-answers mt-3 hidden" data-key="${x.examKey}"></div>
+          </div>`;
+        }).join('')}
+      </section>`;
+    $all('.rt-copy', root).forEach(b=>b.addEventListener('click', ()=>{
+      navigator.clipboard.writeText(b.dataset.link).then(()=>toast('복사했어요'));
+    }));
+    $all('.rt-view', root).forEach(b=>b.addEventListener('click', async ()=>{
+      const detail = root.querySelector(`.rt-detail[data-key="${b.dataset.key}"]`);
+      const showing = !detail.classList.contains('hidden');
+      $all('.rt-detail, .rt-answers', root).forEach(d=>d.classList.add('hidden'));
+      if(showing) return;
+      detail.classList.remove('hidden');
+      detail.innerHTML = `<p class="text-xs font-bold text-slate-600">불러오는 중...</p>`;
+      await this.loadDetail(detail, b.dataset.key);
+    }));
+    $all('.rt-ans', root).forEach(b=>b.addEventListener('click', async ()=>{
+      const panel = root.querySelector(`.rt-answers[data-key="${b.dataset.key}"]`);
+      const showing = !panel.classList.contains('hidden');
+      $all('.rt-detail, .rt-answers', root).forEach(d=>d.classList.add('hidden'));
+      if(showing) return;
+      panel.classList.remove('hidden');
+      const x = myExams().find(e=>e.examKey===b.dataset.key);
+      await this.openAnswerEditor(panel, x);
+    }));
+    $all('.rt-preview', root).forEach(b=>b.addEventListener('click', async ()=>{
+      const cfg = deliveryCfg();
+      const r = await jsonpFetch(cfg.url + '?action=fetchExam&key=' + encodeURIComponent(b.dataset.key));
+      if(!r || !r.found) return toast('문항 이미지를 불러오지 못했어요.');
+      const nums = (r.questionNums && r.questionNums.length) ? r.questionNums : r.imageUrls.map((_,i)=>i+1);
+      const fakeDraft = { questions: r.imageUrls.map((url,i)=>({ num: nums[i], dataUrl: url, answer:null })) };
+      PreviewStudentView.render(root, fakeDraft, ()=> this.render(root));
+    }));
+  },
+
+  // 이미 게시된 시험의 정답을 나중에(또는 다시) 입력/수정. 문항 이미지는 학생용
+  // fetchExam(정답 없이 이미지만 내려줌)으로 받아와서 "이미지 보고 등록"도 가능하게 함.
+  async openAnswerEditor(panel, x){
+    panel.innerHTML = `<p class="text-xs font-bold text-slate-600">불러오는 중...</p>`;
+    const cfg = deliveryCfg();
+    const r = await jsonpFetch(cfg.url + '?action=fetchExam&key=' + encodeURIComponent(x.examKey));
+    if(!r || !r.found){ panel.innerHTML = `<p class="text-xs text-coral-500">문항 이미지를 불러오지 못했어요.</p>`; return; }
+    const imageUrls = r.imageUrls || [];
+    const nums = x.questionNums || [];
+    const current = nums.map((_, i)=> (x.answers && x.answers[i]!=null) ? x.answers[i] : null);
+
+    const countLabel = ()=> `⚡ 빠른 입력 (문항번호,정답 후 Enter) — ${current.filter(a=>a!=null).length}/${nums.length}개 입력됨`;
+    panel.innerHTML = `
+      <div class="mb-3 rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50 p-3">
+        <label id="ae-count" class="mb-1 block text-xs font-bold text-brand-600">${countLabel()}</label>
+        <textarea id="ae-quick" rows="1" autocomplete="off" placeholder="예: 18,3" class="w-full resize-none rounded-xl border-2 border-slate-100 bg-white px-3 py-2 text-sm font-mono outline-none focus:border-brand-400"></textarea>
+        <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Shift+Enter로 줄바꿈해서 여러 줄 한 번에도 가능해요. 아래에서 이미지 보고 버튼으로 눌러도 돼요.</p>
+      </div>
+      <div id="ae-list" class="space-y-3"></div>
+      <button id="ae-save" class="btn3d mt-3 w-full bg-brand-500 py-3 text-sm text-white">저장</button>`;
+
+    const list = panel.querySelector('#ae-list');
+    const renderList = ()=>{
+      list.innerHTML = nums.map((num, idx)=>`
+        <div class="rounded-2xl border border-slate-100 p-3">
+          <div class="mb-2 text-xs font-bold text-slate-500">${num}번</div>
+          ${imageUrls[idx] ? `<img class="qimg mb-2" src="${esc(imageUrls[idx])}" />` : ''}
+          <div class="flex gap-1.5">
+            ${[1,2,3,4,5].map(n=>`<button data-idx="${idx}" data-n="${n}" class="ae-btn flex-1 rounded-xl border-2 py-2 text-sm font-bold ${current[idx]===n?'border-brand-500 bg-brand-50 text-brand-600':'border-slate-100 text-slate-600'}">${'①②③④⑤'[n-1]}</button>`).join('')}
+          </div>
+        </div>`).join('');
+      panel.querySelector('#ae-count').textContent = countLabel();
+    };
+    renderList();
+
+    list.addEventListener('click', e=>{
+      const b = e.target.closest('.ae-btn');
+      if(!b) return;
+      current[+b.dataset.idx] = +b.dataset.n;
+      renderList();
+    });
+
+    const quick = panel.querySelector('#ae-quick');
+    quick.addEventListener('keydown', e=>{
+      if(e.key!=='Enter' || e.shiftKey) return;
+      e.preventDefault();
+      const raw = quick.value.trim();
+      if(!raw) return;
+      const lines = raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      let applied = 0, unknown = [];
+      lines.forEach(line=>{
+        const m = line.match(/^(\d{1,2})\s*[,.\s]\s*([1-5])$/);
+        if(!m){ unknown.push(line); return; }
+        const num = parseInt(m[1], 10);
+        const idx = nums.indexOf(num);
+        if(idx===-1){ unknown.push(line); return; }
+        current[idx] = parseInt(m[2], 10);
+        applied++;
+      });
+      if(applied===0) return toast('형식을 확인해주세요 (예: 18,3)');
+      if(unknown.length) toast(`${unknown.length}개는 문항번호를 못 찾았어요: ${unknown.join(', ')}`);
+      quick.value = '';
+      renderList();
+    });
+
+    panel.querySelector('#ae-save').addEventListener('click', async ()=>{
+      const btn = panel.querySelector('#ae-save');
+      btn.disabled = true;
+      btn.textContent = '저장 중...';
+      await hookPost(cfg.url, { action:'updateAnswers', token: cfg.token, examKey: x.examKey, answers: current });
+      await sleep(600);
+      const answersComplete = current.every(a=>a!=null);
+      saveMyExam(Object.assign({}, x, { answers: current.slice(), answersComplete }));
+      toast('저장했어요');
+      this.render(document.getElementById('tab-root'));
+    });
+  },
+
+  async loadDetail(detail, examKey){
+    const cfg = deliveryCfg();
+    const r = await jsonpFetch(cfg.url + '?action=listResults&key=' + encodeURIComponent(examKey) + '&token=' + encodeURIComponent(cfg.token));
+    if(!r || r.error){ detail.innerHTML = `<p class="text-xs text-coral-500">결과를 불러오지 못했어요.</p>`; return; }
+    if(!r.results || r.results.length===0){ detail.innerHTML = `<p class="text-xs text-slate-600">아직 응시한 학생이 없어요.</p>`; return; }
+
+    const correct = r.correctAnswers || [];
+    detail.innerHTML = `
+      <div class="space-y-2">
+        ${r.results.map((res, ridx)=>`
+          <div class="rounded-xl border border-slate-100 p-2.5">
+            <div class="rd-head flex cursor-pointer items-center justify-between" data-r="${ridx}">
+              <span class="text-xs font-bold text-slate-700">${esc(res.name)}</span>
+              <span class="text-xs font-bold text-brand-600">${res.score}/${correct.length} · ${(res.totalTimeMs/1000).toFixed(0)}초</span>
+            </div>
+            <div class="rd-body mt-2 hidden grid grid-cols-5 gap-1" data-r="${ridx}">
+              ${correct.map((c,i)=>{
+                const ans = res.answers[i];
+                const ok = Number(ans)===Number(c);
+                const t = res.times[i]!=null ? (res.times[i]/1000).toFixed(1)+'s' : '-';
+                return `<div class="rounded-lg ${ok?'bg-grass-500/10 text-grass-600':'bg-coral-400/10 text-coral-500'} p-1.5 text-center text-[10px] font-bold">
+                  <div>${i+1}번</div><div>${ok?'O':'X'}</div><div class="text-slate-600">${t}</div>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`).join('')}
+      </div>`;
+    $all('.rd-head', detail).forEach(h=>h.addEventListener('click', ()=>{
+      const body = detail.querySelector(`.rd-body[data-r="${h.dataset.r}"]`);
+      body.classList.toggle('hidden');
+    }));
+  }
+};
+
+/* =====================================================================
+   학생 앱
+===================================================================== */
+const StudentApp = {
+  key: null, hookUrl: null, nums: '', exam: null, idx: 0, name: '', answers: [], times: [], tStart: 0,
+
+  async init(key, hookUrl, nums){
+    this.key = key;
+    this.hookUrl = hookUrl;
+    this.nums = nums || '';
+    const app = document.getElementById('app');
+    if(!hookUrl){
+      app.innerHTML = `<div class="p-6 text-center text-sm text-coral-500">잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.</div>`;
+      return;
+    }
+    app.innerHTML = `<div class="p-6 text-center text-sm text-slate-600">불러오는 중...</div>`;
+    let fetchUrl = hookUrl + '?action=fetchExam&key=' + encodeURIComponent(key);
+    if(this.nums) fetchUrl += '&nums=' + encodeURIComponent(this.nums);
+    const r = await jsonpFetch(fetchUrl);
+    if(!r || !r.found){
+      app.innerHTML = `<div class="p-6 text-center text-sm text-coral-500">${r&&r.expired?'시험이 만료됐어요.':'시험을 찾을 수 없어요.'}</div>`;
+      return;
+    }
+    this.exam = r;
+    this.renderGate();
+  },
+
+  renderGate(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div class="mb-2 text-2xl font-extrabold text-slate-800">📝 ${esc(this.exam.title)}</div>
+        <div class="mb-6 text-sm text-slate-600">${esc(this.exam.range||'')} · ${this.exam.questionCount}문항</div>
+        <input id="sg-name" placeholder="이름을 입력하세요" class="mb-4 w-full max-w-xs rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-center text-sm outline-none focus:border-brand-400" />
+        <button id="sg-start" class="btn3d w-full max-w-xs bg-brand-500 py-3.5 text-sm text-white">시작하기</button>
+      </div>`;
+    document.getElementById('sg-start').addEventListener('click', ()=>{
+      const name = document.getElementById('sg-name').value.trim();
+      if(!name) return toast('이름을 입력해주세요');
+      this.name = name;
+      this.idx = 0;
+      this.answers = new Array(this.exam.questionCount).fill(null);
+      this.times = new Array(this.exam.questionCount).fill(0);
+      this.renderQuestion();
+    });
+  },
+
+  // 학생도 이전/다음으로 자유롭게 오가며 답을 고치거나 건너뛴 문항으로 돌아갈 수 있게 함
+  // (기존엔 한 번 고르면 바로 다음으로만 넘어가는 방식이었음).
+  renderQuestion(){
+    const app = document.getElementById('app');
+    const total = this.exam.questionCount;
+    const current = this.answers[this.idx];
+    const isLast = this.idx === total-1;
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col px-4 py-5">
+        <div class="mb-3 text-center text-xs font-bold text-slate-600">${this.idx+1} / ${total}</div>
+        <div class="mb-4 flex-1 overflow-y-auto">
+          <img class="qimg" src="${this.exam.imageUrls[this.idx]}" />
+        </div>
+        <div class="mb-3 grid grid-cols-5 gap-2">
+          ${[1,2,3,4,5].map(n=>`<button data-n="${n}" class="sq-ans btn3d py-3.5 text-base shadow ${current===n?'bg-brand-500 text-white':'bg-white text-slate-700'}" style="--btn-edge:${current===n?'#1d4ed8':'#e2e8f0'}">${'①②③④⑤'[n-1]}</button>`).join('')}
+        </div>
+        <div class="flex gap-2">
+          <button id="sq-prev" class="btn3d flex-1 bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1" ${this.idx===0?'disabled':''}>← 이전</button>
+          ${isLast
+            ? `<button id="sq-submit" class="btn3d flex-1 bg-grass-500 py-3 text-sm text-white">✅ 제출하기</button>`
+            : `<button id="sq-next" class="btn3d flex-1 bg-brand-500 py-3 text-sm text-white">다음 →</button>`}
+        </div>
+      </div>`;
+    this.tStart = performance.now();
+    $all('.sq-ans', app).forEach(b=>b.addEventListener('click', ()=> this.selectAnswer(+b.dataset.n)));
+    const prevBtn = document.getElementById('sq-prev');
+    if(prevBtn) prevBtn.addEventListener('click', ()=> this.goTo(this.idx-1));
+    const nextBtn = document.getElementById('sq-next');
+    if(nextBtn) nextBtn.addEventListener('click', ()=> this.goTo(this.idx+1));
+    const submitBtn = document.getElementById('sq-submit');
+    if(submitBtn) submitBtn.addEventListener('click', ()=> this.finish());
+  },
+
+  selectAnswer(n){
+    this.times[this.idx] += Math.round(performance.now()-this.tStart);
+    this.answers[this.idx] = n;
+    this.renderQuestion(); // 하이라이트 갱신 (안 넘어가고 같은 문항에 머무름)
+  },
+
+  goTo(newIdx){
+    if(newIdx<0 || newIdx>=this.exam.questionCount) return;
+    this.times[this.idx] += Math.round(performance.now()-this.tStart);
+    this.idx = newIdx;
+    this.renderQuestion();
+  },
+
+  async finish(){
+    this.times[this.idx] += Math.round(performance.now()-this.tStart);
+    const missing = this.answers.filter(a=>a==null).length;
+    if(missing>0){
+      const ok = await askConfirm(`아직 답을 고르지 않은 문항이 ${missing}개 있어요. 그래도 제출할까요?`);
+      if(!ok) return;
+    }
+    const app = document.getElementById('app');
+    app.innerHTML = `<div class="p-6 text-center text-sm text-slate-600">제출 중...</div>`;
+    await hookPost(this.hookUrl, {
+      action:'submitResult', token: this.exam.submitToken,
+      examKey: this.key, name: this.name, answers: this.answers, times: this.times,
+      nums: this.nums || ''
+    });
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div class="mb-2 text-3xl">🎉</div>
+        <div class="mb-2 text-lg font-extrabold text-slate-800">제출 완료!</div>
+        <div class="text-sm text-slate-600">${esc(this.name)}님, 수고했어요.<br/>선생님이 결과를 확인할 거예요.</div>
+      </div>`;
+  }
+};
+
+boot();
+</script>
+</body>
+</html>
