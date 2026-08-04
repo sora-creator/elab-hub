@@ -114,6 +114,21 @@ function uid(n=10){
   return s;
 }
 function esc(str){ return String(str??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
+
+// 모듈 간 이동 바 -- 단어암기/문법학습/끊어읽기/시험보기 4개 세부 페이지 전부 동일하게
+// 상단에 붙여서, 어느 화면에 있든 다른 기능으로 바로 넘어갈 수 있게 함(학생 화면에는 안 씀).
+function elabNav(current){
+  const items = [
+    { id:'vocab', href:'../vocab/index.html', label:'📝 단어암기' },
+    { id:'grammar', href:'../grammar/index.html', label:'🔍 문법학습' },
+    { id:'sentence', href:'../sentence/index.html', label:'🧩 끊어읽기' },
+    { id:'exam', href:'../exam/index.html', label:'🖊️ 시험보기' },
+  ];
+  return `<div class="mb-3 flex items-center gap-1 overflow-x-auto rounded-2xl bg-white p-1.5 shadow-card">
+    <a href="../index.html" class="shrink-0 rounded-xl px-2.5 py-2 text-sm text-slate-400 hover:bg-slate-50">🏠</a>
+    ${items.map(it=>`<a href="${it.href}" class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold whitespace-nowrap ${it.id===current?'bg-brand-500 text-white':'text-slate-600 hover:bg-slate-50'}">${it.label}</a>`).join('')}
+  </div>`;
+}
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
 /* ---------- 폴더 유틸 (상위/하위 폴더 트리) ---------- */
@@ -603,6 +618,7 @@ function TeacherApp(){
   render();
   function render(){
     app.innerHTML = `
+      ${elabNav('vocab')}
       <header class="mb-4 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <div class="grid h-11 w-11 place-items-center rounded-2xl bg-brand-500 text-2xl shadow-soft floaty">📚</div>

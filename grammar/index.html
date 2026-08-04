@@ -4,11 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>문법학습 · ELAB</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <style>
   :root {
-    --blue: #2563eb;
-    --blue-dark: #1d4ed8;
-    --bg: #f5f7fb;
+    /* ELAB 다른 모듈(단어암기/끊어읽기/시험보기)과 같은 인디고 계열로 맞춤 -- 이 변수만 바꾸면
+       버튼/배지/테두리 등 전체에 자동으로 반영됨(개별 요소 스타일은 안 건드림) */
+    --blue: #6366f1;
+    --blue-dark: #4f46e5;
+    --bg: #f8fafc;
     --card: #ffffff;
     --border: #e2e8f0;
     --text: #1e293b;
@@ -19,12 +22,20 @@
   * { box-sizing: border-box; }
   body {
     margin: 0;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
+    font-family: Pretendard, -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic", Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
     line-height: 1.6;
   }
   .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
+  .elab-nav { display:flex; align-items:center; gap:4px; overflow-x:auto; background:#fff; border:1px solid var(--border);
+    border-radius: 16px; padding: 6px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .elab-nav a { flex-shrink:0; display:inline-block; padding: 8px 12px; border-radius: 10px; font-size: 12px;
+    font-weight: 700; text-decoration: none; color: var(--muted); white-space: nowrap; }
+  .elab-nav a:hover { background: #f1f5f9; }
+  .elab-nav a.home { color: #94a3b8; font-size: 14px; }
+  .elab-nav a.cur { background: var(--blue); color: #fff; }
+  .elab-nav a.cur:hover { background: var(--blue); }
   h1 { font-size: 24px; margin-bottom: 4px; }
   .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
   .card {
@@ -157,6 +168,13 @@
   <div id="stBody"></div>
 </div>
 <div id="teacherWrap" class="wrap">
+  <div class="elab-nav">
+    <a href="../index.html" class="home">🏠</a>
+    <a href="../vocab/index.html">📝 단어암기</a>
+    <a href="../grammar/index.html" class="cur">🔍 문법학습</a>
+    <a href="../sentence/index.html">🧩 끊어읽기</a>
+    <a href="../exam/index.html">🖊️ 시험보기</a>
+  </div>
   <h1>🔍 문법학습 · 교사</h1>
   <div class="subtitle">모의고사 PDF를 넣으면, 분사구문 / to부정사가 쓰인 문장만 뽑아드려요. 설치 없이 이 화면에서 바로 됩니다.</div>
 
