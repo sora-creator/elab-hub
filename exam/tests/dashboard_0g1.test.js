@@ -1,0 +1,17 @@
+const fs=require('fs'),vm=require('vm');
+let src=fs.readFileSync('exam/tests/review_0f.test.js','utf8');
+src=src.replace("console.log('review_0f.test.js: all assertions passed');",`
+ctx.setupAssignmentsV2_();
+const vocabId=crypto.randomUUID();
+sheets.VocabSetsV2.appendRow([vocabId,teacher,'G01VOCAB0001','수능기본 Day 12','수능기본','',true,now,now,'수능기본','Day 12','101','150','수능기본 Day 12 · 101~150']);
+ctx.handleCreateAssignmentV2_({student_ids:[student],content_type:'VOCAB',content_ref_id:vocabId,title:'단어 숙제',lesson_date:'2026-08-15'});
+ctx.handleCreateAssignmentV2_({student_ids:[student],content_type:'READING',content_subtype:'INDIVIDUAL',content_ref_id:'exam-1',title:'독해 숙제',lesson_date:'2026-08-15'});
+ctx.handleCreateAssignmentV2_({student_ids:[student],content_type:'GRAMMAR',content_subtype:'FINAL_QUIZ',content_ref_id:'grammar-1',title:'이전 문법',lesson_date:'2026-08-08'});
+assert.strictEqual(sheets.HomeworkBatchesV2.getLastRow(),3,'two lesson dates make two batches');
+const links=sheets.HomeworkBatchAssignmentsV2.getDataRange().getValues();assert.strictEqual(links.length-1,3);assert(JSON.parse(links[1][4]).display_range.includes('101~150'));
+const dash=ctx.handleGetTeacherDashboardG01_({parameter:{token:'teacher',group_id:'',student_id:''}});assert.strictEqual(dash.dashboard_basis,'LATEST_HOMEWORK_BATCH');assert.strictEqual(dash.summary.active_students,1);assert.strictEqual(dash.summary.incomplete_students,1);assert.strictEqual(dash.students[0].homework_batches.length,2);assert.strictEqual(dash.students[0].current_batch.lesson_date,'2026-08-15');assert.strictEqual(dash.students[0].current_batch.assignments,2);assert.strictEqual(dash.students[0].areas.VOCAB.assigned,1);assert.strictEqual(dash.students[0].areas.GRAMMAR.assigned,0);assert(dash.students[0].vocab_display_range.includes('101~150'));
+sheetReads=[];const summaryDash=ctx.handleGetTeacherDashboardH_({parameter:{token:'teacher',group_id:'',student_id:'',summary:'1'}}),initialSummaryReads=Array.from(new Set(sheetReads));assert.strictEqual(summaryDash.summary.active_students,1);assert.strictEqual(summaryDash.students[0].current_batch.performance,undefined,'initial summary skips detail-only performance aggregation');assert(!initialSummaryReads.includes('GroupMembersV2'),'unfiltered initial summary skips unused group membership rows');assert(initialSummaryReads.includes('GroupsV2'),'initial summary still returns the group filter options');sheetReads=[];ctx.handleGetTeacherDashboardH_({parameter:{token:'teacher',group_id:'missing-group',student_id:'',summary:'1'}});assert(Array.from(new Set(sheetReads)).includes('GroupMembersV2'),'filtered dashboard still reads group membership rows');
+assert.strictEqual(ctx.handleListHomeworkBatchesV2_({parameter:{token:'student',student_id:student}}).error,'no token');
+const navG01=fs.readFileSync('shared/nav.js','utf8'),uiG01=fs.readFileSync('teacher/dashboard.html','utf8');assert(navG01.indexOf("'students'")<navG01.indexOf("'dashboard'")&&navG01.indexOf("'vocab'")<navG01.indexOf("'grammar'")&&navG01.indexOf("'grammar'")<navG01.indexOf("'exam'"));assert(uiG01.includes("action=getTeacherDashboardV2&summary=1&token="));assert(uiG01.includes("['PENDING','채점 대기'"));assert(!uiG01.includes('기한초과 학생'));assert(uiG01.includes('숙제 이력'));assert(uiG01.includes('미배정'));
+console.log('dashboard_0g1.test.js: all assertions passed');`);
+vm.runInThisContext('(function(require){'+src+'\n})',{filename:'dashboard_0g1.test.js'})(require);
