@@ -2,11 +2,14 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>단어암기 · ELAB</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELAB · 교사용</title>
 
 <!-- 한글 최적화 폰트 -->
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
+<script src="../shared/appsScriptTransport.js?v=vocab-db-1"></script>
 
 <!-- Tailwind Play CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
@@ -18,12 +21,12 @@
           sans: ['Pretendard', '-apple-system', 'BlinkMacSystemFont', 'system-ui', 'Roboto', 'sans-serif'],
         },
         colors: {
-          brand:   { 50:'#eef2ff',100:'#e0e7ff',200:'#c7d2fe',400:'#818cf8',500:'#6366f1',600:'#4f46e5',700:'#4338ca' },
+          brand:   { 50:'#f0f5fa',100:'#e0eaf3',200:'#bfd2e3',400:'#5484aa',500:'#326b98',600:'#245984',700:'#17456f' },
           grass:   { 50:'#f0fdf4',400:'#4ade80',500:'#22c55e',600:'#16a34a' },
           coral:   { 50:'#fff1f2',400:'#fb7185',500:'#f43f5e',600:'#e11d48' },
         },
         boxShadow: {
-          soft: '0 10px 30px -12px rgba(79,70,229,0.25)',
+          soft: '0 10px 30px -12px rgba(8,145,178,0.25)',
           card: '0 12px 40px -16px rgba(30,41,59,0.20)',
         }
       }
@@ -35,9 +38,9 @@
   html,body{ -webkit-tap-highlight-color: transparent; overscroll-behavior-y: contain; }
   body{
     background:
-      radial-gradient(1200px 500px at 10% -5%, #eef2ff 0%, transparent 55%),
-      radial-gradient(1000px 460px at 110% 0%, #fdf2ff 0%, transparent 50%),
-      linear-gradient(180deg,#fbfcff 0%,#f6f7ff 100%);
+      radial-gradient(1200px 500px at 10% -5%, #def0f1 0%, transparent 55%),
+      radial-gradient(1000px 460px at 110% 0%, #e2efec 0%, transparent 50%),
+      linear-gradient(180deg,#f1f3f2 0%,#e8ebea 100%);
     min-height:100dvh;
   }
   /* 듀오링고식 눌리는 3D 버튼 */
@@ -58,7 +61,7 @@
   .anim-in    { animation: bounceIn .5s cubic-bezier(.2,.8,.2,1) both; }
   .floaty     { animation: floaty 3s ease-in-out infinite; }
 
-  .progressbar > i{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#818cf8,#22c55e); transition:width .5s cubic-bezier(.2,.8,.2,1); }
+  .progressbar > i{ display:block; height:100%; border-radius:999px; background:linear-gradient(90deg,#22d3ee,#22c55e); transition:width .5s cubic-bezier(.2,.8,.2,1); }
 
   input::placeholder{ color:#c7cbd6; }
   /* iOS zoom 방지: 폰트 16px 이상 */
@@ -73,7 +76,7 @@
 </head>
 
 <body class="font-sans text-slate-800 antialiased">
-  <div id="app" class="mx-auto w-full max-w-md px-4 pb-24 pt-5 sm:max-w-lg"></div>
+  <div id="app" class="mx-auto w-full max-w-3xl px-4 pb-24 pt-4"></div>
   <canvas id="fx" class="pointer-events-none fixed inset-0 z-50 hidden h-full w-full"></canvas>
   <div id="toast" class="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 opacity-0 transition-all duration-300"></div>
 
@@ -115,19 +118,11 @@ function uid(n=10){
 }
 function esc(str){ return String(str??'').replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m])); }
 
-// 모듈 간 이동 바 -- 단어암기/문법학습/끊어읽기/시험보기 4개 세부 페이지 전부 동일하게
-// 상단에 붙여서, 어느 화면에 있든 다른 기능으로 바로 넘어갈 수 있게 함(학생 화면에는 안 씀).
+// 모듈 간 이동 바 -- 6개 하위 페이지(단어암기/문법학습/끊어읽기/시험보기/학생관리/대시보드) 전부
+// 동일한 마크업+클래스(shared/theme.css의 .eb-nav)로 상단에 붙여서 위치·글자크기를 통일함
+// (학생 화면에는 안 씀).
 function elabNav(current){
-  const items = [
-    { id:'vocab', href:'../vocab/index.html', label:'📝 단어암기' },
-    { id:'grammar', href:'../grammar/index.html', label:'🔍 문법학습' },
-    { id:'sentence', href:'../sentence/index.html', label:'🧩 끊어읽기' },
-    { id:'exam', href:'../exam/index.html', label:'🖊️ 시험보기' },
-  ];
-  return `<div class="mb-3 flex items-center gap-1 overflow-x-auto rounded-2xl bg-white p-1.5 shadow-card">
-    <a href="../index.html" class="shrink-0 rounded-xl px-2.5 py-2 text-sm text-slate-400 hover:bg-slate-50">🏠</a>
-    ${items.map(it=>`<a href="${it.href}" class="shrink-0 rounded-xl px-3 py-2 text-xs font-bold whitespace-nowrap ${it.id===current?'bg-brand-500 text-white':'text-slate-600 hover:bg-slate-50'}">${it.label}</a>`).join('')}
-  </div>`;
+  return `<div data-elab-nav="${current}"></div>`;
 }
 function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 
@@ -202,7 +197,7 @@ function cloneFolderTree(folders, words, srcId, newParentId){
     const orig = folders.find(f=>f.id===fid); if(!orig) return;
     const nf = { id:uid(8), name: isRoot? `${orig.name} 복사본` : orig.name, parentId };
     newFolders.push(nf);
-    words.filter(w=>(w.folderId||null)===fid).forEach(w=> newWords.push({ id:uid(8), en:w.en, ko:w.ko, folderId:nf.id }));
+    words.filter(w=>(w.folderId||null)===fid).forEach(w=> newWords.push({ id:w.id||stableWordId(w.en,w.ko), en:w.en, ko:w.ko, folderId:nf.id }));
     folderChildren(folders, fid).forEach(c=> walk(c.id, nf.id, false));
   })(srcId, newParentId||null, true);
   return { newFolders, newWords };
@@ -249,6 +244,26 @@ function fnv1a(str){ // 결정적 32bit 해시 → base36
   for(let i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193); }
   return (h>>>0).toString(36);
 }
+function isFixedCatalogDetailName(value){return /^(?:set\s*\d+|day\s*\d+|\d+\s*일|\d+\s*번(?:\s*외\s*\d+\s*개)?|(?:문항|범위)\s*.*)$/i.test(String(value||'').trim())}
+function fixedCatalogSource(folders,folderIds,fallback){const sources=(folderIds||[]).map(id=>folderPath(folders,id).map(folder=>folder.name)).map(parts=>{while(parts.length>1&&isFixedCatalogDetailName(parts[parts.length-1]))parts.pop();return parts.join(' › ')}).filter(Boolean),unique=[...new Set(sources)];if(unique.length===1){const parts=unique[0].split(' › ');return parts[parts.length-1]}return fallback}
+function fixedCatalogId(folderIds){const ids=(folderIds&&folderIds.length?folderIds:['__ALL_WORDS__']).map(String).sort();return 'catalog_'+stableWordHash(JSON.stringify(ids))}
+function fixedSetSourceFolders(words,folders){const ids=[];(words||[]).forEach(word=>{const id=String(word&&word.folderId||'');if(!ids.includes(id))ids.push(id)});return ids.map(id=>{const path=id?folderPath(folders,id):[];return{folder_id:id,name:path.length?path[path.length-1].name:'전체 단어장',path:path.map(folder=>folder.name)}})}
+function fixedSetSourceSummary(sources){if(!sources||!sources.length)return'전체 단어장';return sources[0].name+(sources.length>1?' 외 '+(sources.length-1)+'개':'')}
+function normalizeWordTerm(value){ return String(value??'').trim().toLowerCase(); }
+function normalizeWordMeaning(value){ return String(value??'').trim().replace(/\s+/g,' '); }
+function canonicalWordKey(term, meaning){ return JSON.stringify([normalizeWordTerm(term),normalizeWordMeaning(meaning)]); }
+function stableWordHash(str){
+  let a=0x811c9dc5, b=0x9e3779b9;
+  for(let i=0;i<str.length;i++){ const c=str.charCodeAt(i); a=Math.imul(a^c,0x01000193); b=Math.imul(b^c,0x85ebca6b); b^=b>>>13; }
+  return [a>>>0,b>>>0].map(n=>n.toString(16).padStart(8,'0')).join('');
+}
+function stableWordId(term, meaning){ return 'word_'+stableWordHash(canonicalWordKey(term,meaning)); }
+function wordWithStableId(word){ return {...word,id:String(word&&word.id||'').trim()||stableWordId(word&&word.en,word&&word.ko)}; }
+function splitFixedVocabSets(words, size=50){
+  const n=Math.max(1,parseInt(size,10)||50), out=[];
+  for(let i=0;i<words.length;i+=n) out.push(words.slice(i,i+n));
+  return out;
+}
 function sigString(p){
   const w = (p.w||[]).map(x=>x.e+'\u241f'+x.k).join('\u241e');
   return [SIG_SALT, p.s, p.exp||0, p.mode, p.sec, p.dm||'', p.dv||'', p.dt||'', w].join('\u2016');
@@ -292,27 +307,81 @@ async function translateWord(en){
 function newToken(){ return uid(20); }
 function deliveryCfg(){
   let c=null;
-  try{ c=JSON.parse(localStorage.getItem('vpang.delivery')||'null'); }catch(e){}
+  let sourceKey='generated';
+  try{
+    c=JSON.parse(localStorage.getItem('hub.delivery')||'null');
+    if(c) sourceKey='hub.delivery';
+    if(!c){c=JSON.parse(localStorage.getItem('vpang.delivery')||'null');if(c)sourceKey='vpang.delivery';}
+  }catch(e){}
   if(!c) c = { mode:'hook', url:'', token:newToken() };
   if(!c.token) c.token = newToken();     // 기존 설정 마이그레이션
   if(c.mode==='ntfy') c.mode='hook';      // 구글시트 전용으로 통일
+  if(!c.mode) c.mode='hook';
+  localStorage.setItem('hub.delivery', JSON.stringify(c));
   localStorage.setItem('vpang.delivery', JSON.stringify(c));
+  console.info('[ELAB delivery]',{page:'vocab',source_key:sourceKey,url:c.url||'',hub_url:(()=>{try{return (JSON.parse(localStorage.getItem('hub.delivery')||'null')||{}).url||''}catch(e){return''}})(),vpang_url:(()=>{try{return (JSON.parse(localStorage.getItem('vpang.delivery')||'null')||{}).url||''}catch(e){return''}})()});
   return c;
 }
-function saveDelivery(c){ localStorage.setItem('vpang.delivery', JSON.stringify(c)); }
+function saveDelivery(c){ localStorage.setItem('hub.delivery', JSON.stringify(c)); localStorage.setItem('vpang.delivery', JSON.stringify(c)); }
 
-// 학생 완료 시 결과 전송. dm:'hook'|'', dv:웹훅 URL, dt:비밀 토큰
-async function sendResult(dm, dv, dt, result){
+// 학생 완료 시 결과 전송. 교사용 TOKEN은 링크/학생 요청에 넣지 않고,
+// session key 범위의 submitVocabResult capability를 서버에서 발급받아 사용한다.
+async function sendResult(dm, dv, result, sessionKey, expiresAt){
+  const pageParams = new URLSearchParams(location.search);
+  const traceId=result.trace_id||(globalThis.crypto&&crypto.randomUUID?crypto.randomUUID():('trace-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10)));
+  result.trace_id=traceId;
+  try{localStorage.setItem('elab.result.last-trace',traceId);}catch(traceStorageError){}
+  const traceLog=(step,data)=>console.info('[ELAB-RESULT][trace='+traceId+'] '+step,data||'');
+  const pendingKey='elab.vocab.pending-result.'+sessionKey+'.'+(pageParams.get('assignment_target_id')||'direct');
   try{
     if(dm==='hook' && dv){
+      const assignmentContext = ['assignment_target_id','student_id','assignmentCapability'].map(k=>pageParams.get(k)?'&'+k+'='+encodeURIComponent(pageParams.get(k)):'').join('');
+      const issueUrl=dv + '?action=issueVocabCapability&key=' + encodeURIComponent(sessionKey)
+        + (expiresAt ? '&expiresAt=' + encodeURIComponent(expiresAt) : '') + assignmentContext+'&trace_id='+encodeURIComponent(traceId);
+      console.info('[ELAB vocab result] issueVocabCapability URL',issueUrl.replace(/([?&]assignmentCapability=)[^&]*/,'$1[redacted]'));
+      const auth = await fetchJsonpObject(issueUrl,30000);
+      traceLog('ISSUE_RESPONSE',{found:!!(auth&&auth.found),error:auth&&auth.error||'',attempt_id:auth&&auth.attempt_id||'',attempt_status:auth&&auth.attempt_status||''});
+      if(!auth || !auth.found){console.error('[ELAB-RESULT][trace='+traceId+'] SUBMIT_NOT_CONFIRMED capability issue failed',auth&&auth.error||'no response');return false;}
+      const studentAuth = auth.studentCapability
+        ? { studentCapability:auth.studentCapability }
+        : { studentSubmitToken:auth.studentSubmitToken||'' };
+      const submission={ action:'submitVocabResult', ...result, ...studentAuth, sessionKey,
+        request_id:result.request_id||('vocab-result:'+String(auth.attempt_id||sessionKey)),
+        assignment_id:pageParams.get('assignment_id')||'',assignment_target_id:pageParams.get('assignment_target_id')||'',student_id:pageParams.get('student_id')||'',
+        attempt_id:auth.attempt_id||'',attemptCapability:auth.attemptCapability||'',vocab_set_id:auth.vocab_set_id||'' };
+      traceLog('SUBMIT_PAYLOAD',{trace_id:traceId,action:submission.action,student_id:submission.student_id,assignment_id:submission.assignment_id,assignment_target_id:submission.assignment_target_id,attempt_id:submission.attempt_id,vocab_set_id:submission.vocab_set_id,session_key:submission.sessionKey,request_id:submission.request_id,studentCapability:!!submission.studentCapability,attemptCapability:!!submission.attemptCapability,score:submission.score,total:submission.count||(submission.wordItems||[]).length,correct:submission.correct,wrong_count:Array.isArray(submission.wrong)?submission.wrong.length:(submission.wordItems||[]).filter(w=>Number(w.wrong_count)>0).length});
+      if(!auth.attempt_id||!auth.attemptCapability){console.error('[ELAB-RESULT][trace='+traceId+'] SUBMIT_NOT_CONFIRMED',{reason:'MISSING_ATTEMPT_CONTEXT',attempt_id:auth.attempt_id||'',attemptCapability:!!auth.attemptCapability});return false;}
+      try{localStorage.setItem(pendingKey,JSON.stringify({url:dv,submission,created_at:Date.now()}));}catch(storageError){}
       // 구글 Apps Script 웹훅: CORS 프리플라이트 회피 위해 text/plain + no-cors
-      // action은 통합 웹앱 허브 백엔드가 VocabResults 시트로 분기하기 위해 필요.
-      // VocaTest 전용 개인 Apps Script(기존 사용자)는 모르는 필드를 그냥 무시하므로 하위호환됨.
-      await fetch(dv, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-                        body:JSON.stringify({ action:'submitVocabResult', ...result, token: dt||'' }) });
-      return true; // no-cors는 응답 확인 불가 → 전송 시도 성공으로 간주
+      traceLog('SUBMIT_TRANSPORT_START',{transport:'fetch',mode:'no-cors',url:new URL(dv).origin+new URL(dv).pathname});
+      try{
+        const submitTransport=fetch(dv, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body:JSON.stringify(submission) });
+        traceLog('SUBMIT_TRANSPORT_RETURNED');
+        await submitTransport;
+        traceLog('SUBMIT_TRANSPORT_RESOLVED');
+        traceLog('SUBMIT_REQUEST_DISPATCHED',{url:new URL(dv).origin+new URL(dv).pathname});
+      }catch(submitError){console.error('[ELAB-RESULT][trace='+traceId+'] SUBMIT_TRANSPORT_ERROR',{name:submitError&&submitError.name||'',message:submitError&&submitError.message||String(submitError)});return false;}
+      finally{traceLog('SUBMIT_TRANSPORT_FINALLY');}
+      traceLog('VERIFY_START',{attempt_id:auth.attempt_id});
+      const verifyUrl=dv+'?action=verifyVocabResultV2&attempt_id='+encodeURIComponent(auth.attempt_id)
+        +'&assignment_target_id='+encodeURIComponent(pageParams.get('assignment_target_id')||'')
+        +'&student_id='+encodeURIComponent(pageParams.get('student_id')||'')
+        +'&attemptCapability='+encodeURIComponent(auth.attemptCapability||'')
+        +'&expected_word_count='+encodeURIComponent((result.wordItems||[]).length)
+        +'&trace_id='+encodeURIComponent(traceId);
+      traceLog('VERIFY_URL',verifyUrl.replace(/([?&]attemptCapability=)[^&]*/,'$1[redacted]'));
+      for(let attempt=0;attempt<4;attempt++){
+        const saved=await fetchJsonpObject(verifyUrl+'&_='+Date.now(),30000);
+        traceLog('VERIFY_RESPONSE',{try:attempt+1,raw:saved||null});
+        if(saved&&saved.found&&saved.complete){try{localStorage.removeItem(pendingKey);}catch(storageError){}return true;}
+        if(!saved)console.error('[ELAB-RESULT][trace='+traceId+'] VERIFY_API_FAILED');
+        else if(saved.error)console.error('[ELAB-RESULT][trace='+traceId+'] VERIFY_API_FAILED',saved.error);
+        else console.error('[ELAB-RESULT][trace='+traceId+'] RESULT_NOT_FOUND_AFTER_SUBMIT',saved);
+        if(attempt<3)await new Promise(resolve=>setTimeout(resolve,600));
+      }
+      return false;
     }
-  }catch(e){}
+  }catch(e){console.error('[ELAB-RESULT][trace='+traceId+'] SUBMIT_NOT_CONFIRMED',e);}
   return false;
 }
 
@@ -341,32 +410,79 @@ async function loadRosterInto(sel, wrap, root){
 // 링크를 만든 직후 그 학생의 학생포털 배정에 반영. 단어 필드만 보내므로(백엔드가 merge 방식)
 // 시험·문법 배정은 그대로 유지된다. 실패해도 조용히 무시 — 링크 자체는 이미 만들어졌고
 // 교사가 복사해서 직접 보내는 기존 방식은 영향받지 않아야 하므로.
-async function autoAssignVocab(studentName, label, link){
-  const name = (studentName||'').trim();
-  if(!name) return false;
-  const dc = deliveryCfg();
-  if(dc.mode!=='hook' || !dc.url || !dc.token) return false;
+// 생성된 단어시험 세션을 Assignment에서 재사용 가능한 불변 콘텐츠로 등록한다.
+// 단어 목록은 Assignment에 복사하지 않고 기존 서명 세션 링크를 VocabSetsV2가 참조한다.
+async function registerVocabSet(sessionKey, title, sourceRef, link, options={}){
+  const dc=deliveryCfg();
+  if(dc.mode!=='hook'||!dc.url||!dc.token)return false;
   try{
-    await fetch(dc.url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'},
-      body: JSON.stringify({ action:'saveAssignment', token:dc.token, name, vocabLabel:label||'', vocabLink:link }) });
+    const body=JSON.stringify({action:'saveVocabSetV2',token:dc.token,session_key:sessionKey,title:title||sourceRef||'단어시험',source_ref:sourceRef||'',content_link:link,
+      book_source:options.book_source||'',day_set:options.day_set||'',range_start:options.range_start||'',range_end:options.range_end||'',display_range:options.display_range||sourceRef||'',catalog_id:options.catalog_id||'',set_number:options.set_number||'',source_folders_json:options.source_folders_json||'',
+      fixed_set:options.fixed_set===true,word_items:(options.words||[]).map((w,i)=>({word_id:w.id,term:w.en,meaning:w.ko,item_order:i+1}))});
+    const queued=navigator.sendBeacon&&navigator.sendBeacon(dc.url,new Blob([body],{type:'text/plain;charset=utf-8'}));
+    if(!queued)fetch(dc.url,{method:'POST',mode:'no-cors',keepalive:true,headers:{'Content-Type':'text/plain;charset=utf-8'},body}).catch(()=>{});
+    if(new URLSearchParams(location.search).get('assignment_pick')!=='1')(async()=>{
+      for(let attempt=0;attempt<3;attempt++){
+        const result=await jsonpFetch(dc.url+'?action=listAssignmentContentV2&token='+encodeURIComponent(dc.token)+'&_='+Date.now());
+        const saved=result&&Array.isArray(result.items)&&result.items.find(item=>item.content_type==='VOCAB'&&item.extra&&String(item.extra.session_key)===String(sessionKey));
+        if(saved){
+          try{
+            const cache=JSON.parse(sessionStorage.getItem('elab.assignment.workspace.v1')||'null');
+            if(cache&&Array.isArray(cache.items)){
+              cache.items=cache.items.filter(item=>!(item.content_type==='VOCAB'&&item.extra&&String(item.extra.session_key)===String(sessionKey)));
+              cache.items.push(saved);
+              sessionStorage.setItem('elab.assignment.workspace.v1',JSON.stringify(cache));
+            }
+          }catch(e){}
+          return;
+        }
+        await new Promise(resolve=>setTimeout(resolve,400));
+      }
+    })();
     return true;
-  }catch(e){ return false; }
+  }catch(e){return false;}
+}
+
+function returnSavedVocabToAssignment(items,addToCart=true,selectionMeta=null){
+  let draft={};try{draft=JSON.parse(sessionStorage.getItem('elab.assignment.draft.v2')||'{}')||{}}catch(e){}
+  const cart=Array.isArray(draft.cart)?draft.cart:[],pending=Array.isArray(draft.pendingItems)?draft.pendingItems:[];
+  items.forEach(item=>{
+    const ref=String(item.key);
+    if(addToCart&&!cart.some(value=>value.content_type==='VOCAB'&&String(value.content_ref_id)===ref))cart.push({content_type:'VOCAB',content_ref_id:ref});
+    if(!pending.some(value=>value.content_type==='VOCAB'&&String(value.content_ref_id)===ref))pending.push({content_type:'VOCAB',content_ref_id:ref,title:item.title||'단어암기',content_link:item.link||'',extra:Object.assign({session_key:ref},item.extra||{})});
+  });
+  draft.cart=cart;draft.pendingItems=pending;
+  if(selectionMeta&&selectionMeta.catalog_id){
+    draft.vocabSelection={
+      catalog_id:String(selectionMeta.catalog_id),
+      label:String(selectionMeta.label||''),
+      source_folders_json:JSON.stringify(selectionMeta.source_folders||[])
+    };
+  }
+  try{sessionStorage.setItem('elab.assignment.draft.v2',JSON.stringify(draft))}catch(e){}
+  location.replace('../teacher/assignments.html');
 }
 
 // JSONP GET (Apps Script 응답을 CORS 제약 없이 읽기 위함 — <script> 태그는 CORS 대상이 아님)
 // 응답이 콜백(payload)로 안 오거나 타임아웃되면 null
 function jsonpFetch(url, timeoutMs=10000){
-  return new Promise(resolve=>{
-    const cbName = '__vt_cb_' + uid(8);
-    const script = document.createElement('script');
-    let settled = false;
-    const cleanup = ()=>{ delete window[cbName]; script.remove(); clearTimeout(timer); };
-    window[cbName] = (data)=>{ if(settled) return; settled=true; cleanup(); resolve(data); };
-    const timer = setTimeout(()=>{ if(settled) return; settled=true; cleanup(); resolve(null); }, timeoutMs);
-    script.onerror = ()=>{ if(settled) return; settled=true; cleanup(); resolve(null); };
-    script.src = url + (url.includes('?')?'&':'?') + 'callback=' + cbName;
-    document.body.appendChild(script);
-  });
+  return fetchJsonpObject(url,timeoutMs).catch(error=>{console.error('[ELAB vocab read]',{code:error&&error.name==='AbortError'?'NETWORK_ERROR':'HTTP_OR_PARSE_ERROR',message:error&&error.message||String(error)});return null});
+}
+
+// Apps Script ContentService의 302 응답은 file:// 페이지에서 <script src>로 불러오면
+// Chrome ORB에 차단될 수 있다. CORS가 허용된 fetch로 본문을 읽고 JSONP wrapper만 검증한다.
+async function fetchJsonpObject(url, timeoutMs=30000){
+  const cbName='__elab_fetch_jsonp__';
+  const requestUrl=url+(url.includes('?')?'&':'?')+'callback='+encodeURIComponent(cbName);
+  const controller=typeof AbortController==='function'?new AbortController():null;
+  const timer=setTimeout(()=>controller&&controller.abort(),timeoutMs);
+  try{
+    const response=await fetch(requestUrl,{method:'GET',mode:'cors',redirect:'follow',signal:controller&&controller.signal});
+    if(!response.ok)throw new Error('HTTP '+response.status);
+    const text=await response.text(),prefix=cbName+'(';
+    if(!text.startsWith(prefix)||!text.endsWith(')'))throw new Error('BAD_JSONP_RESPONSE');
+    return JSON.parse(text.slice(prefix.length,-1));
+  }finally{clearTimeout(timer);}
 }
 
 // 짧은 링크용 payload 저장. GET 대신 POST를 써서 단어 수가 많아도(URL 길이 제한 없이) 저장 가능하게 함.
@@ -413,7 +529,7 @@ function askPrompt(msg, placeholder='', okLabel='확인', defVal=''){
       <input id="pf-input" value="${esc(defVal)}" placeholder="${esc(placeholder)}" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-center font-semibold outline-none focus:border-brand-400" />
       <div class="grid grid-cols-2 gap-2">
         <button id="pf-no" class="btn3d bg-slate-100 py-3 text-sm font-bold text-slate-500" style="--btn-edge:#e2e8f0">취소</button>
-        <button id="pf-yes" class="btn3d bg-brand-500 py-3 text-sm font-bold text-white" style="--btn-edge:#4338ca">${esc(okLabel)}</button>
+        <button id="pf-yes" class="btn3d bg-brand-500 py-3 text-sm font-bold text-white" style="--btn-edge:#17456f">${esc(okLabel)}</button>
       </div></div>`;
     document.body.appendChild(ov);
     const inp=ov.querySelector('#pf-input');
@@ -492,7 +608,7 @@ function pickFoldersModal(folders, title='폴더 선택 (여러 개 가능)', wo
           </div>
           <div class="shrink-0 grid grid-cols-2 gap-2 border-t border-slate-100 p-4">
             <button id="pkm-cancel" class="btn3d bg-slate-100 py-3 text-sm font-bold text-slate-500" style="--btn-edge:#e2e8f0">취소</button>
-            <button id="pkm-ok" class="btn3d bg-brand-500 py-3 text-sm font-bold text-white" style="--btn-edge:#4338ca">선택 완료${sel.size?` (${sel.size})`:''}</button>
+            <button id="pkm-ok" class="btn3d bg-brand-500 py-3 text-sm font-bold text-white" style="--btn-edge:#17456f">선택 완료${sel.size?` (${sel.size})`:''}</button>
           </div>
         </div>
         <div class="hidden min-h-0 w-80 shrink-0 flex-col border-slate-100 lg:flex lg:border-l">
@@ -578,7 +694,7 @@ function beep(good){
 function confetti(){
   const cv=document.getElementById('fx'); cv.classList.remove('hidden');
   const ctx=cv.getContext('2d'); cv.width=innerWidth; cv.height=innerHeight;
-  const colors=['#6366f1','#22c55e','#fb7185','#f59e0b','#38bdf8','#a78bfa'];
+  const colors=['#245984','#12bbaf','#fb7185','#f59e0b','#5484aa','#0e968e'];
   const P=Array.from({length:150},()=>({
     x:innerWidth/2+(Math.random()-0.5)*120, y:innerHeight*0.35,
     vx:(Math.random()-0.5)*11, vy:Math.random()*-13-4,
@@ -603,10 +719,14 @@ function boot(){
   const q = new URLSearchParams(location.search);
   const session = q.get('session');
   if(session){
-    if(q.get('r')==='1'){ StudentApp(session, null, { rv:q.get('rv')||'', rt:q.get('rt')||'' }); }
+    if(q.get('server_set')==='1'){ StudentApp(session, null, { serverSet:true, hook:q.get('hook')||'' }); }
+    else if(q.get('r')==='1'){ StudentApp(session, null, { rv:q.get('rv')||'', rt:q.get('rt')||'' }); }
     else { StudentApp(session, q.get('d')); }
   }
-  else { TeacherApp(); }
+  else {
+    if(q.get('assignment_pick')==='1')teacherTab='make';
+    TeacherApp();
+  }
 }
 
 /* ============================================================
@@ -619,31 +739,23 @@ function TeacherApp(){
   function render(){
     app.innerHTML = `
       ${elabNav('vocab')}
-      <header class="mb-4 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <div class="grid h-11 w-11 place-items-center rounded-2xl bg-brand-500 text-2xl shadow-soft floaty">📚</div>
-          <div>
-            <h1 class="text-xl font-extrabold tracking-tight">단어암기</h1>
-            <p class="text-xs font-medium text-slate-600">ELAB · 선생님용</p>
-          </div>
-        </div>
-      </header>
+      <div class="mb-3 text-right"><a href="../teacher/vocabulary-db.html" class="inline-flex rounded-xl border border-brand-200 bg-white px-3 py-2 text-sm font-bold text-brand-700">V1~V5 통합 어휘 DB</a></div>
+      <div class="eb-page-header">
+        <h1>단어암기</h1>
+        <p>단어장 관리, 시험 생성과 결과 확인</p>
+      </div>
 
-      <nav class="mb-5 grid grid-cols-4 gap-1 rounded-2xl bg-white p-1.5 shadow-card">
+      <nav class="mb-5 grid grid-cols-2 gap-1 rounded-2xl bg-white p-1.5 shadow-card">
         ${tabBtn('words','단어장','📝')}
         ${tabBtn('make','만들기','🎯')}
-        ${tabBtn('sessions','세션','🔑')}
-        ${tabBtn('results','결과','📊')}
       </nav>
 
       <main id="tab"></main>
     `;
     app.querySelectorAll('[data-tab]').forEach(b=> b.onclick=()=>{ teacherTab=b.dataset.tab; render(); });
     const tab = $('#tab');
-    if(teacherTab==='words') renderWords(tab);
-    else if(teacherTab==='make') renderMake(tab);
-    else if(teacherTab==='sessions') renderSessions(tab);
-    else renderResultsTab(tab);
+    if(teacherTab==='make') renderMake(tab);
+    else renderWords(tab);
   }
   function tabBtn(id,label,icon){
     const on = teacherTab===id;
@@ -704,6 +816,12 @@ let treeSel = new Set();    // 폴더 트리에서 다중 선택된 폴더 id (�
 let treeAnchor = null;      // 폴더 트리 Shift 범위선택 기준점(폴더 id)
 let treeExpanded = new Set(); // 펼쳐진 폴더 id
 let folderClipboard = null; // {ids:[...], mode:'copy'|'cut'} — Ctrl+C/X/V 및 붙여넣기 버튼용
+const wordAddListKey = folderId=> folderId==null ? '__ROOT__' : String(folderId);
+const WORD_ADD_LIST_CLEARED_KEY='vpang.wordAddListCleared';
+function loadClearedWordAddLists(){try{const value=JSON.parse(localStorage.getItem(WORD_ADD_LIST_CLEARED_KEY)||'[]');return new Set(Array.isArray(value)?value.map(String):[]);}catch(error){return new Set();}}
+function saveClearedWordAddLists(){try{localStorage.setItem(WORD_ADD_LIST_CLEARED_KEY,JSON.stringify([...clearedWordAddListKeys]));}catch(error){}}
+let clearedWordAddListKeys=loadClearedWordAddLists(); // UI 초기화 상태만 저장하며 DB.words와는 무관
+let storedWordListOpenKey=null; // 사용자가 명시적으로 저장 단어 관리를 열었을 때만 표시
 
 function refreshWordsTab(){ const t=document.getElementById('tab'); if(t && teacherTab==='words') renderWords(t); }
 
@@ -747,8 +865,15 @@ function renderWords(root){
 
   const crumbs = folderPath(folders, curFolder);
   crumbs.forEach(f=> treeExpanded.add(f.id)); // 현재 폴더까지 자동으로 펼치기
+  const entryFolderId = treeSel.size===1 ? [...treeSel][0] : curFolder;
+  const entryFolder = entryFolderId ? folders.find(f=>f.id===entryFolderId) : null;
 
-  const words = wordsInFolder(allWords, folders, curFolder, false); // 현재 폴더 직속 단어만
+  const storedWords = wordsInFolder(allWords, folders, curFolder, false); // 실제 저장 데이터
+  const currentWordAddListKey=wordAddListKey(curFolder);
+  // 이전 버전에서 이미 저장된 단어도 입력용 목록에는 다시 나타내지 않는다.
+  if(storedWords.length&&!clearedWordAddListKeys.has(currentWordAddListKey)){clearedWordAddListKeys.add(currentWordAddListKey);saveClearedWordAddLists();}
+  const wordAddListHidden=clearedWordAddListKeys.has(currentWordAddListKey)&&storedWordListOpenKey!==currentWordAddListKey;
+  const words = wordAddListHidden ? [] : storedWords;
   const emptyCount = words.filter(w=>!w.ko || !w.ko.trim()).length;
   const dupGroups = findDuplicateGroups(words); // 이 폴더 안에서 영단어(대소문자 무시)가 겹치는 단어들
   const dupIds = new Set(dupGroups.flat().map(w=>w.id));
@@ -761,7 +886,7 @@ function renderWords(root){
 
   root.innerHTML = `
     <div class="lg:ml-[calc(50%-50vw)] lg:mr-[calc(50%-50vw)] lg:w-screen">
-    <div class="lg:mx-auto lg:max-w-5xl lg:px-4">
+    <div class="lg:mx-auto lg:max-w-7xl lg:px-4">
     <div class="lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-6">
     <div class="lg:min-w-0">
     <div class="mb-3 flex items-center justify-between gap-2">
@@ -829,14 +954,14 @@ function renderWords(root){
 
     <section class="anim-slide rounded-3xl bg-white p-5 shadow-card">
       <h2 class="mb-1 text-base font-extrabold">단어 추가</h2>
-      <p class="mb-3 text-xs leading-relaxed text-slate-600">${curFolder? `<b>'${esc(crumbs[crumbs.length-1].name)}'</b> 폴더에 추가돼요. `:''}<b>영단어와 뜻을 한 줄에</b> 적어주세요. 콤마·띄어쓰기 아무거나 OK — 영어·한글을 자동으로 구분해 매칭해요.</p>
+      <p class="mb-3 text-xs leading-relaxed text-slate-600">${entryFolder? `<b>'${esc(entryFolder.name)}'</b> 폴더에 추가돼요. `:''}<b>영단어와 뜻을 한 줄에</b> 적어주세요. 콤마·띄어쓰기 아무거나 OK — 영어·한글을 자동으로 구분해 매칭해요.</p>
       <label class="mb-3 flex items-center gap-2 text-xs font-bold text-slate-500">
         <input id="w-autotx" type="checkbox" ${autoTx?'checked':''} class="h-4 w-4 accent-brand-500" />
         🌐 영어만 입력하면 뜻 자동 번역 (꺼두면 뜻을 직접 입력해야 해요)
       </label>
       <div class="flex flex-col gap-2">
         <input id="w-entry" placeholder="예: apple 사과   또는   apple, 사과" class="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-brand-400" />
-        <button id="w-add" class="btn3d bg-brand-500 py-3.5 text-white" style="--btn-edge:#4338ca">＋ 단어 추가</button>
+        <button id="w-add" class="btn3d bg-brand-500 py-3.5 text-white" style="--btn-edge:#17456f">＋ 단어 추가</button>
       </div>
       <details class="mt-3">
         <summary class="cursor-pointer text-xs font-bold text-brand-600">여러 개 한 번에 붙여넣기</summary>
@@ -854,8 +979,8 @@ function renderWords(root){
 
     <section class="mt-4">
       <div class="mb-1 flex items-center justify-between px-1">
-        <h2 class="text-sm font-extrabold text-slate-600">${curFolder?'이 폴더의 단어':'내 단어장'} <span class="text-brand-500">${words.length}</span>개</h2>
-        ${words.length? `<button id="w-clear" class="text-xs font-bold text-coral-500">전체 삭제</button>`:''}
+        <h2 class="text-sm font-extrabold text-slate-600">${storedWordListOpenKey===currentWordAddListKey?'저장된 단어 관리':'단어 추가 목록'} <span class="text-brand-500">${words.length}</span>개</h2>
+        <div class="flex items-center gap-3">${wordAddListHidden&&storedWords.length?`<button id="w-show-stored" class="text-xs font-bold text-brand-600">저장된 단어 관리 (${storedWords.length})</button>`:''}${words.length? `<button id="w-clear" class="text-xs font-bold text-coral-500">전체 삭제</button>`:''}</div>
       </div>
       ${words.length? `<p class="mb-2 px-1 text-[11px] text-slate-600">번호를 탭하면 선택 · <b>Ctrl+클릭</b> 개별선택 · <b>Shift+클릭</b> 연속선택</p>`:''}
       ${emptyCount? `<div class="mb-2 rounded-xl bg-coral-50 px-3 py-2 text-[11px] font-semibold text-coral-600">⚠️ 뜻이 비어있는 단어 ${emptyCount}개 — 탭해서 채워주세요 (테스트에서 제외됩니다)</div>`:''}
@@ -921,20 +1046,32 @@ function renderWords(root){
   async function addEntries(raw, btn){
     const pairs = parsePairs(raw);
     if(!pairs.length){ toast('인식된 단어가 없어요','bad'); return; }
+    const originalButtonText=btn.textContent;
     const autoOn = getAutoTranslate();
     const needTx = autoOn ? pairs.filter(p=>!p.ko).length : 0;
     btn.disabled=true;
-    const list=DB.words(); let txDone=0, noKo=0;
-    for(const p of pairs){
-      let ko=p.ko;
-      if(!ko && autoOn){ txDone++; btn.textContent=`🔎 뜻 자동 채우는 중… (${txDone}/${needTx})`; ko = await translateWord(p.en) || ''; }
-      if(!ko) noKo++;
-      list.push({id:uid(8), en:p.en, ko, folderId:curFolder});
+    try{
+      const list=DB.words(); let txDone=0, noKo=0;
+      for(const p of pairs){
+        let ko=p.ko;
+        if(!ko && autoOn){ txDone++; btn.textContent=`🔎 뜻 자동 채우는 중… (${txDone}/${needTx})`; ko = await translateWord(p.en) || ''; }
+        if(!ko) noKo++;
+        list.push({id:stableWordId(p.en,ko), en:p.en, ko, folderId:entryFolderId});
+      }
+      DB.saveWords(list);
+      selWords.clear(); selAnchor=null;
+      if(entryFolderId){curFolder=entryFolderId;treeExpanded.add(entryFolderId);treeSel.clear();}
+      const savedListKey=wordAddListKey(entryFolderId);clearedWordAddListKeys.add(savedListKey);saveClearedWordAddLists();storedWordListOpenKey=null;
+      renderWords(root);
+      if(noKo) toast(`${pairs.length}개 추가 · ${noKo}개는 뜻 확인 필요`,'bad');
+      else toast(`${pairs.length}개 추가했어요 ✅`);
+      return true;
+    }catch(error){
+      console.error('[ELAB vocab] word save failed',error);
+      btn.disabled=false;btn.textContent=originalButtonText;
+      toast('단어를 저장하지 못했습니다. 입력 내용을 유지했어요.','bad');
+      return false;
     }
-    selWords.clear(); selAnchor=null;
-    DB.saveWords(list); renderWords(root);
-    if(noKo) toast(`${pairs.length}개 추가 · ${noKo}개는 뜻 확인 필요`,'bad');
-    else toast(`${pairs.length}개 추가했어요 ✅`);
   }
 
   addBtn.onclick=async()=>{ if(entryEl.value.trim()){ await addEntries(entryEl.value, addBtn); const e=$('#w-entry'); if(e) e.focus(); } };
@@ -978,7 +1115,7 @@ function renderWords(root){
         let ko=p.ko;
         if(!ko && autoOn){ btn.textContent=`🔎 [${g.name}] 뜻 자동 채우는 중…`; ko = await translateWord(p.en) || ''; }
         if(!ko) noKo++;
-        words.push({ id:uid(8), en:p.en, ko, folderId:folder.id });
+        words.push({ id:stableWordId(p.en,ko), en:p.en, ko, folderId:folder.id });
         totalWords++;
       }
     }
@@ -989,11 +1126,11 @@ function renderWords(root){
   }
   $('#w-bulkfolder-add').onclick=async()=>{ const raw=$('#w-bulkfolder').value.trim(); if(raw) await addFolderBulk(raw, $('#w-bulkfolder-add')); };
 
-  // ----- 중복 단어 정리: 같은 폴더 안에서 영단어(대소문자 무시)가 같으면 뜻을 합쳐 하나로 -----
+  // ----- 중복 단어 정리: 같은 폴더 안의 정확히 같은 (영단어+뜻)만 정리 -----
   function findDuplicateGroups(words){
     const groups = new Map();
     words.forEach(w=>{
-      const key = (w.folderId||'null') + '::' + w.en.trim().toLowerCase();
+      const key = (w.folderId||'null') + '::' + canonicalWordKey(w.en,w.ko);
       if(!groups.has(key)) groups.set(key, []);
       groups.get(key).push(w);
     });
@@ -1004,13 +1141,10 @@ function renderWords(root){
     const groups = findDuplicateGroups(words);
     if(!groups.length){ toast('중복된 단어가 없어요 ✨'); return; }
     const extra = groups.reduce((sum,g)=>sum+g.length-1, 0);
-    if(!(await askConfirm(`같은 폴더 안에 중복된 단어 ${groups.length}종류(여분 ${extra}개)를 발견했어요.\n뜻을 합쳐서 하나로 정리할까요?`,'정리'))) return;
+    if(!(await askConfirm(`같은 폴더 안에 영단어와 뜻이 모두 같은 항목 ${groups.length}종류(여분 ${extra}개)를 발견했어요.\n기존 ID 하나를 남기고 정리할까요?`,'정리'))) return;
     const toRemove = new Set();
     groups.forEach(group=>{
       const keep = group[0];
-      const kos = [];
-      group.forEach(w=>{ const k=w.ko.trim(); if(k && !kos.includes(k)) kos.push(k); });
-      keep.ko = kos.join(', ');
       for(let i=1;i<group.length;i++) toRemove.add(group[i].id);
     });
     DB.saveWords(words.filter(w=>!toRemove.has(w.id)));
@@ -1046,7 +1180,7 @@ function renderWords(root){
       const idMap={};
       const newFolders=(data.folders||[]).map(f=>{ const nid=uid(8); idMap[f.id]=nid; return {...f, id:nid}; });
       newFolders.forEach(f=>{ f.parentId = f.parentId && idMap[f.parentId] ? idMap[f.parentId] : null; });
-      const newWords=data.words.map(w=>({ id:uid(8), en:w.en||'', ko:w.ko||'', folderId: w.folderId && idMap[w.folderId] ? idMap[w.folderId] : null }));
+      const newWords=data.words.map(w=>({ id:w.id||stableWordId(w.en,w.ko), en:w.en||'', ko:w.ko||'', folderId: w.folderId && idMap[w.folderId] ? idMap[w.folderId] : null }));
       DB.saveFolders(DB.folders().concat(newFolders));
       DB.saveWords(DB.words().concat(newWords));
       toast(`${newWords.length}개 단어를 가져왔어요 ✅`); renderWords(root);
@@ -1280,6 +1414,8 @@ function renderWords(root){
     selWords.clear(); selAnchor=null; DB.saveWords(list); renderWords(root);
   });
 
+  const showStored=$('#w-show-stored');if(showStored)showStored.onclick=()=>{storedWordListOpenKey=currentWordAddListKey;renderWords(root);};
+
   // 전체 삭제 (앱 내부 확인창) — 현재 폴더에 보이는 단어만 삭제
   const clr=$('#w-clear'); if(clr) clr.onclick=async()=>{
     if(await askConfirm(`${curFolder?'이 폴더의':'전체'} 단어 ${words.length}개를 모두 삭제할까요?`)){
@@ -1291,7 +1427,7 @@ function renderWords(root){
 }
 
 /* ---------- 탭: 테스트 만들기 ---------- */
-let makeCfg = { mode:'mc', studySec:10, expDays:7, folderIds:null, sampleMode:'all', sampleCount:'', samplePercent:'', perFolder:false, testLabel:'', studentName:'', goalScore:'', reviewKind:'wrong' };
+let makeCfg = { mode:'mc', studySec:10, expDays:7, folderIds:null, sampleMode:'all', sampleCount:'', samplePercent:'', perFolder:false, testLabel:'', studentName:'', goalScore:'', reviewKind:'wrong', setKind:'random', fixedSetSize:50 };
 const EXP_OPTIONS = [ {d:1,t:'1일'}, {d:3,t:'3일'}, {d:7,t:'7일'}, {d:30,t:'30일'}, {d:0,t:'무제한'} ];
 
 /* ---------- 재시험(OX자가진단 재시험 / 오답 재시험) 미리보기 캐시 ----------
@@ -1344,12 +1480,14 @@ function ensureRetestPreview(root, kind){
 }
 
 function renderMake(root){
+  const assignmentPickMode=new URLSearchParams(location.search).get('assignment_pick')==='1';
+  if(assignmentPickMode){makeCfg.setKind='fixed';makeCfg.fixedSetSize=Math.min(50,Math.max(1,parseInt(makeCfg.fixedSetSize,10)||50))}
   const folders = DB.folders();
   if(makeCfg.folderIds){
     makeCfg.folderIds = makeCfg.folderIds.filter(id=> folders.find(f=>f.id===id)); // 삭제된 폴더 정리
     if(!makeCfg.folderIds.length) makeCfg.folderIds = null;
   }
-  if(!makeCfg.folderIds || makeCfg.folderIds.length<2) makeCfg.perFolder = false;
+  makeCfg.perFolder = false;
   const scoped = wordsInFolders(DB.words(), folders, makeCfg.folderIds, true);
   const validWords = scoped.filter(w=>w.ko && w.ko.trim());
   const emptyWords = scoped.filter(w=>!w.ko || !w.ko.trim());
@@ -1364,6 +1502,7 @@ function renderMake(root){
     if(!paths.length) return '전체 단어장';
     return paths.length<=2 ? paths.join(', ') : `${paths.slice(0,2).join(', ')} 외 ${paths.length-2}개`;
   })();
+  const fixedBookSource=fixedCatalogSource(folders,makeCfg.folderIds,folderLabel);
 
   // 출제 개수 미리보기 (전체 / 개수 지정 / 퍼센트 지정)
   function computeSampleN(total){
@@ -1386,6 +1525,7 @@ function renderMake(root){
   // 재시험 모드(OX자가진단 재시험 / 오답 재시험)일 때는 "폴더 전체 단어" 대신
   // "학생의 최근 기록에서 찾은 단어"가 소스가 됨 — 그래서 미리보기/경고 문구를 따로 계산
   const isRetest = makeCfg.mode==='ox_retest' || makeCfg.mode==='wrong_retest';
+  if(!isRetest) makeCfg.studentName = '';
   const retestKind = makeCfg.mode==='wrong_retest' ? 'wrong' : makeCfg.reviewKind;
   if(isRetest) ensureRetestPreview(root, retestKind);
   const retestCount = retestCache.matched ? retestCache.matched.length : 0;
@@ -1395,7 +1535,7 @@ function renderMake(root){
     <section class="anim-slide rounded-3xl bg-white p-5 shadow-card">
       <h2 class="mb-1 text-base font-extrabold">테스트 만들기</h2>
       ${!isRetest? `
-      <p class="${excluded?'mb-1':'mb-4'} text-xs text-slate-600">사용할 단어 <b class="text-brand-500">${previewCount}</b>개로 링크를 만듭니다.${excluded?` <span class="text-coral-500">(뜻 없는 ${excluded}개 제외)</span>`:''}${makeCfg.sampleMode!=='all'?` <span class="text-slate-600">(전체 ${validWords.length}개 중 무작위 추출)</span>`:''}</p>`:''}
+      <p class="${excluded?'mb-1':'mb-4'} text-xs text-slate-600">사용할 단어 <b class="text-brand-500">${previewCount}</b>개로 과제자료를 만듭니다.${excluded?` <span class="text-coral-500">(뜻 없는 ${excluded}개 제외)</span>`:''}${makeCfg.sampleMode!=='all'?` <span class="text-slate-600">(전체 ${validWords.length}개 중 무작위 추출)</span>`:''}</p>`:''}
       ${!isRetest && excluded? `
       <details class="mb-4">
         <summary class="cursor-pointer text-xs font-bold text-coral-500">뜻 없는 단어 보기 (${excluded}개)</summary>
@@ -1410,14 +1550,13 @@ function renderMake(root){
         <span class="truncate">${esc(folderLabel)}</span><span class="shrink-0 text-xs text-slate-600">변경 ›</span>
       </button>
 
-      ${!isRetest && makeCfg.folderIds && makeCfg.folderIds.length>=2 ? `
-      <label class="mb-4 flex items-center gap-2 rounded-xl bg-brand-50 px-4 py-3 text-xs font-bold text-brand-700 ring-1 ring-brand-100">
-        <input id="t-perfolder" type="checkbox" ${makeCfg.perFolder?'checked':''} class="h-4 w-4 accent-brand-500" />
-        선택한 ${makeCfg.folderIds.length}개 폴더로 <b>각각</b> 테스트 링크 만들기 (폴더당 1개씩)
-      </label>`:''}
-
-      <label class="mb-1.5 block text-xs font-bold text-slate-500">🔢 출제 개수${makeCfg.perFolder?' <span class="font-normal text-slate-600">(폴더별로 각각 적용)</span>':''}</label>
-      <div class="mb-2 grid grid-cols-3 gap-2" id="t-samplemode">
+      <label class="mb-1.5 block text-xs font-bold text-slate-500">🔢 출제 개수</label>
+      ${!isRetest? `<div class="mb-3 grid ${assignmentPickMode?'grid-cols-1':'grid-cols-2'} gap-2">
+        ${assignmentPickMode?'':`<button type="button" data-setkind="random" class="rounded-xl border-2 py-3 text-xs font-bold ${makeCfg.setKind==='random'?'border-brand-400 bg-brand-50 text-brand-700':'border-slate-100 bg-white text-slate-600'}">임시·랜덤 시험</button>`}
+        <button type="button" data-setkind="fixed" class="rounded-xl border-2 py-3 text-xs font-bold ${makeCfg.setKind==='fixed'?'border-grass-400 bg-grass-50 text-grass-700':'border-slate-100 bg-white text-slate-600'}">고정 Vocabulary Set</button>
+      </div>
+      ${makeCfg.setKind==='fixed'? `<div class="mb-4 rounded-xl bg-grass-50 p-3"><label class="mb-1 block text-xs font-bold text-grass-700">출제 단어 수 (최대 50)</label><input id="t-fixed-size" type="number" min="1" max="50" value="${esc(makeCfg.fixedSetSize)}" class="w-full rounded-xl border-2 border-grass-100 bg-white px-4 py-3 font-semibold outline-none focus:border-grass-400"/><p class="mt-1 text-[11px] text-slate-600">${assignmentPickMode?`선택 범위에서 ${Math.min(validWords.length,makeCfg.fixedSetSize)}개로 과제 하나를 만듭니다. 단어가 ${makeCfg.fixedSetSize}개보다 적으면 전부 포함합니다.`:`현재 순서 그대로 ${splitFixedVocabSets(validWords,makeCfg.fixedSetSize).length}개 Set으로 나눕니다.`}</p></div>`:''}`:''}
+      ${(isRetest||makeCfg.setKind==='random')? `<div class="mb-2 grid grid-cols-3 gap-2" id="t-samplemode">
         ${sampleModeCard('all','전체', `${validWords.length}개`)}
         ${sampleModeCard('count','개수 지정','직접 입력')}
         ${sampleModeCard('percent','퍼센트','직접 입력')}
@@ -1428,17 +1567,16 @@ function renderMake(root){
       <div class="mb-4 flex items-center gap-2">
         <input id="t-samplepercent" type="number" min="1" max="100" value="${esc(makeCfg.samplePercent)}" placeholder="예: 50" class="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-brand-400" />
         <span class="shrink-0 font-bold text-slate-600">%</span>
-      </div>`:''}
+      </div>`:''}`:''}
 
       <label class="mb-1 block text-xs font-bold text-slate-500">테스트 이름표 (선택)</label>
       <input id="t-name" value="${esc(makeCfg.testLabel)}" placeholder="예: 3월 데일리 테스트" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 font-semibold outline-none focus:border-brand-400" />
 
-      <label class="mb-1 block text-xs font-bold text-slate-500">👤 학생 선택 (선택)</label>
+      ${isRetest ? `<label class="mb-1 block text-xs font-bold text-slate-500">👤 재시험 학생 선택</label>
       <div id="t-roster-wrap" class="mb-4 hidden">
         <select id="t-roster" class="w-full rounded-xl border-2 border-slate-100 bg-white px-4 py-3 text-sm font-semibold outline-none focus:border-brand-400"></select>
-        <p class="mt-1 text-[11px] leading-relaxed text-slate-600">학생을 고르면 링크를 만들 때 <b>그 학생의 학생용 페이지에 자동으로 배정</b>돼요(링크 복사해서 직접 보내는 기존 방식도 그대로 됩니다).</p>
       </div>
-      ${!makeCfg.studentName ? `<p class="mb-4 text-[11px] leading-relaxed text-slate-600">학생 로스터가 없다면 <b>학생 관리</b> 화면에서 먼저 등록해주세요.</p>`:''}
+      ${!makeCfg.studentName ? `<p class="mb-4 text-[11px] leading-relaxed text-slate-600">학생 로스터가 없다면 <b>학생 관리</b> 화면에서 먼저 등록해주세요.</p>`:''}` : ''}
 
       <label class="mb-1.5 block text-xs font-bold text-slate-500">문제 유형</label>
       <div class="mb-4 grid grid-cols-2 gap-2" id="t-mode">
@@ -1472,48 +1610,40 @@ function renderMake(root){
         <span class="shrink-0 font-bold text-slate-600">%</span>
       </div>
 
-      <label class="mb-1.5 block text-xs font-bold text-slate-500">🔒 링크 만료일 <span class="font-normal text-slate-600">(지나면 자동 차단)</span></label>
-      <div class="mb-4 grid grid-cols-5 gap-1.5" id="t-exp">
-        ${EXP_OPTIONS.map(o=>{
-          const on=makeCfg.expDays===o.d;
-          return `<button data-exp="${o.d}" class="rounded-xl border-2 py-2.5 text-xs font-extrabold transition ${on?'border-brand-500 bg-brand-50 text-brand-700':'border-slate-100 bg-white text-slate-600'}">${o.t}</button>`;
-        }).join('')}
-      </div>
-
       <label class="mb-1.5 block text-xs font-bold text-slate-500">틀렸을 때 공부 시간: <span id="t-secval" class="text-brand-600">${makeCfg.studySec}초</span></label>
       <input id="t-sec" type="range" min="2" max="10" value="${makeCfg.studySec}" class="mb-5 w-full accent-brand-500" />
 
       ${!isRetest && !enough && makeCfg.mode!=='spelling' && makeCfg.mode!=='ox' ? `<div class="mb-3 rounded-xl bg-coral-50 px-4 py-3 text-xs font-semibold text-coral-600">객관식·혼합은 뜻이 있는 단어가 4개 이상 필요해요. (스펠링·OX는 가능)</div>`:''}
       ${isRetest && makeCfg.mode==='wrong_retest' && !retestEnough && retestCount>0 ? `<div class="mb-3 rounded-xl bg-coral-50 px-4 py-3 text-xs font-semibold text-coral-600">오답 재시험(객관식)은 단어가 4개 이상 필요해요. (지금 ${retestCount}개)</div>`:''}
 
-      <button id="t-make" class="btn3d w-full bg-grass-500 py-4 text-white" style="--btn-edge:#15803d">${!isRetest && makeCfg.perFolder && makeCfg.folderIds && makeCfg.folderIds.length>=2 ? `🔗 링크 ${makeCfg.folderIds.length}개 한번에 만들기` : isRetest ? '🔗 재시험 링크 만들기' : '🔗 테스트 링크 만들기'}</button>
+      <button id="t-make" class="btn3d w-full bg-grass-500 py-4 text-white" style="--btn-edge:#15803d">${isRetest ? '재시험 자료 저장' : '과제자료 저장'}</button>
     </section>
 
     <div id="t-result"></div>
   `;
 
   root.querySelectorAll('[data-mode]').forEach(c=> c.onclick=()=>{ makeCfg.mode=c.dataset.mode; renderMake(root); });
-  root.querySelectorAll('[data-exp]').forEach(b=> b.onclick=()=>{ makeCfg.expDays=+b.dataset.exp; renderMake(root); });
+  root.querySelectorAll('[data-setkind]').forEach(c=>c.onclick=()=>{makeCfg.setKind=c.dataset.setkind;renderMake(root);});
+  const fsEl=$('#t-fixed-size'); if(fsEl) fsEl.addEventListener('change',()=>{const limit=new URLSearchParams(location.search).get('assignment_pick')==='1'?50:Number.MAX_SAFE_INTEGER;makeCfg.fixedSetSize=Math.min(limit,Math.max(1,parseInt(fsEl.value,10)||50));renderMake(root);});
   const sec=$('#t-sec'); sec.oninput=()=>{ makeCfg.studySec=+sec.value; $('#t-secval').textContent=sec.value+'초'; };
   $('#t-folder').onclick=async()=>{
     const pickedFolders = await pickFoldersModal(DB.folders(), '어느 폴더에서 출제할까요? (여러 개 선택 가능)');
     if(pickedFolders===undefined) return;
     makeCfg.folderIds = pickedFolders; renderMake(root);
   };
-  const pfEl=$('#t-perfolder'); if(pfEl) pfEl.onchange=()=>{ makeCfg.perFolder=pfEl.checked; renderMake(root); };
   $('#t-name').addEventListener('input', e=>{ makeCfg.testLabel = e.target.value; });
-  loadRosterInto($('#t-roster'), $('#t-roster-wrap'), root);
+  if(isRetest) loadRosterInto($('#t-roster'), $('#t-roster-wrap'), root);
   $('#t-goal').addEventListener('input', e=>{ makeCfg.goalScore = e.target.value; });
   root.querySelectorAll('[data-reviewkind]').forEach(b=> b.onclick=()=>{ makeCfg.reviewKind=b.dataset.reviewkind; renderMake(root); });
   root.querySelectorAll('[data-samplemode]').forEach(b=> b.onclick=()=>{ makeCfg.sampleMode=b.dataset.samplemode; renderMake(root); });
   const scEl=$('#t-samplecount'); if(scEl) scEl.addEventListener('change',()=>{ makeCfg.sampleCount=scEl.value; renderMake(root); });
   const spEl=$('#t-samplepercent'); if(spEl) spEl.addEventListener('change',()=>{ makeCfg.samplePercent=spEl.value; renderMake(root); });
 
-  $('#t-make').onclick=()=>{
+  $('#t-make').onclick=async()=>{
     const dcCheck = deliveryCfg();
     if(dcCheck.mode==='hook' && !dcCheck.url){ toast('결과 탭에서 구글시트 URL을 먼저 저장하세요','bad'); return; }
 
-    if(!isRetest && makeCfg.perFolder && makeCfg.folderIds && makeCfg.folderIds.length>=2){
+    if(false && !isRetest && makeCfg.perFolder && makeCfg.folderIds && makeCfg.folderIds.length>=2){
       const results = makeCfg.folderIds.map(fid=>buildOneLink(fid));
       renderMultiResults(results);
       toast('세션 발급 완료 🔑');
@@ -1521,6 +1651,42 @@ function renderMake(root){
     }
 
     let picked, rngLabel, countLabel, forcedMode;
+
+    if(!isRetest && makeCfg.setKind==='fixed'){
+      const ordered=wordsInFolders(DB.words(),DB.folders(),makeCfg.folderIds,true).filter(w=>w.ko&&w.ko.trim()).map(wordWithStableId);
+      if(!ordered.length){toast('뜻이 있는 단어를 먼저 추가하세요','bad');return;}
+      const assignmentPick=new URLSearchParams(location.search).get('assignment_pick')==='1';
+      const chunks=splitFixedVocabSets(ordered,makeCfg.fixedSetSize), baseName=$('#t-name').value.trim()||folderLabel,catalogId=fixedCatalogId(makeCfg.folderIds);
+      const selectedSourceFolders=(makeCfg.folderIds||[]).map(folderId=>{const path=folderPath(DB.folders(),folderId);return{folder_id:String(folderId),name:path.length?path[path.length-1].name:'',path:path.map(folder=>folder.name)}});
+      const button=$('#t-make'); button.disabled=true;
+      const saved=[],createdSessions=[],existingSessions=assignmentPick?[]:DB.sessions();
+      for(let i=0;i<chunks.length;i++){
+        button.textContent=`고정 Set 저장 중 (${i+1}/${chunks.length})`;
+        const setWords=chunks[i],setNumber=i+1,key='fixed_'+stableWordHash(catalogId+'|'+setNumber),start=i*makeCfg.fixedSetSize+1,end=start+setWords.length-1;
+        const dc=deliveryCfg(), dm=dc.mode==='none'?'':dc.mode, dv=dm==='hook'?(dc.url||''):'', dt=dm==='hook'?(dc.token||''):'';
+        const sourceFolders=fixedSetSourceFolders(setWords,DB.folders()),sourceFolderLabel=fixedSetSourceSummary(sourceFolders);
+        const title=`${baseName} Set ${String(setNumber).padStart(2,'0')}`, display=`${sourceFolderLabel} · ${baseName} · Set ${String(setNumber).padStart(2,'0')} · ${start}~${end}`;
+        const payload={v:1,s:key,n:title,sn:'',mode:makeCfg.mode,sec:makeCfg.studySec,goal:parseInt(makeCfg.goalScore,10)||0,exp:0,dm,dv,rng:display,cnt:`${setWords.length}개(고정 Set)`,fixed:true,w:shuffle(setWords).map(w=>({id:w.id,e:w.en,k:w.ko}))};
+        const link=buildLink(payload), session={key,name:title,student:'',mode:makeCfg.mode,sec:makeCfg.studySec,count:setWords.length,goal:payload.goal,created:Date.now(),exp:0,dm,dv,dt,rng:display,cnt:payload.cnt,status:'active',fixed:true};
+        if(!assignmentPick)session.snapshot=setWords.map(w=>({id:w.id,e:w.en,k:w.ko}));
+        createdSessions.unshift(session);
+        const path=makeCfg.folderIds&&makeCfg.folderIds.length===1?folderPath(DB.folders(),makeCfg.folderIds[0]):[];
+        const ok=await registerVocabSet(key,title,fixedBookSource,link,{fixed_set:true,words:setWords,book_source:fixedBookSource,day_set:path.length>1?path[path.length-1].name:'',range_start:start,range_end:end,display_range:display,catalog_id:catalogId,set_number:setNumber,source_folders_json:JSON.stringify(sourceFolders)});
+        if(!ok){button.disabled=false;button.textContent='과제자료 저장';toast(`${i+1}번째 Set 저장에 실패했습니다.`,'bad');return;}
+        saved.push({key,title,count:setWords.length,link,extra:{session_key:key,source_ref:fixedBookSource,book_source:fixedBookSource,day_set:path.length>1?path[path.length-1].name:'',range_start:start,range_end:end,display_range:display,set_kind:'FIXED',set_size:setWords.length,catalog_id:catalogId,set_number:setNumber,source_folders_json:JSON.stringify(sourceFolders)}});
+        await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      try{if(!assignmentPick){const createdKeys=new Set(createdSessions.map(session=>session.key));DB.saveSessions(createdSessions.concat(existingSessions.filter(session=>!createdKeys.has(session.key))))}}catch(error){
+        button.disabled=false;button.textContent='과제자료 저장';
+        toast('브라우저 저장공간이 부족합니다. 세션 관리에서 오래된 단어시험 기록을 정리해주세요.','bad');return;
+      }
+      button.disabled=false;button.textContent='과제자료 저장';
+      if(assignmentPick){
+        returnSavedVocabToAssignment(saved,false,{catalog_id:catalogId,label:folderLabel,source_folders:selectedSourceFolders});return;
+      }
+      $('#t-result').innerHTML=`<section class="anim-in mt-4 rounded-3xl bg-brand-50 p-5 shadow-card ring-1 ring-brand-100"><div class="mb-2 font-extrabold text-brand-700">고정 Vocabulary Set ${saved.length}개를 저장했습니다.</div><p class="mb-4 text-sm text-slate-600">${saved.map(s=>`${esc(s.title)} (${s.count}개)`).join(' · ')}</p><a href="../teacher/assignments.html?content_type=VOCAB" class="btn3d inline-grid place-items-center bg-brand-500 px-5 py-3 text-sm text-white" style="--btn-edge:#17456f">과제배정으로 이동</a></section>`;
+      toast(`고정 Set ${saved.length}개 저장 완료`);return;
+    }
 
     if(isRetest){
       const sName = makeCfg.studentName.trim();
@@ -1573,77 +1739,51 @@ function renderMake(root){
     }
 
     const key = uid(12);
-    const exp = makeCfg.expDays>0 ? Date.now() + makeCfg.expDays*86400000 : 0;
+    const exp = 0;
     const dc = deliveryCfg();
     const dm = dc.mode==='none' ? '' : dc.mode;                 // 'hook' 또는 ''
     const dv = dm==='hook' ? (dc.url||'') : '';
-    const dt = dm==='hook' ? (dc.token||'') : '';
+    const dt = dm==='hook' ? (dc.token||'') : '';               // 교사 브라우저의 교사용 POST에만 사용
     if(dm==='hook' && !dv){ toast('결과 탭에서 구글시트 URL을 먼저 저장하세요','bad'); return; }
     const studentName = makeCfg.studentName.trim();
     const goal = parseInt(makeCfg.goalScore,10)||0;
+    picked=picked.map(wordWithStableId);
     const payload = { v:1, s:key, n:$('#t-name').value.trim(), sn:studentName, mode:forcedMode, sec:makeCfg.studySec, goal,
-                      exp, dm, dv, dt, rng:rngLabel, cnt:countLabel, w: picked.map(w=>({e:w.en,k:w.ko})) };
+                      exp, dm, dv, rng:rngLabel, cnt:countLabel, w: picked.map(w=>({id:w.id,e:w.en,k:w.ko})) };
     const link = buildLink(payload);
 
-    const sessions=DB.sessions();
-    sessions.unshift({ key, name:payload.n, student:studentName, mode:forcedMode, sec:makeCfg.studySec, count:picked.length, goal,
-                       created:Date.now(), exp, dm, dv, dt, rng:rngLabel, cnt:countLabel, status:'active',
-                       snapshot: picked.map(w=>({e:w.en,k:w.ko})) });
-    DB.saveSessions(sessions);
+    const assignmentPick=new URLSearchParams(location.search).get('assignment_pick')==='1';
+    if(!assignmentPick){
+      const sessions=DB.sessions();
+      sessions.unshift({ key, name:payload.n, student:studentName, mode:forcedMode, sec:makeCfg.studySec, count:picked.length, goal,
+                         created:Date.now(), exp, dm, dv, dt, rng:rngLabel, cnt:countLabel, status:'active',
+                         snapshot: picked.map(w=>({id:w.id,e:w.en,k:w.ko})) });
+      DB.saveSessions(sessions);
+    }
 
-    autoAssignVocab(studentName, rngLabel, link).then(done=>{
-      if(done) toast(`${studentName}님 학생 페이지에 배정했어요 📌`);
-    });
+    const makeButton=$('#t-make');
+    makeButton.disabled=true;
+    makeButton.textContent='저장 중...';
+    const registered=await registerVocabSet(key, payload.n||rngLabel, rngLabel, link,{words:picked,display_range:rngLabel});
+    makeButton.disabled=false;
+    makeButton.textContent=isRetest ? '재시험 자료 저장' : '과제자료 저장';
+    if(!registered){
+      if(!assignmentPick)DB.saveSessions(DB.sessions().filter(session=>session.key!==key));
+      toast('과제자료를 저장하지 못했습니다. 환경설정의 연결 정보를 확인하세요.','bad');
+      return;
+    }
 
-    const expText = exp ? `${new Date(exp).getFullYear()}. ${new Date(exp).getMonth()+1}. ${new Date(exp).getDate()}` : '무제한';
-    const dText = dm==='hook' ? '📊 결과 → 구글시트 자동전송' : '📋 결과 수동 전송';
+    if(assignmentPick){
+      returnSavedVocabToAssignment([{key,title:payload.n||rngLabel,link}]);return;
+    }
     $('#t-result').innerHTML = `
       <section class="anim-in mt-4 rounded-3xl bg-brand-50 p-5 shadow-card ring-1 ring-brand-100">
-        <div class="mb-2 flex items-center gap-2 text-brand-700"><span class="text-lg">✅</span><b>링크가 만들어졌어요!</b></div>
-        <div class="mb-2 flex flex-wrap gap-1.5">
-          <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-brand-600 shadow-sm">🔒 만료: ${expText}</span>
-          <span class="inline-flex items-center gap-1 rounded-full bg-white px-3 py-1 text-[11px] font-bold text-grass-600 shadow-sm">${dText}</span>
-        </div>
-        <div class="mb-3 break-all rounded-xl bg-white px-4 py-3 text-xs text-slate-500 shadow-sm">${esc(link)}</div>
-        <div class="grid grid-cols-2 gap-2">
-          <button id="t-copy" class="btn3d bg-brand-500 py-3 text-sm text-white" style="--btn-edge:#4338ca">링크 복사</button>
-          <a href="${esc(link)}" target="_blank" class="btn3d grid place-items-center bg-slate-800 py-3 text-sm text-white" style="--btn-edge:#0f172a">미리보기</a>
-        </div>
-        ${dm==='hook'? `<div id="t-short-result" class="mt-2"></div>`:''}
-        <p class="mt-3 text-[11px] leading-relaxed text-slate-600">만료일이 지나면 어느 기기에서든 자동 차단돼요. <b>세션 관리</b> 탭에서 미리 만료시킬 수도 있어요.</p>
+        <div class="mb-2 font-extrabold text-brand-700">과제자료를 저장했습니다.</div>
+        <p class="mb-4 text-sm text-slate-600">과제배정에서 학생 또는 그룹을 선택해 배정하세요.</p>
+        <a href="../teacher/assignments.html?content_type=VOCAB&content_ref_id=${encodeURIComponent(key)}" class="btn3d inline-grid place-items-center bg-brand-500 px-5 py-3 text-sm text-white" style="--btn-edge:#17456f">학생·그룹 선택하고 배정하기</a>
       </section>`;
-    const shareLabel = `📚 영단어 테스트 · ${folderLabel}`;
-    $('#t-copy').onclick=async()=>{ (await copyText(`${shareLabel}\n${link}`))? toast('링크를 복사했어요 📋'):toast('복사 실패','bad'); };
-
-    // 웹훅이 설정돼 있으면 짧은 링크를 자동으로 만들어봄 (실패해도 원래 링크는 그대로 유효, 재시도 버튼만 남김)
-    if(dm==='hook'){
-      const shortArea = $('#t-short-result');
-      async function attemptShorten(){
-        shortArea.innerHTML = `<div class="rounded-2xl bg-slate-50 py-3 text-center text-sm font-bold text-slate-600">🔗 짧은 링크 만드는 중…</div>`;
-        const signed = signPayload(payload);
-        const ok = await storeShortLinkPayload(dv, dt, key, signed);
-        if(ok){
-          const shortLink = location.origin + location.pathname + '?session=' + key + '&r=1&rv=' + encodeURIComponent(dv);
-          const list=DB.sessions(); const s=list.find(x=>x.key===key); if(s){ s.shortLink=shortLink; DB.saveSessions(list); }
-          shortArea.innerHTML = `
-            <div class="flex items-center gap-2 rounded-xl bg-grass-50 px-4 py-3 ring-1 ring-grass-100">
-              <span class="min-w-0 flex-1 truncate text-sm font-bold text-grass-700">${esc(shortLink)}</span>
-              <button id="t-short-copy" class="btn3d shrink-0 bg-grass-500 px-3 py-2 text-xs text-white" style="--btn-edge:#15803d">복사</button>
-            </div>`;
-          $('#t-short-copy').onclick=async()=>{ (await copyText(`${shareLabel}\n${shortLink}`))? toast('짧은 링크를 복사했어요 📋'):toast('복사 실패','bad'); };
-        } else {
-          shortArea.innerHTML = `
-            <div class="flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 ring-1 ring-amber-100">
-              <span class="flex-1 text-xs font-bold text-amber-700">⚠️ 짧은 링크 자동 생성 실패 — 원래 링크는 그대로 사용 가능해요</span>
-              <button id="t-short-retry" class="btn3d shrink-0 bg-amber-500 px-3 py-2 text-xs text-white" style="--btn-edge:#b45309">재시도</button>
-            </div>`;
-          $('#t-short-retry').onclick=attemptShorten;
-        }
-      }
-      attemptShorten();
-    }
     $('#t-result').scrollIntoView({behavior:'smooth',block:'center'});
-    toast('세션 발급 완료 🔑');
+    toast('과제자료를 저장했습니다.');
   };
 
   // 폴더 하나에 대해 현재 makeCfg 설정(출제개수/유형/만료일/공부시간/전송설정)을 그대로 적용해 세션+링크 1개를 만듦
@@ -1670,21 +1810,24 @@ function renderMake(root){
     const dc = deliveryCfg();
     const dm = dc.mode==='none' ? '' : dc.mode;
     const dv = dm==='hook' ? (dc.url||'') : '';
-    const dt = dm==='hook' ? (dc.token||'') : '';
+    const dt = dm==='hook' ? (dc.token||'') : '';               // 교사 브라우저의 교사용 POST에만 사용
     const countLabel = makeCfg.sampleMode==='all' ? `${picked.length}개(전체)`
                       : makeCfg.sampleMode==='count' ? `${picked.length}개(전체 ${valid.length}개 중 지정)`
                       : `${picked.length}개(전체 ${valid.length}개 중 ${makeCfg.samplePercent}%)`;
     const studentName = makeCfg.studentName.trim();
     const goal = parseInt(makeCfg.goalScore,10)||0;
+    const stablePicked=picked.map(wordWithStableId);
     const payload = { v:1, s:key, n:$('#t-name').value.trim(), sn:studentName, mode:makeCfg.mode, sec:makeCfg.studySec, goal,
-                      exp, dm, dv, dt, rng:label, cnt:countLabel, w: picked.map(w=>({e:w.en,k:w.ko})) };
+                      exp, dm, dv, rng:label, cnt:countLabel, w: stablePicked.map(w=>({id:w.id,e:w.en,k:w.ko})) };
     const link = buildLink(payload);
 
     const sessions=DB.sessions();
     sessions.unshift({ key, name:payload.n, student:studentName, mode:makeCfg.mode, sec:makeCfg.studySec, count:picked.length, goal,
                        created:Date.now(), exp, dm, dv, dt, rng:label, cnt:countLabel, status:'active',
-                       snapshot: picked.map(w=>({e:w.en,k:w.ko})) });
+                       snapshot: stablePicked.map(w=>({id:w.id,e:w.en,k:w.ko})) });
     DB.saveSessions(sessions);
+
+    registerVocabSet(key, payload.n||label, label, link,{words:stablePicked,display_range:label});
 
     return { ok:true, label, link, key, payload, dm, dv, dt, count:picked.length, exp };
   }
@@ -1692,10 +1835,12 @@ function renderMake(root){
   // 폴더별로 각각 만든 링크 여러 개를 한 화면에 카드로 나열 (실패한 폴더는 사유와 함께 건너뜀 표시)
   function renderMultiResults(results){
     const okResults = results.filter(r=>r.ok);
+    const hookResults = okResults.filter(r=>r.dm==='hook');
     const shareLabelFor = (label)=> `📚 영단어 테스트 · ${label}`;
     $('#t-result').innerHTML = `
       <section class="anim-in mt-4 flex flex-col gap-3">
         ${okResults.length>1? `<button id="t-copyall" class="btn3d w-full bg-slate-800 py-3 text-sm text-white" style="--btn-edge:#0f172a">📋 전체 링크(${okResults.length}개) 한번에 복사</button>`:''}
+        ${hookResults.length>1? `<button id="t-copyall-short" class="btn3d w-full bg-grass-500 py-3 text-sm text-white" style="--btn-edge:#15803d">🔗 짧은 링크(${hookResults.length}개) 한번에 복사</button>`:''}
         ${results.map((r,i)=>{
           if(!r.ok) return `<div class="rounded-2xl bg-coral-50 px-4 py-3 text-xs font-semibold text-coral-600 ring-1 ring-coral-100">⚠️ <b>${esc(r.label)}</b>: ${esc(r.reason)} — 건너뛰었어요</div>`;
           const expText = r.exp ? `${new Date(r.exp).getFullYear()}. ${new Date(r.exp).getMonth()+1}. ${new Date(r.exp).getDate()}` : '무제한';
@@ -1709,7 +1854,7 @@ function renderMake(root){
             </div>
             <div class="mb-2 break-all rounded-xl bg-white px-3 py-2 text-[11px] text-slate-500 shadow-sm">${esc(r.link)}</div>
             <div class="grid grid-cols-2 gap-2">
-              <button data-mcopy="${i}" class="btn3d bg-brand-500 py-2.5 text-xs text-white" style="--btn-edge:#4338ca">링크 복사</button>
+              <button data-mcopy="${i}" class="btn3d bg-brand-500 py-2.5 text-xs text-white" style="--btn-edge:#17456f">링크 복사</button>
               <a href="${esc(r.link)}" target="_blank" class="btn3d grid place-items-center bg-slate-800 py-2.5 text-xs text-white" style="--btn-edge:#0f172a">미리보기</a>
             </div>
             ${r.dm==='hook'? `<div data-mshort="${i}" class="mt-2"></div>`:''}
@@ -1722,6 +1867,17 @@ function renderMake(root){
     if(copyAllBtn) copyAllBtn.onclick=async()=>{
       const text = okResults.map(r=>`${shareLabelFor(r.label)}\n${r.link}`).join('\n\n');
       (await copyText(text))? toast('전체 링크를 복사했어요 📋'):toast('복사 실패','bad');
+    };
+
+    const copyAllShortBtn = $('#t-copyall-short');
+    if(copyAllShortBtn) copyAllShortBtn.onclick=async()=>{
+      const ready = hookResults.filter(r=>r.shortLink);
+      const notReady = hookResults.length - ready.length;
+      if(!ready.length){ toast('아직 짧은 링크가 준비되지 않았어요. 잠시 후 다시 시도해주세요','bad'); return; }
+      const text = ready.map(r=>`${shareLabelFor(r.label)}\n${r.shortLink}`).join('\n\n');
+      const ok = await copyText(text);
+      if(!ok){ toast('복사 실패','bad'); return; }
+      toast(notReady>0 ? `짧은 링크 ${ready.length}개 복사했어요 (${notReady}개는 아직 준비 중)` : `짧은 링크 ${ready.length}개를 한번에 복사했어요 📋`);
     };
 
     results.forEach((r,i)=>{
@@ -1737,6 +1893,7 @@ function renderMake(root){
         const ok = await storeShortLinkPayload(r.dv, r.dt, r.key, signed);
         if(ok){
           const shortLink = location.origin + location.pathname + '?session=' + r.key + '&r=1&rv=' + encodeURIComponent(r.dv);
+          r.shortLink = shortLink;
           const list=DB.sessions(); const s=list.find(x=>x.key===r.key); if(s){ s.shortLink=shortLink; DB.saveSessions(list); }
           area.innerHTML = `
             <div class="flex items-center gap-2 rounded-xl bg-grass-50 px-3 py-2 ring-1 ring-grass-100">
@@ -1815,7 +1972,7 @@ function renderSessions(root){
     // 받아오므로, 다시 안 보내도 자동으로 연장됨. 긴 링크(?d=...)는 만료일이 URL 자체에
     // 서명까지 박혀있어서 이 방법으론 못 늘림 -- 그 경우는 새 링크를 다시 보내야 함.
     if(s.dm==='hook' && s.dv){
-      const signed = signPayload({ v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, goal:s.goal||0, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', dt:s.dt||'', rng:s.rng||'', cnt:s.cnt||'', w: s.snapshot||[] });
+      const signed = signPayload({ v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, goal:s.goal||0, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', rng:s.rng||'', cnt:s.cnt||'', w: s.snapshot||[] });
       const ok = await storeShortLinkPayload(s.dv, s.dt||'', key, signed);
       toast(ok ? '연장했어요 — 이미 보낸 짧은 링크에 자동 반영돼요 🔗' : '로컬엔 연장했지만 서버 반영에 실패했어요. 다시 시도해주세요', ok?undefined:'bad');
     } else {
@@ -1836,7 +1993,7 @@ function renderSessions(root){
   root.querySelectorAll('[data-make-short]').forEach(b=> b.onclick=async()=>{
     const key=b.dataset.makeShort; const s=DB.sessions().find(x=>x.key===key); if(!s || !s.dv) return;
     b.disabled=true; b.textContent='만드는 중…';
-    const signed = signPayload({ v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', dt:s.dt||'', rng:s.rng||'', cnt:s.cnt||'', w: s.snapshot||[] });
+    const signed = signPayload({ v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', rng:s.rng||'', cnt:s.cnt||'', w: s.snapshot||[] });
     const ok = await storeShortLinkPayload(s.dv, s.dt||'', key, signed);
     if(ok){
       const shortLink = location.origin + location.pathname + '?session=' + key + '&r=1&rv=' + encodeURIComponent(s.dv);
@@ -1874,7 +2031,7 @@ function renderSessions(root){
       <div class="flex items-start justify-between gap-2">
         <div class="min-w-0">
           <div class="flex items-center gap-2">
-            <span class="truncate font-extrabold">${esc(s.name||'이름 없는 테스트')}</span>
+            <span class="truncate font-extrabold">${esc(s.name || s.rng || '이름 없는 테스트')}</span>
             ${badge}
           </div>
           <div class="mt-0.5 text-xs text-slate-600">${modeTxt} · ${s.count}단어 · ${date}</div>
@@ -1908,8 +2065,12 @@ function renderSessions(root){
 }
 // 세션 카드에서 링크 재생성 (생성 당시 단어 스냅샷 + 만료일 유지)
 function rebuildLink(s){
-  const snap = s.snapshot || DB.words().map(w=>({e:w.en,k:w.ko}));
-  const payload = { v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, goal:s.goal||0, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', dt:s.dt||'', rng:s.rng||'', cnt:s.cnt||'', w: snap };
+  const snap = (s.snapshot || DB.words()).map(w=>{
+    const item={e:w.e??w.en,k:w.k??w.ko};
+    if(w.id) item.id=w.id;
+    return item;
+  });
+  const payload = { v:1, s:s.key, n:s.name, mode:s.mode, sec:s.sec, goal:s.goal||0, exp:s.exp||0, dm:s.dm||'', dv:s.dv||'', rng:s.rng||'', cnt:s.cnt||'', w: snap };
   return buildLink(payload);
 }
 
@@ -1938,7 +2099,7 @@ function renderResultsTab(root){
           <button id="d-newtoken" class="btn3d shrink-0 bg-slate-200 px-3 text-xs font-bold text-slate-600" style="--btn-edge:#cbd5e1">새로</button>
         </div>
 
-        <button id="d-save" class="btn3d w-full bg-brand-500 py-3 text-sm text-white" style="--btn-edge:#4338ca">저장</button>
+        <button id="d-save" class="btn3d w-full bg-brand-500 py-3 text-sm text-white" style="--btn-edge:#17456f">저장</button>
 
         <div class="mt-3 rounded-2xl bg-brand-50 p-3 text-[11px] leading-relaxed text-brand-700">
           🔁 <b>백엔드(<code>exam/sheet_backend.gs</code>) 코드를 나중에 업데이트할 때는 "새 배포"를 다시 누르지 말고</b>, Apps Script 화면 우측 상단 <b>배포 → 배포 관리 → (연필 아이콘) 편집 → 버전: 새 버전 → 배포</b>로 하세요. 이렇게 해야 <b>웹 앱 주소(/exec)가 그대로 유지</b>되어 이미 보낸 링크(단어암기·시험보기·문법학습 전부)가 안 깨져요. 이 백엔드는 <b>네 모듈이 전부 같이 쓰는 하나의 주소</b>라 "새 배포"로 주소가 바뀌면 네 곳 전부 다시 설정해야 해서 특히 더 조심해야 해요. 실수로 새 주소가 생겨도 예전 배포는 계속 살아있어서 이미 보낸 링크가 당장 끊기진 않지만, 앞으로 만드는 링크에 새 코드를 적용하려면 네 모듈의 웹훅 URL을 전부 새 주소로 갱신해야 해요.
@@ -1986,6 +2147,20 @@ function StudentApp(sessionKey, dataStr, remote){
     initStudentApp(sessionKey, b64dec(dataStr));
     return;
   }
+  if(remote && remote.serverSet){
+    app.innerHTML = `<div class="flex min-h-[70dvh] flex-col items-center justify-center text-center anim-in"><p class="text-sm font-bold text-slate-600">단어 세트를 불러오는 중…</p></div>`;
+    const q=new URLSearchParams(location.search),hook=remote.hook||deliveryCfg().url;
+    if(!hook)return renderExpired('단어 세트 서버 주소를 찾을 수 없어요.');
+    const url=new URL(hook);url.searchParams.set('action','fetchVocabularySetV1');url.searchParams.set('key',sessionKey);
+    ['assignment_id','assignment_target_id','student_id','assignmentCapability'].forEach(key=>{const value=q.get(key);if(value)url.searchParams.set(key,value)});
+    url.searchParams.set('hook',hook);
+    ELABAppsScript.read(url.href,{timeoutMs:30000}).then(response=>{
+      if(!response||!response.found||!response.payload)return renderExpired('단어 세트를 찾을 수 없어요. 선생님께 문의해주세요.');
+      if(response.attempt_id)response.payload.attempt_id=response.attempt_id;
+      initStudentApp(sessionKey,response.payload,true);
+    }).catch(()=>renderExpired('단어 세트를 불러오지 못했습니다. 잠시 후 다시 시도해주세요.'));
+    return;
+  }
   if(remote && remote.rv){
     app.innerHTML = `
       <div class="flex min-h-[70dvh] flex-col items-center justify-center text-center anim-in">
@@ -2002,14 +2177,14 @@ function StudentApp(sessionKey, dataStr, remote){
   renderExpired('테스트 정보를 불러올 수 없어요. 링크가 올바른지 확인해 주세요.');
 }
 
-function initStudentApp(sessionKey, payload){
+function initStudentApp(sessionKey, payload, trustedServerPayload){
   // 1) 데이터 확인
   if(!payload || !payload.w || !payload.w.length){
     return renderExpired('테스트 정보를 불러올 수 없어요. 링크가 올바른지 확인해 주세요.');
   }
 
   // 2) 위·변조 검증 (만료일/단어를 임의로 바꾼 링크 차단)
-  if(!verifyPayload(payload)){
+  if(!trustedServerPayload&&!verifyPayload(payload)){
     return renderExpired('유효하지 않은 링크예요. 링크가 손상되었거나 변경되었을 수 있어요.');
   }
 
@@ -2021,15 +2196,44 @@ function initStudentApp(sessionKey, payload){
   const rec = DB.sessions().find(s=>s.key===sessionKey);
   if(rec && rec.status==='expired'){ return renderExpired('이 테스트는 선생님이 마감했어요.'); }
 
-  const words = payload.w.map(x=>({en:x.e, ko:x.k}));
-  const cfg = { mode: payload.mode||'mixed', sec: payload.sec||4, name: payload.n||'', sn: payload.sn||'', dm: payload.dm||'', dv: payload.dv||'', dt: payload.dt||'', rng: payload.rng||'', cnt: payload.cnt||'', goal: payload.goal||0 };
+  const words = payload.w.map((x,i)=>({word_id:x.id||(`${payload.s}:${i}`),en:x.e, ko:x.k}));
+  const cfg = { mode: payload.mode||'mixed', sec: payload.sec||4, name: payload.n||'', sn: payload.sn||'', dm: payload.dm||'', dv: payload.dv||'', rng: payload.rng||'', cnt: payload.cnt||'', goal: payload.goal||0, exp: payload.exp||0 };
   const attemptKey = 'vt_attempt_' + sessionKey;
-  document.title = cfg.rng ? `단어암기 · ${cfg.rng}` : '단어암기 · ELAB';
+  document.title = 'ELAB · 학생용';
 
   renderGate();
 
+  // 단어 목록 PDF 다운로드 -- jsPDF 등 별도 라이브러리를 CDN으로 새로 안 끌어와도(한글 폰트를
+  // 따로 임베딩해야 하는 번거로움 없이) 브라우저 자체 인쇄 기능(팝업 창 → window.print() →
+  // "PDF로 저장")으로 해결. 네트워크 왕복 없이 이미 화면에 있는 payload.w로 바로 생성.
+  function downloadWordListPdf(){
+    const rows = words.map((w,i)=>`<tr><td>${i+1}</td><td>${esc(w.en)}</td><td>${esc(w.ko)}</td></tr>`).join('');
+    const html = `<!DOCTYPE html><html lang="ko"><head><meta charset="UTF-8" />
+<title>단어 목록${cfg.rng?' · '+esc(cfg.rng):''}</title>
+<style>
+  body{font-family:"Pretendard","Apple SD Gothic Neo",-apple-system,sans-serif;color:#1e293b;padding:28px;}
+  h1{font-size:19px;margin:0 0 4px;}
+  p.sub{font-size:12px;color:#64748b;margin:0 0 18px;}
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  th,td{border:1px solid #cbd5e1;padding:7px 10px;text-align:left;}
+  th{background:#f1f5f9;}
+  td:first-child,th:first-child{width:40px;text-align:center;}
+  @media print{ body{padding:0;} }
+</style></head><body>
+<h1>📚 영단어 목록${cfg.rng?' · '+esc(cfg.rng):''}</h1>
+<p class="sub">총 ${words.length}개 · 인쇄 대화상자에서 "PDF로 저장"을 선택하면 다운로드돼요.</p>
+<table><thead><tr><th>#</th><th>영단어</th><th>뜻</th></tr></thead><tbody>${rows}</tbody></table>
+<script>window.onload=function(){ setTimeout(function(){ window.print(); }, 200); };<\/script>
+</body></html>`;
+    const w = window.open('', '_blank');
+    if(!w){ toast('팝업이 차단됐어요 — 팝업을 허용한 뒤 다시 시도해주세요','bad'); return; }
+    w.document.write(html);
+    w.document.close();
+  }
+
   /* ----- 이름 입력 ----- */
   function renderGate(){
+    const assignmentParams=new URLSearchParams(location.search),assignedName=assignmentParams.get('assignment_target_id')?String(assignmentParams.get('student_name')||cfg.sn||'').trim():'';
     app.innerHTML = `
       <div class="flex min-h-[70dvh] flex-col items-center justify-center text-center anim-in">
         <div class="mb-4 grid h-20 w-20 place-items-center rounded-3xl bg-brand-500 text-4xl shadow-soft floaty">📚</div>
@@ -2039,16 +2243,17 @@ function initStudentApp(sessionKey, payload){
         <p class="mt-1 text-sm text-slate-600">단어 ${words.length}개 · ${({mc:'객관식',spelling:'주관식',mixed:'혼합',ox:'OX 자가진단'})[cfg.mode]}</p>
         ${cfg.goal? `<p class="mt-1 text-xs font-bold text-amber-500">🎯 목표 점수 ${cfg.goal}% — 도달할 때까지 재도전해요!</p>`:''}
         <div class="mt-7 w-full max-w-xs">
-          <input id="s-name" value="${esc(cfg.sn)}" placeholder="이름을 입력하세요" class="w-full rounded-2xl border-2 border-slate-100 bg-white px-5 py-4 text-center text-lg font-bold shadow-sm outline-none focus:border-brand-400" />
+          ${assignedName?`<div class="rounded-2xl bg-white px-5 py-4 text-center text-lg font-bold shadow-sm">${esc(assignedName)}</div><input id="s-name" type="hidden" value="${esc(assignedName)}" />`:`<input id="s-name" value="${esc(cfg.sn)}" placeholder="이름을 입력하세요" class="w-full rounded-2xl border-2 border-slate-100 bg-white px-5 py-4 text-center text-lg font-bold shadow-sm outline-none focus:border-brand-400" />`}
           <div class="mt-4 rounded-2xl bg-white px-4 py-3 shadow-sm">
             <label class="mb-1.5 block text-sm font-bold text-slate-500">⏱ 틀렸을 때 공부 시간: <span id="s-secval" class="text-brand-600">${cfg.sec}초</span></label>
             <input id="s-sec" type="range" min="2" max="10" value="${cfg.sec}" class="w-full accent-brand-500" />
           </div>
           <button id="s-start" class="btn3d mt-3 w-full bg-grass-500 py-4 text-lg text-white" style="--btn-edge:#15803d">시작하기 🚀</button>
+          <button id="s-pdf" class="btn3d mt-3 w-full bg-white py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">📄 단어 PDF 다운로드</button>
         </div>
         <p class="mt-6 max-w-xs text-sm leading-relaxed text-slate-500 sm:max-w-sm">다음 화면에서 진행 방법을 간단히 안내해 드려요!</p>
       </div>`;
-    const nameEl=$('#s-name'); nameEl.focus(); if(cfg.sn) nameEl.select();
+    const nameEl=$('#s-name'); if(!assignedName){nameEl.focus();if(cfg.sn)nameEl.select()}
     const secEl=$('#s-sec'); secEl.oninput=()=>{ cfg.sec=+secEl.value; $('#s-secval').textContent=secEl.value+'초'; };
     function start(){
       const name=nameEl.value.trim();
@@ -2056,6 +2261,7 @@ function initStudentApp(sessionKey, payload){
       renderTutorial(name);
     }
     $('#s-start').onclick=start;
+    $('#s-pdf').onclick=downloadWordListPdf;
     nameEl.addEventListener('keydown',e=>{ if(e.key==='Enter') start(); });
   }
 
@@ -2086,7 +2292,7 @@ function initStudentApp(sessionKey, payload){
     const questions = words.map((w,i)=>{
       let type = cfg.mode;
       if(cfg.mode==='mixed') type = Math.random()<0.5 ? 'mc' : 'spelling';
-      return { id:i, en:w.en, ko:w.ko, type };
+      return { id:i, word_id:w.word_id, en:w.en, ko:w.ko, type };
     });
 
     // 이 브라우저 탭에서 같은 링크로 몇 번째 도전인지 (새로고침해도 유지, 탭을 닫으면 초기화)
@@ -2102,6 +2308,8 @@ function initStudentApp(sessionKey, payload){
       knownSet: new Set(),            // OX 전용: "안다(O)"로 답한 단어 (id)
       mastered: new Set(),
       attempts: 0,
+      wrongCounts: {}, firstAnsweredAt:{}, finalAnsweredAt:{},
+      answerLocked: false,
       tryNum,
       start: Date.now(),
     };
@@ -2116,6 +2324,7 @@ function initStudentApp(sessionKey, payload){
   }
 
   function renderQuestion(state, q){
+    state.answerLocked=false;
     const progress = Math.round(state.mastered.size / state.total * 100);
     const remain = state.queue.length;
 
@@ -2158,7 +2367,7 @@ function initStudentApp(sessionKey, payload){
         </div>
         <input id="sp-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"
           placeholder="영어 스펠링 입력" class="w-full rounded-2xl border-2 border-slate-100 bg-white px-5 py-4 text-center text-xl font-bold shadow-sm outline-none focus:border-brand-400" />
-        <button id="sp-submit" class="btn3d mt-3 w-full bg-brand-500 py-4 text-white" style="--btn-edge:#4338ca">제출하기</button>`;
+        <button id="sp-submit" class="btn3d mt-3 w-full bg-brand-500 py-4 text-white" style="--btn-edge:#17456f">제출하기</button>`;
     }
 
     app.innerHTML = `
@@ -2198,7 +2407,12 @@ function initStudentApp(sessionKey, payload){
   }
 
   function answer(state, q, correct, btnEl){
+    if(state.answerLocked)return;
+    state.answerLocked=true;
+    app.querySelectorAll('button,input').forEach(el=>{el.disabled=true;el.style.pointerEvents='none'});
     state.attempts++;
+    const answeredAt=Date.now();if(!state.firstAnsweredAt[q.id])state.firstAnsweredAt[q.id]=answeredAt;state.finalAnsweredAt[q.id]=answeredAt;
+    if(!correct)state.wrongCounts[q.id]=(state.wrongCounts[q.id]||0)+1;
     // 최초 시도 결과 기록
     if(!(q.id in state.firstResult)) state.firstResult[q.id] = correct;
 
@@ -2290,7 +2504,7 @@ function initStudentApp(sessionKey, payload){
         const left=Math.ceil((dur-el)/1000);
         if(el>=lock){
           btn.disabled=false; btn.classList.remove('bg-slate-300'); btn.classList.add('bg-brand-500');
-          btn.style.setProperty('--btn-edge','#4338ca');
+          btn.style.setProperty('--btn-edge','#17456f');
           label.textContent = left>0 ? `다음 문제 → (${left})` : '다음 문제 →';
         }
         if(el>=dur){ clearInterval(timer); label.textContent='다음 문제 →'; }
@@ -2335,7 +2549,8 @@ function initStudentApp(sessionKey, payload){
     const qtype = ({mc:'객관식',spelling:'주관식',mixed:'혼합',ox:'OX 자가진단'})[cfg.mode] || cfg.mode;
     const result = { name: state.name, score: `${firstCorrect}/${state.total} (${pct}%)`,
                      timeStr, attempts: state.attempts, wrong: wrongWords, known: cfg.mode==='ox'? knownWords : [], date: dateStr, report,
-                     range: cfg.rng||'', count: cfg.cnt||'', qtype, attempt: `${state.tryNum}회차` };
+                     range: cfg.rng||'', count: cfg.cnt||'', qtype, attempt: `${state.tryNum}회차`, request_id:'vocab-result:'+sessionKey+':'+state.tryNum, repetition_count:Math.max(0,state.attempts-state.total),
+                     wordItems:words.map((w,i)=>({word_id:w.word_id,term:w.en,meaning:w.ko,first_correct:!!state.firstResult[i],wrong_count:state.wrongCounts[i]||0,final_correct:state.mastered.has(i),first_answered_at:state.firstAnsweredAt[i]||null,final_answered_at:state.finalAnsweredAt[i]||null})) };
     const autoSend = !!cfg.dm;
 
     app.innerHTML = `
@@ -2383,27 +2598,20 @@ function initStudentApp(sessionKey, payload){
 
         <div class="mt-4 grid w-full grid-cols-1 gap-2.5">
           ${autoSend? `<div id="r-send" class="rounded-2xl bg-slate-50 py-3 text-center text-sm font-bold text-slate-600">📡 선생님께 결과 전송 중…</div>`
-                     : `<button id="r-copy" class="btn3d bg-grass-500 py-4 text-white" style="--btn-edge:#15803d">📋 결과 복사해서 선생님께 보내기</button>`}
-          <div id="r-copy-fallback"></div>
+                     : `<div class="rounded-2xl bg-slate-50 py-3 text-center text-sm font-bold text-slate-600">결과 자동 저장이 설정되지 않은 링크입니다.</div>`}
           <button id="r-again" class="btn3d py-3.5 ${(autoSend||pushRetry)?'bg-grass-500 text-white':'bg-white text-slate-600'}" style="--btn-edge:${(autoSend||pushRetry)?'#15803d':'#e2e8f0'}">${pushRetry? '다시 도전하기 🔥' : '재시험 보기 🔄'}</button>
         </div>
-        ${!autoSend? `<p class="mt-4 text-center text-[11px] text-slate-600">위 카드를 캡처해서 보내도 좋아요 📸</p>`:''}
       </div>`;
 
-    const rcopy=$('#r-copy'); if(rcopy) rcopy.onclick=async()=>{ (await copyText(report))? toast('결과를 복사했어요! 카톡에 붙여넣으세요 💬'):toast('복사 실패','bad'); };
     $('#r-again').onclick=()=> renderGate();
 
     if(autoSend){
-      sendResult(cfg.dm, cfg.dv, cfg.dt, result).then(ok=>{
+      sendResult(cfg.dm, cfg.dv, result, sessionKey, cfg.exp).then(ok=>{
         const el=$('#r-send'); if(!el) return;
-        if(ok){ el.className='rounded-2xl bg-grass-50 py-3 text-center text-sm font-bold text-grass-600'; el.textContent='✅ 선생님께 결과가 전송됐어요!'; }
+        if(ok){ el.className='rounded-2xl bg-grass-50 py-3 text-center text-sm font-bold text-grass-600'; el.textContent='결과가 선생님께 전송되었습니다.'; }
         else {
-          el.className='rounded-2xl bg-amber-50 py-3 text-center text-sm font-bold text-amber-600'; el.textContent='⚠️ 자동 전송에 실패했어요';
-          const fb=$('#r-copy-fallback');
-          if(fb){
-            fb.innerHTML = `<button id="r-copy" class="btn3d w-full bg-grass-500 py-4 text-white" style="--btn-edge:#15803d">📋 결과 복사해서 선생님께 보내기</button>`;
-            $('#r-copy').onclick=async()=>{ (await copyText(report))? toast('결과를 복사했어요! 카톡에 붙여넣으세요 💬'):toast('복사 실패','bad'); };
-          }
+          el.className='rounded-2xl bg-amber-50 py-3 text-center text-sm font-bold text-amber-600'; el.textContent='결과 저장을 확인하지 못했습니다.';
+          const retry=document.createElement('button');retry.className='btn3d mt-2 w-full bg-brand-500 py-3 text-white';retry.style.setProperty('--btn-edge','#17456f');retry.textContent='결과 다시 전송';retry.onclick=()=>{retry.disabled=true;retry.textContent='다시 전송 중…';sendResult(cfg.dm,cfg.dv,result,sessionKey,cfg.exp).then(saved=>{if(saved){el.className='rounded-2xl bg-grass-50 py-3 text-center text-sm font-bold text-grass-600';el.textContent='결과가 선생님께 전송되었습니다.';retry.remove();}else{retry.disabled=false;retry.textContent='결과 다시 전송';}})};el.insertAdjacentElement('afterend',retry);
         }
       });
     }

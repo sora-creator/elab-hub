@@ -1,6 +1,10 @@
 # 파이썬
 __pycache__/
 *.pyc
+.venv-grammar/
+.venv/
+venv/
+.pytest_cache/
 
 # 로컬 전용 설정(API 키 등) — 이 컴퓨터에서만 쓰는 값, 커밋 금지
 grammar/mockexam_db/gui_config.json
@@ -12,3 +16,54 @@ grammar/test_exams.db
 
 # 윈도우 바로가기(이 컴퓨터의 절대경로를 담고 있어 다른 컴퓨터에서 의미 없음)
 *.lnk
+
+# 환경·인증 설정
+.env
+.env.*
+!.env.example
+.clasp.json
+.clasprc.json
+*service-account*.json
+*credentials*.json
+*secret*.json
+.vscode/settings.json
+
+# 설치물·테스트·로그·브라우저 상태
+node_modules/
+.pw-browsers/
+coverage/
+test-results/
+playwright-report/
+output/
+outputs/
+backups/
+logs/
+*.log
+.ebsi_browser_profile/
+browser-profile/
+browser-data/
+
+# 운영·원본 데이터 및 대량 산출물
+*.xlsx
+*.xls
+*.pdf
+*.csv
+*.tsv
+uploads/
+upload/
+Downloads/
+
+# 생성 산출물
+*.map
+*-qa.png
+*-390.png
+*-1440.png
+*-source.png
+exam/tests/**/*.png
+exam/tests/landing_reference/
+exam/tests/public_pages/
+exam/tests/ui_0h1/
+/exam-elab-restored.png
+/exam-google-cloud-redesign.png
+.DS_Store
+Thumbs.db

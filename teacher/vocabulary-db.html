@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELAB · 통합 어휘 DB</title>
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1">
+<script src="../shared/nav.js?v=vocab-db-1"></script>
+<script src="../shared/appsScriptTransport.js?v=vocab-db-1"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+body{margin:0;background:var(--eb-bg);color:var(--eb-text);font-family:Pretendard,system-ui,sans-serif}.page{width:min(1180px,calc(100% - 32px));margin:auto;padding:24px 0 64px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{background:#fff;border:1px solid var(--eb-border);border-radius:16px;padding:18px}.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}input,select,button{min-height:42px;border:1px solid var(--eb-border);border-radius:10px;padding:8px 11px;background:#fff}button{cursor:pointer;font-weight:750}button.primary{background:var(--eb-primary-600);color:#fff;border-color:transparent}button:disabled{opacity:.45;cursor:not-allowed}.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:14px 0}.stat{background:var(--eb-bg);border-radius:10px;padding:10px}.stat b{display:block;font-size:1.2rem}.list{margin-top:12px;max-height:560px;overflow:auto;border-top:1px solid var(--eb-border)}.row{display:grid;grid-template-columns:32px 70px 1fr 1.5fr 88px 130px;gap:8px;padding:10px 4px;border-bottom:1px solid var(--eb-border);align-items:start}.row small{display:block}.row .actions button{min-height:32px;padding:4px 7px;font-size:.75rem}.muted{color:var(--eb-text-muted);font-size:.82rem}.error{color:#b42318;white-space:pre-wrap}.ok{color:#067647}@media(max-width:800px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}.row{grid-template-columns:28px 58px 1fr}.row .meaning{grid-column:3}.row .score{display:none}.row .actions{grid-column:3}}
+
+.mode-banner{padding:14px;border:2px solid #64748b;border-radius:12px;background:#f1f5f9;margin-bottom:16px}.mode-banner.local{border-color:#b45309;background:#fffbeb}.mode-banner p{margin:8px 0 0}.pager{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:16px}.row>*{min-width:0;overflow-wrap:anywhere}.toolbar>*{max-width:100%;box-sizing:border-box}.panel{min-width:0}.panel>input{max-width:100%;box-sizing:border-box}.row .details{margin-top:6px}.row input{min-height:24px}@media(max-width:800px){.row .score{display:block;grid-column:3}.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body><main class="page"><div data-elab-nav="vocabulary-db"></div><div class="eb-page-header"><h1>V1~V5 통합 어휘 DB</h1></div>
+<div id="modeBanner" class="mode-banner local" role="status"><div class="toolbar"><strong id="modeLabel">로컬 XLSX 검토 모드</strong><button id="localMode" disabled>로컬 XLSX 검토</button><button id="serverMode">서버 DB 목록으로 전환</button></div><p id="modeHelp">파일을 선택하면 브라우저 메모리에서만 검토합니다. 서버 업로드·API 호출이 없으며 새로고침하면 파일 데이터가 사라집니다.</p></div>
+<div class="grid">
+<section class="panel"><h2>DB 가져오기</h2><p class="muted">ELAB_Import 시트를 검증합니다. DAY 열은 읽거나 저장하지 않습니다.</p><input id="file" type="file" accept=".xlsx,.xls,.csv"><div id="importStats" class="stats"></div><p id="importMsg" class="muted"></p><div class="toolbar"><button id="stage" disabled>서버 미리보기</button><button id="commit" class="primary" disabled>확인 후 실제 반영</button></div><div id="errors" class="error"></div></section>
+<section class="panel"><h2>단어 세트 생성</h2><div class="toolbar"><select id="setLevel"><option>V1</option><option>V2</option><option>V3</option><option>V4</option><option>V5</option></select><input id="setCount" type="number" min="1" max="500" value="50"><select id="selection"><option value="importance">중요도순</option><option value="random">무작위</option><option value="unlearned">미학습 우선</option><option value="wrong">오답 우선</option></select><label><input id="exclude" type="checkbox"> 학습한 단어 제외</label></div><input id="studentId" placeholder="학생 ID (미학습/오답 기준 선택 시)"><input id="setTitle" placeholder="세트 제목"><div class="toolbar"><button id="previewSet">선택 미리보기</button><button id="createSet" class="primary" disabled>스냅샷 세트 확정</button></div><p id="setMsg" class="muted"></p></section>
+</div>
+<section class="panel" style="margin-top:16px"><h2>어휘 검색·선택</h2><div class="toolbar"><select id="level"><option value="">전체 레벨</option><option>V1</option><option>V2</option><option>V3</option><option>V4</option><option>V5</option></select><input id="query" placeholder="단어 또는 뜻 검색"><select id="sort"><option value="importance">선정점수순</option><option value="occurrence">출현빈도순</option><option value="alphabetical">알파벳순</option></select><select id="scope" title="현재 운영 DB에 보관 어휘 없음"><option value="curriculum">학생용</option><option value="archive">보관용</option></select><label title="현재 운영 DB에 보관 어휘 없음"><input id="includeArchive" type="checkbox"> 전체 기출 DB 포함</label><label><input id="uncertainOnly" type="checkbox"> UNCERTAIN만</label><label><input id="activeOnly" type="checkbox" checked> active만</label><button id="search">조회</button></div><p class="muted">전체 기출 어휘는 마스터 XLSX에서 관리합니다. 현재 운영 DB에 보관 어휘 없음.</p><p id="dbMsg" class="muted"></p><div id="words" class="list"></div><nav class="pager" aria-label="어휘 목록 페이지"><button id="prevPage" disabled>이전</button><span id="pageInfo" aria-live="polite">1 / 1 페이지 · 전체 0개</span><button id="nextPage" disabled>다음</button></nav></section>
+</main><script>
+(()=>{'use strict';
+const REQUIRED=['level','word','meaning','vocab_id','sense_id','item_type','sense_order','importance_score','occurrence_count','active','curriculum_active','curriculum_level','archive_only','selection_score','selection_reason','recommended_level','confirmed_level'];
+const $=s=>document.querySelector(s),esc=value=>String(value==null?'':value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),cfg=()=>{try{return JSON.parse(localStorage.getItem('hub.delivery')||'null')||{}}catch(e){return{}}};let importRows=[],requestId='',selectionRows=[],visibleItems=[];
+let localMode=true,page=1,totalPages=1,loadVersion=0,fileVersion=0,fileValid=false;const pageSize=200;
+function read(action,params={}){if(localMode)throw new Error('로컬 XLSX 검토 모드에서는 서버에 연결하지 않습니다.');const c=cfg();if(!c.url||!c.token)throw new Error('환경설정에서 Apps Script 연결이 필요합니다.');const u=new URL(c.url);u.searchParams.set('action',action);u.searchParams.set('token',c.token);Object.entries(params).forEach(([k,v])=>{if(v!==''&&v!=null)u.searchParams.set(k,v)});return ELABAppsScript.read(u.href,{timeoutMs:60000})}
+async function post(action,data={}){if(localMode)throw new Error('로컬 XLSX 검토 모드에서는 서버에 연결하지 않습니다.');const c=cfg();if(!c.url||!c.token)throw new Error('환경설정에서 Apps Script 연결이 필요합니다.');await fetch(c.url,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(Object.assign({action,token:c.token},data))})}
+function stats(target,values){target.innerHTML=Object.entries(values).map(([k,v])=>`<div class="stat"><span class="muted">${esc(k)}</span><b>${esc(v)}</b></div>`).join('')}
+$('#file').onchange=async e=>{try{const file=e.target.files[0];if(!file)return;const version=++fileVersion;importRows=[];fileValid=false;requestId='';$('#importStats').innerHTML='';$('#errors').textContent='';$('#importMsg').textContent='파일을 읽고 있습니다.';setMode(true);const buffer=await file.arrayBuffer();if(version!==fileVersion)return;const wb=XLSX.read(buffer,{type:'array'}),ws=wb.Sheets.ELAB_Import;if(!ws)throw new Error('ELAB_Import 시트가 없습니다.');const rows=XLSX.utils.sheet_to_json(ws,{defval:''}),headers=Object.keys(rows[0]||{}),missing=REQUIRED.filter(x=>!headers.includes(x));if(missing.length)throw new Error('필수 열 누락: '+missing.join(', '));const uncertain=new Set(),uws=wb.Sheets.CurriculumUncertain;if(uws)XLSX.utils.sheet_to_json(uws,{defval:''}).forEach(x=>{if(x.sense_id_a)uncertain.add(String(x.sense_id_a));if(x.sense_id_b)uncertain.add(String(x.sense_id_b))});const isTrue=v=>v===true||String(v).toLowerCase()==='true'||String(v)==='1',seen=new Set(),errors=[];importRows=rows.map((r,i)=>{const out={source_row:i+2};REQUIRED.forEach(k=>out[k]=r[k]);out.semantic_review_status=uncertain.has(String(r.sense_id))?'UNCERTAIN':'';if(!String(r.sense_id).trim())errors.push(`${i+2}행: sense_id 없음`);else if(seen.has(String(r.sense_id)))errors.push(`${i+2}행: 중복 sense_id ${r.sense_id}`);seen.add(String(r.sense_id));if(!/^V[1-5]$/.test(String(r.confirmed_level).toUpperCase()))errors.push(`${i+2}행: 잘못된 confirmed_level`);if(isTrue(r.curriculum_active)&&isTrue(r.archive_only))errors.push(`${i+2}행: 학생용/보관용 충돌`);if(isTrue(r.curriculum_active)&&String(r.curriculum_level)!==String(r.confirmed_level))errors.push(`${i+2}행: curriculum_level 불일치`);return out});const levels={};importRows.filter(r=>isTrue(r.curriculum_active)).forEach(r=>levels[r.confirmed_level]=(levels[r.confirmed_level]||0)+1);stats($('#importStats'),Object.assign({전체:importRows.length,학생용:importRows.filter(r=>isTrue(r.curriculum_active)).length,보관용:importRows.filter(r=>isTrue(r.archive_only)).length,오류:errors.length},levels));$('#errors').textContent=errors.slice(0,30).join('\n');fileValid=!errors.length;$('#stage').disabled=true;$('#commit').disabled=true;$('#importMsg').textContent=errors.length?'파일 검증 실패':'파일 검증 완료. 로컬 목록에서 검토하세요.';loadDb()}catch(err){importRows=[];fileValid=false;$('#stage').disabled=true;$('#importMsg').textContent=err.message;loadDb()}};
+$('#stage').onclick=async()=>{if(localMode)return;try{$('#stage').disabled=true;requestId='vocab-import-'+Date.now();const file=$('#file').files[0];for(let i=0;i<importRows.length;i+=300){$('#importMsg').textContent=`staging ${Math.min(i+300,importRows.length)} / ${importRows.length}`;await post('stageVocabularyImportV1',{request_id:requestId,start_row:i+2,rows:importRows.slice(i,i+300)})}await post('previewVocabularyImportV1',{request_id:requestId,source_file:file.name});await new Promise(r=>setTimeout(r,800));const result=await read('getVocabularyImportStatusV1',{request_id:requestId});stats($('#importStats'),{전체:result.total_count,학생용:result.curriculum_count,보관용:result.archive_count,V1:result.v1_count,V2:result.v2_count,V3:result.v3_count,V4:result.v4_count,V5:result.v5_count,headword:result.headword_count,출현:result.occurrence_count,신규:result.new_count,변경:result.changed_count,유지:result.unchanged_count,오류:result.error_count});$('#errors').textContent=(result.errors||[]).map(x=>`${x.source_row}행 ${x.code}: ${x.message}`).join('\n');$('#commit').disabled=result.status!=='PREVIEWED';$('#importMsg').textContent='서버 미리보기: '+result.status}catch(err){$('#importMsg').textContent=err.message}finally{$('#stage').disabled=localMode||!fileValid}};
+$('#commit').onclick=async()=>{if(localMode||!requestId||!confirm('백업을 확인했습니까? 미리보기 결과를 VocabularyDB에 반영합니다.'))return;try{$('#commit').disabled=true;await post('commitVocabularyImportV1',{request_id:requestId});await new Promise(r=>setTimeout(r,1000));const result=await read('getVocabularyImportStatusV1',{request_id:requestId});$('#importMsg').textContent='반영 상태: '+result.status+' · '+result.message;if(result.status==='COMMITTED')loadDb()}catch(err){$('#importMsg').textContent=err.message}};
+function renderRows(items){visibleItems=items;$('#words').innerHTML=items.map(x=>`<div class="row"><input type="checkbox" data-sense="${esc(x.sense_id)}" ${localMode?'disabled':''}><b>${esc(x.confirmed_level||x.level)}</b><span><b>${esc(x.word)}</b><small class="muted">${x.curriculum_active?'학생용':'보관용'}${x.semantic_review_status==='UNCERTAIN'?' · UNCERTAIN':''} · ${esc(x.vocab_id)} · ${esc(x.sense_id)}</small></span><span class="meaning">${esc(x.meaning)}<small class="muted">${esc(x.selection_reason)}</small><small class="details">뜻 순서 ${esc(x.sense_order)} · 확정 레벨 ${esc(x.confirmed_level||x.level)}</small></span><span class="score">선정 ${esc(x.selection_score)}<br>출현 ${esc(x.occurrence_count)}</span><span class="actions"><button data-edit="${esc(x.sense_id)}">수정</button> <button data-related="${esc(x.vocab_id)}">다른 뜻</button>${x.archive_only?' <button data-promote="'+esc(x.sense_id)+'">학생용 승격</button>':''}</span></div>`).join('')||'<p class="muted">검색 결과가 없습니다.</p>';$('#words').scrollTop=0;document.querySelectorAll('.row .actions button').forEach(button=>button.disabled=localMode);document.querySelectorAll('[data-edit]').forEach(button=>button.onclick=()=>editSense(button.dataset.edit));document.querySelectorAll('[data-related]').forEach(button=>button.onclick=()=>showRelated(button.dataset.related));document.querySelectorAll('[data-promote]').forEach(button=>button.onclick=()=>promoteSense(button.dataset.promote))}
+async function promoteSense(id){const item=visibleItems.find(x=>x.sense_id===id);if(!item||!confirm(`${item.word}을(를) 학생용 정규 어휘로 승격할까요?`))return;await post('updateVocabularySenseV1',{sense_id:id,curriculum_active:true,curriculum_level:item.confirmed_level||item.level});await loadDb()}
+async function editSense(id){const item=visibleItems.find(x=>x.sense_id===id);if(!item)return;const word=prompt('단어',item.word);if(word===null)return;const meaning=prompt('대표 뜻',item.meaning);if(meaning===null)return;const level=prompt('확정 레벨 (V1~V5)',item.level);if(level===null)return;const active=confirm('active 상태로 유지할까요?');await post('updateVocabularySenseV1',{sense_id:id,word,meaning,level,active});await loadDb()}
+async function showRelated(vocabId){try{const result=await read('listVocabularySensesV1',{vocab_id:vocabId});alert((result.items||[]).map(x=>`${x.level} · ${x.word} · ${x.meaning} (${x.sense_id})`).join('\n')||'연결된 다른 뜻이 없습니다.')}catch(err){$('#dbMsg').textContent=err.message}}
+function localResult(params){
+  const truth=v=>v===true||v===1||['true','1','yes','y'].includes(String(v).trim().toLowerCase());
+  let items=importRows.map(r=>Object.assign({},r,{word:String(r.word??''),meaning:String(r.meaning??''),sense_id:String(r.sense_id??''),confirmed_level:String(r.confirmed_level||r.level).toUpperCase(),active:truth(r.active),curriculum_active:truth(r.curriculum_active),archive_only:truth(r.archive_only)}));
+  const query=params.q.trim().toLowerCase();
+  items=items.filter(x=>(!params.level||x.confirmed_level===params.level)&&
+    (params.active_only==='0'||x.active)&&
+    (params.scope!=='archive'||x.archive_only)&&
+    (params.scope!=='curriculum'||params.include_archive==='1'||x.curriculum_active&&!x.archive_only)&&
+    (params.uncertain_only==='0'||x.semantic_review_status==='UNCERTAIN')&&
+    (!query||x.word.toLowerCase().includes(query)||x.meaning.toLowerCase().includes(query)));
+  items.sort((a,b)=>{const order=params.sort==='alphabetical'?a.word.localeCompare(b.word)||a.sense_order-b.sense_order:
+    params.sort==='occurrence'?b.occurrence_count-a.occurrence_count||b.importance_score-a.importance_score:
+    b.selection_score-a.selection_score||b.importance_score-a.importance_score||b.occurrence_count-a.occurrence_count;
+    return order||(a.sense_id<b.sense_id?-1:a.sense_id>b.sense_id?1:0)});
+  return{items:items.slice((params.page-1)*pageSize,params.page*pageSize),total_count:items.length,total_pages:Math.ceil(items.length/pageSize)};
+}
+function setMode(local){
+  localMode=local;loadVersion++;page=1;selectionRows=[];
+  $('#modeBanner').classList.toggle('local',local);
+  $('#modeLabel').textContent=local?'로컬 XLSX 검토 모드':'서버 DB 목록 모드';
+  $('#modeHelp').textContent=local?'파일을 선택하면 브라우저 메모리에서만 검토합니다. 서버 업로드·API 호출이 없으며 새로고침하면 파일 데이터가 사라집니다.':'환경설정에 연결된 VocabularyDB를 조회합니다. 로컬 XLSX는 서버 DB 목록에 포함되지 않습니다.';
+  $('#localMode').disabled=local;$('#serverMode').disabled=!local;
+  $('#stage').disabled=local||!fileValid;$('#commit').disabled=true;
+  $('#previewSet').disabled=local;$('#createSet').disabled=true;$('#setMsg').textContent='';
+  loadDb();
+}
+async function loadDb(){
+  const version=++loadVersion;
+  $('#prevPage').disabled=true;$('#nextPage').disabled=true;
+  selectionRows=[];$('#createSet').disabled=true;$('#setMsg').textContent='';renderRows([]);
+  try{
+    const params={level:$('#level').value,q:$('#query').value,sort:$('#sort').value,active_only:$('#activeOnly').checked?'1':'0',scope:$('#scope').value,include_archive:$('#includeArchive').checked?'1':'0',uncertain_only:$('#uncertainOnly').checked?'1':'0',page,limit:pageSize};
+    // cursor preserves compatibility with the currently deployed older backend.
+    const r=localMode?localResult(params):await read('listVocabularyDbV1',Object.assign({cursor:(page-1)*pageSize},params));
+    if(version!==loadVersion)return;
+    if(r.error)throw new Error(r.error);
+    const total=Number(r.total_count??r.total??0);totalPages=Math.max(1,Math.ceil(total/pageSize));
+    if(page>totalPages){page=totalPages;return loadDb()}
+    renderRows(r.items||[]);
+    $('#dbMsg').textContent=`${total}개 중 ${(r.items||[]).length}개 표시`;
+    $('#pageInfo').textContent=`${page} / ${totalPages} 페이지 · 전체 ${total}개`;
+    $('#prevPage').disabled=page<=1;$('#nextPage').disabled=page>=totalPages;
+  }catch(err){if(version!==loadVersion)return;$('#dbMsg').textContent=err.message;$('#pageInfo').textContent='목록을 불러오지 못했습니다.'}
+}
+function firstPage(){page=1;loadDb()}
+$('#search').onclick=firstPage;
+$('#query').oninput=firstPage;
+['level','sort','scope','includeArchive','uncertainOnly','activeOnly'].forEach(id=>$('#'+id).onchange=firstPage);
+$('#prevPage').onclick=()=>{if(page>1){page--;loadDb()}};
+$('#nextPage').onclick=()=>{if(page<totalPages){page++;loadDb()}};
+$('#localMode').onclick=()=>setMode(true);
+$('#serverMode').onclick=()=>setMode(false);
+async function previewSet(){if(localMode)return;const version=loadVersion;const checked=[...document.querySelectorAll('[data-sense]:checked')].map(x=>x.dataset.sense);if(checked.length){selectionRows=checked.map(id=>({sense_id:id}));$('#setMsg').textContent=`직접 선택 ${checked.length}개`;$('#createSet').disabled=false;return}const r=await read('previewVocabularySetV1',{level:$('#setLevel').value,item_count:$('#setCount').value,selection_type:$('#selection').value,student_id:$('#studentId').value,exclude_learned:$('#exclude').checked?'1':'0'});if(localMode||version!==loadVersion)return;selectionRows=r.items||[];$('#setMsg').textContent=`${selectionRows.length}개 선택됨: `+selectionRows.slice(0,8).map(x=>x.word).join(', ');$('#createSet').disabled=!selectionRows.length}
+$('#previewSet').onclick=()=>previewSet().catch(e=>$('#setMsg').textContent=e.message);
+$('#createSet').onclick=async()=>{if(localMode)return;try{await post('createVocabularySetV1',{sense_ids:selectionRows.map(x=>x.sense_id),level:$('#setLevel').value,selection_type:selectionRows.some(x=>!x.word)?'manual':$('#selection').value,title:$('#setTitle').value,hook:cfg().url});$('#setMsg').textContent='세트가 생성되었습니다. 기존 과제배정 화면에서 학생 또는 그룹에 배정하세요.';setTimeout(()=>location.href='./assignments.html',1000)}catch(e){$('#setMsg').textContent=e.message}};
+setMode(true);
+})();
+</script></body></html>

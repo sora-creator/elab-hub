@@ -1,0 +1,10 @@
+{
+  "devDependencies": {
+    "playwright": "^1.62.1",
+    "xlsx": "0.18.5"
+  },
+  "scripts": {
+    "test:local": "node exam/tests/run-local.cjs",
+    "test:vocabulary": "node exam/tests/run-local.cjs vocabulary_final_xlsx.test.js vocabulary_pagination.test.js vocabulary_db_integration.test.js vocabulary_db_ui.test.js vocabulary_db_xlsx_ui.test.js"
+  }
+}

@@ -1,0 +1,11 @@
+const assert=require('assert'),fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync('vocab/index.html','utf8');
+assert(html.includes('const entryFolderId = treeSel.size===1 ? [...treeSel][0] : curFolder'));
+assert(html.includes('folderId:entryFolderId'));
+assert(html.includes('curFolder=entryFolderId'));
+assert(html.includes('treeSel.clear()'));
+assert(html.includes("entryFolder.name"));
+assert(!html.includes('folderId:curFolder});'));
+const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(x=>x[1]).filter(x=>x.trim());
+scripts.forEach((script,i)=>new vm.Script(script,{filename:'vocab-selected-folder-'+i+'.js'}));
+console.log('vocab_selected_folder_add.test.js: all assertions passed');
