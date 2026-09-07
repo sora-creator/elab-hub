@@ -1,0 +1,198 @@
+/* ELAB product design system — zero-build shared CSS */
+@import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css");
+:root{
+  --eb-primary-50:#eef7f8;--eb-primary-100:#d9ecef;--eb-primary-200:#b9dce1;
+  --eb-primary-500:#147d8f;--eb-primary-600:#0f6b7a;--eb-primary-700:#105866;
+  --eb-bg:#f4f5f3;--eb-surface:#fff;--eb-surface-subtle:#f8f9f8;
+  --eb-text:#17212b;--eb-text-muted:#596675;--eb-text-faint:#7d8995;
+  --eb-border:#d8dde2;--eb-border-strong:#bdc6cf;
+  --eb-success:#287a51;--eb-success-bg:#edf7f1;
+  --eb-warning:#98651b;--eb-warning-bg:#fbf4e8;
+  --eb-danger:#b34635;--eb-danger-bg:#fbefed;
+  --eb-info:#356f9b;--eb-info-bg:#eef5fa;
+  --eb-control-radius:6px;--eb-panel-radius:8px;
+  --eb-h1-size:24px;--eb-h2-size:17px;--eb-body-size:14px;--eb-caption-size:12px;
+  --eb-space-1:4px;--eb-space-2:8px;--eb-space-3:12px;--eb-space-4:16px;
+  --eb-space-5:20px;--eb-space-6:24px;--eb-space-8:32px;
+  --eb-container-narrow:720px;--eb-container-wide:1180px;
+  --eb-mint-bg:var(--eb-success-bg);--eb-mint-text:var(--eb-success);
+  --eb-sky-bg:var(--eb-info-bg);--eb-sky-text:var(--eb-info);
+  --eb-amber-bg:var(--eb-warning-bg);--eb-amber-text:var(--eb-warning);
+  --eb-coral-bg:var(--eb-danger-bg);--eb-coral-text:var(--eb-danger);
+  --eb-violet-bg:#f3f0f8;--eb-violet-text:#675781;
+}
+*{box-sizing:border-box}
+body{font-family:Pretendard,-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;background:var(--eb-bg);color:var(--eb-text);font-size:var(--eb-body-size);line-height:1.55}
+.eb-h1{font-size:var(--eb-h1-size);font-weight:750;line-height:1.3;color:var(--eb-text);letter-spacing:-.02em}
+.eb-h2{font-size:var(--eb-h2-size);font-weight:700;line-height:1.4;color:var(--eb-text)}
+.eb-body{font-size:var(--eb-body-size);font-weight:400;line-height:1.6;color:var(--eb-text-muted)}
+.eb-caption{font-size:var(--eb-caption-size);font-weight:400;line-height:1.5;color:var(--eb-text-faint)}
+.eb-card{background:var(--eb-surface);border:1px solid var(--eb-border);border-radius:var(--eb-panel-radius);box-shadow:none;transition:border-color .12s ease}
+.eb-card:active{transform:none}
+.eb-badge{display:inline-flex;align-items:center;border-radius:4px;padding:2px 7px;font-size:11px;font-weight:650}
+.eb-badge-mint{background:var(--eb-success-bg);color:var(--eb-success)}
+.eb-badge-sky{background:var(--eb-info-bg);color:var(--eb-info)}
+.eb-badge-amber{background:var(--eb-warning-bg);color:var(--eb-warning)}
+.eb-badge-coral{background:var(--eb-danger-bg);color:var(--eb-danger)}
+.eb-badge-violet{background:var(--eb-violet-bg);color:var(--eb-violet-text)}
+.eb-badge-dark{background:#e9edf0;color:#36424f}
+.eb-nav-wrap{position:relative}.eb-sidebar{position:fixed;inset:0 auto 0 0;z-index:45;display:flex;width:72px;flex-direction:column;border-right:1px solid var(--eb-border);background:var(--eb-surface);transition:width .18s ease}.eb-sidebar.expanded{width:240px}.eb-side-head{display:flex;height:72px;align-items:center;justify-content:space-between;padding:0 15px;border-bottom:1px solid var(--eb-border)}.eb-side-brand{display:block;width:38px;overflow:hidden}.eb-side-brand img{display:block;width:112px;max-width:none}.eb-side-toggle{display:grid;width:28px;height:28px;flex:0 0 auto;place-items:center;padding:0;border:1px solid var(--eb-border);border-radius:50%;background:#fff;color:var(--eb-text-muted);font-size:20px;line-height:1;cursor:pointer;transform:translateX(30px)}.expanded .eb-side-toggle{transform:none}.eb-side-scroll{flex:1;overflow-y:auto;padding:12px 10px}.eb-side-section{margin:0 0 16px;padding:0;border:0!important}.eb-side-section h2{height:18px;margin:0 10px 6px;overflow:hidden;color:var(--eb-text-faint);font-size:10px;font-weight:750;letter-spacing:.08em;white-space:nowrap;opacity:0}.expanded .eb-side-section h2{opacity:1}.eb-side-link{display:flex;height:42px;align-items:center;gap:12px;margin:2px 0;padding:0 12px;border-radius:var(--eb-control-radius);color:var(--eb-text-muted);font-size:13px;font-weight:650;text-decoration:none;white-space:nowrap}.eb-side-link:hover{background:var(--eb-surface-subtle);color:var(--eb-text)}.eb-side-link.cur{background:var(--eb-primary-50);color:var(--eb-primary-700);font-weight:750}.eb-side-icon{display:grid;width:26px;flex:0 0 26px;place-items:center;font-size:16px;font-weight:800}.eb-side-text{overflow:hidden;opacity:0;transition:opacity .12s}.expanded .eb-side-text{opacity:1}.eb-side-foot{padding:10px;border-top:1px solid var(--eb-border)}.eb-mobile-menu,.eb-side-backdrop{display:none}body[data-elab-page]{padding-left:72px;transition:padding-left .18s ease}body[data-elab-page].eb-sidebar-expanded{padding-left:240px}
+.eb-sidebar.expanded .eb-side-brand{width:112px}
+.eb-sidebar{width:56px}.eb-sidebar.expanded{width:228px}.eb-sidebar:not(.expanded) .eb-side-scroll,.eb-sidebar:not(.expanded) .eb-side-foot{visibility:hidden}.eb-side-link{gap:0;padding:0 14px;font-size:14px}.eb-side-icon{display:none}.eb-side-text{opacity:1}.eb-side-toggle{transform:translateX(24px)}body[data-elab-page]{padding-left:56px}body[data-elab-page].eb-sidebar-expanded{padding-left:228px}
+.eb-side-section{margin-bottom:20px}.eb-side-section h2{height:28px;margin:0 14px 7px;color:var(--eb-text);font-size:16px;font-weight:850;letter-spacing:-.02em;line-height:28px}
+.eb-page-header{display:flex;flex-direction:column;justify-content:center;min-height:58px;margin:0 0 16px}
+.eb-page-header h1{margin:0;font-size:22px;font-weight:750;line-height:1.35;color:var(--eb-text);letter-spacing:-.02em}
+.eb-page-header p{margin:4px 0 0;font-size:13px;font-weight:400;line-height:1.5;color:var(--eb-text-muted)}
+.eb-button,button,input,select,textarea{font:inherit}
+.eb-button,button{border-radius:var(--eb-control-radius)}
+input[type="text"],input[type="number"],input[type="password"],input[type="date"],select,textarea{border-radius:var(--eb-control-radius);border-color:var(--eb-border-strong);background:var(--eb-surface)}
+.eb-state{padding:20px;border:1px dashed var(--eb-border-strong);border-radius:var(--eb-panel-radius);background:var(--eb-surface-subtle);color:var(--eb-text-muted);text-align:center}
+.eb-state-error{border-color:#e4bdb7;background:var(--eb-danger-bg);color:var(--eb-danger)}
+.eb-table{width:100%;border-collapse:collapse}
+.eb-table th{background:var(--eb-surface-subtle);color:var(--eb-text-muted);font-size:12px;font-weight:650;text-align:left}
+.eb-table th,.eb-table td{padding:10px 12px;border-bottom:1px solid var(--eb-border)}
+body[data-elab-page] .rounded-3xl,body[data-elab-page] .rounded-2xl{border-radius:var(--eb-panel-radius)}
+body[data-elab-page] .rounded-xl{border-radius:var(--eb-control-radius)}
+body[data-elab-page] .shadow,body[data-elab-page] .shadow-sm,body[data-elab-page] .shadow-md,body[data-elab-page] .shadow-lg{box-shadow:none}
+body[data-elab-page] section.rounded-3xl,body[data-elab-page] section.rounded-2xl{border:1px solid var(--eb-border)}
+body[data-elab-page] header nav.rounded-2xl{border:1px solid var(--eb-border);background:var(--eb-surface-subtle)}
+body[data-elab-page] header nav.rounded-2xl button{border-radius:4px;box-shadow:none}
+body[data-elab-page] .px-5{padding-left:clamp(16px,3vw,24px);padding-right:clamp(16px,3vw,24px)}
+body[data-elab-page="vocab"]{background:var(--eb-bg)}
+body[data-elab-page="vocab"] .eb-card,
+body[data-elab-page="vocab"] .rounded-3xl,
+body[data-elab-page="exam"] .rounded-3xl,
+body[data-elab-page="practice"] .rounded-3xl,
+body[data-elab-page="students"] .rounded-3xl{border:1px solid var(--eb-border);border-radius:var(--eb-panel-radius);box-shadow:none}
+body[data-elab-page="grammar"] .card{border:1px solid var(--eb-border);border-radius:var(--eb-panel-radius);box-shadow:none;padding:20px;margin-bottom:16px}
+body[data-elab-page="grammar"] .tab-bar{gap:0!important;overflow-x:auto;flex-wrap:nowrap}
+body[data-elab-page="grammar"] .gtab-btn{flex:0 0 auto;padding:10px 14px;font-size:13px}
+body[data-elab-page="wrongnote"] .panel{border:1px solid var(--eb-border);border-radius:var(--eb-panel-radius);box-shadow:none}
+body[data-elab-page="students"] .eb-card{border-radius:var(--eb-panel-radius);box-shadow:none}
+body[data-elab-page="students"] input,body[data-elab-page="students"] select{border-radius:var(--eb-control-radius)}
+@media(max-width:768px){
+  body[data-elab-page],body[data-elab-page].eb-sidebar-expanded{padding-left:0}.eb-sidebar{width:240px;transform:translateX(-100%);transition:transform .18s ease}.eb-sidebar.expanded{width:240px}.eb-sidebar:not(.expanded) .eb-side-scroll,.eb-sidebar:not(.expanded) .eb-side-foot{visibility:visible}.eb-sidebar-open .eb-sidebar{transform:none}.eb-side-text,.expanded .eb-side-text,.eb-side-section h2{opacity:1}.eb-side-toggle{display:none}.eb-mobile-menu{position:fixed;left:14px;top:14px;z-index:44;display:grid;width:42px;height:42px;place-items:center;padding:0;border:1px solid var(--eb-border);border-radius:var(--eb-control-radius);background:#fff;color:var(--eb-text);font-size:20px;box-shadow:0 4px 16px #0f172a14}.eb-side-backdrop{position:fixed;inset:0;z-index:40;background:#17212b66}.eb-sidebar-open .eb-side-backdrop{display:block}
+  .eb-page-header{min-height:54px;margin-bottom:14px}
+  .eb-page-header h1{font-size:21px}
+}
+@media(max-width:430px){.eb-page-header p{font-size:12.5px}}
+
+/* ELAB teacher workspace — unified blue visual system */
+:root{--eb-primary-50:#f0f5fa;--eb-primary-100:#e0eaf3;--eb-primary-200:#bfd2e3;--eb-primary-500:#326b98;--eb-primary-600:#245984;--eb-primary-700:#17456f;--eb-accent-50:#e9fbf9;--eb-accent-100:#cff5f1;--eb-accent-200:#9be8e1;--eb-accent-500:#12bbaf;--eb-accent-600:#0e968e;--eb-accent-700:#0b746f;--eb-bg:#f3f6f9;--eb-surface:#fff;--eb-surface-subtle:#f7f9fc;--eb-text:#102943;--eb-text-muted:#4d5e77;--eb-text-faint:#718097;--eb-border:#ccd8e4;--eb-border-strong:#adbdcd;--eb-control-radius:9px;--eb-panel-radius:16px;--eb-h1-size:28px;--eb-h2-size:19px;--eb-body-size:15px;--eb-caption-size:13px}
+body[data-elab-page]{background:radial-gradient(circle at 92% 0,var(--eb-accent-50) 0,transparent 26%),var(--eb-bg)!important;color:var(--eb-text);font-size:15px}
+body[data-elab-page] .eb-page-header{min-height:70px;margin-bottom:20px}
+body[data-elab-page] .eb-page-header h1{font-size:27px;font-weight:850;letter-spacing:-.035em}
+body[data-elab-page] .eb-page-header p{margin-top:6px;color:var(--eb-text-muted);font-size:14px}
+body[data-elab-page] .panel,body[data-elab-page] .card,body[data-elab-page] .eb-card,body[data-elab-page] section.rounded-3xl,body[data-elab-page] section.rounded-2xl{border:1px solid var(--eb-border)!important;border-radius:var(--eb-panel-radius)!important;background:rgba(255,255,255,.94)!important;box-shadow:0 10px 28px rgba(35,61,104,.06)!important}
+body[data-elab-page] input:not([type="checkbox"]):not([type="radio"]),body[data-elab-page] select,body[data-elab-page] textarea{border-color:var(--eb-border-strong)!important;border-width:1px!important;border-radius:var(--eb-control-radius)!important;background:#fff!important;color:var(--eb-text)!important;font-size:14px}
+body[data-elab-page] input:focus,body[data-elab-page] select:focus,body[data-elab-page] textarea:focus{border-color:var(--eb-accent-500)!important;box-shadow:0 0 0 3px rgba(18,187,175,.16)!important;outline:none}
+body[data-elab-page] button,body[data-elab-page] .eb-button{border-radius:var(--eb-control-radius)!important;font-weight:750}
+body[data-elab-page] .bg-cyan-500,body[data-elab-page] .bg-cyan-600,body[data-elab-page] .bg-cyan-700,body[data-elab-page] .bg-brand-500,body[data-elab-page] .bg-brand-600{background-color:var(--eb-primary-600)!important}
+body[data-elab-page] .bg-teal-500,body[data-elab-page] .bg-teal-600{background-color:var(--eb-accent-600)!important}
+body[data-elab-page] .text-cyan-600,body[data-elab-page] .text-cyan-700,body[data-elab-page] .text-brand-500,body[data-elab-page] .text-brand-600{color:var(--eb-primary-700)!important}
+body[data-elab-page] .text-teal-600,body[data-elab-page] .text-teal-700{color:var(--eb-accent-700)!important}
+body[data-elab-page] .bg-cyan-50,body[data-elab-page] .bg-brand-50{background-color:var(--eb-primary-50)!important}
+body[data-elab-page] .bg-teal-50{background-color:var(--eb-accent-50)!important}
+body[data-elab-page] .head h1,body[data-elab-page] main>header h1{color:var(--eb-text);font-size:27px;font-weight:850;letter-spacing:-.035em}
+body[data-elab-page] h2{color:var(--eb-text);font-weight:800}body[data-elab-page] .muted{color:var(--eb-text-muted)}
+body[data-elab-page] table{background:#fff}body[data-elab-page] th{background:#f2f6fc!important;color:#41516a!important;font-size:13px!important}body[data-elab-page] td{color:#33435b;font-size:14px}
+body[data-elab-page] a:focus-visible,body[data-elab-page] button:focus-visible{outline:3px solid rgba(18,187,175,.34);outline-offset:2px}
+@media(max-width:768px){body[data-elab-page] .eb-page-header{padding-left:48px}body[data-elab-page] .eb-page-header h1{font-size:24px}}
+
+/* Fixed global top navigation */
+.eb-topbar{position:fixed;inset:0 0 auto 0;z-index:100;height:68px;border-bottom:1px solid var(--eb-border);background:rgba(255,255,255,.97);box-shadow:0 4px 18px rgba(30,55,95,.06);backdrop-filter:blur(12px)}.eb-topbar-inner{display:flex;width:100%;height:100%;align-items:center;padding:0 24px}.eb-top-brand{display:block;width:104px;flex:0 0 104px;margin-right:22px}.eb-top-brand img{display:block;width:104px}.eb-top-menu{display:flex;min-width:0;flex:1;align-items:center;gap:4px;overflow-x:auto;scrollbar-width:none;white-space:nowrap}.eb-top-menu::-webkit-scrollbar{display:none}.eb-top-group{flex:0 0 auto;margin:0 6px 0 14px;color:var(--eb-text);font-size:16px;font-weight:850}.eb-top-group:first-child{margin-left:0}.eb-top-link{position:relative;display:inline-flex;height:68px;flex:0 0 auto;align-items:center;padding:0 9px;color:var(--eb-text-muted);font-size:15px;font-weight:700;text-decoration:none}.eb-top-link:hover{color:var(--eb-primary-700)}.eb-top-link.cur{color:var(--eb-primary-700);font-weight:850}.eb-top-link.cur::after{content:"";position:absolute;right:9px;bottom:0;left:9px;height:3px;background:var(--eb-primary-600)}.eb-top-separator{width:1px;height:22px;flex:0 0 1px;margin:0 7px;background:var(--eb-border)}body[data-elab-page],body[data-elab-page].eb-sidebar-expanded{padding-top:68px!important;padding-left:0!important}
+@media(max-width:768px){.eb-topbar{height:60px}.eb-topbar-inner{padding:0 12px}.eb-top-brand{width:84px;flex-basis:84px;margin-right:12px}.eb-top-brand img{width:84px}.eb-top-group{font-size:14px}.eb-top-link{height:60px;padding:0 8px;font-size:14px}body[data-elab-page],body[data-elab-page].eb-sidebar-expanded{padding-top:60px!important}.eb-mobile-menu,.eb-side-backdrop,.eb-sidebar{display:none!important}body[data-elab-page] .eb-page-header{padding-left:0}}
+
+/* Unified teacher workspace: every menu opens on the same content grid. */
+body[data-elab-page] > #app,
+body[data-elab-page] > main.page,
+body[data-elab-page] > main.shell,
+body[data-elab-page] > main.wrap,
+body[data-elab-page] > main[class*="max-w-"],
+body[data-elab-page] > .workspace,
+body[data-elab-page] > #teacherWrap.wrap{
+  width:calc(100% - 64px)!important;
+  max-width:1280px!important;
+  min-height:calc(100vh - 68px);
+  margin:0 auto!important;
+  padding:28px 0 48px!important;
+}
+body[data-elab-page] .eb-page-header,
+body[data-elab-page] main.page > .head,
+body[data-elab-page="settings"] main.shell > .header{
+  min-height:70px;
+  margin:0 0 20px!important;
+  padding:0!important;
+}
+body[data-elab-page] .eb-page-header{justify-content:flex-start}
+body[data-elab-page] main.page > .head{align-items:flex-start}
+body[data-elab-page="settings"] main.shell > .header{padding:0!important}
+body[data-elab-page="students"] .eb-page-header{min-height:70px!important;margin:0 0 20px!important}
+body[data-elab-page] main.page > .head h1{
+  margin:0;
+  font-size:27px;
+  font-weight:850;
+  line-height:1.35;
+  letter-spacing:-.035em;
+}
+body[data-elab-page] main.page > .head p{margin:6px 0 0;font-size:14px;line-height:1.5}
+body[data-elab-page] .eb-page-header > p,
+body[data-elab-page] main.page > .head p,
+body[data-elab-page="settings"] main.shell > .header p{display:none!important}
+body[data-elab-page] .eb-page-header,
+body[data-elab-page] main.page > .head,
+body[data-elab-page="settings"] main.shell > .header{min-height:44px!important;margin-bottom:16px!important}
+body[data-elab-page] .eb-page-header h1,
+body[data-elab-page] main.page > .head h1,
+body[data-elab-page="settings"] main.shell > .header h1{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  color:var(--eb-text);
+  font-family:"Pretendard",-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic",sans-serif;
+  font-size:27px!important;
+  font-weight:850!important;
+  line-height:1.35;
+  letter-spacing:-.035em;
+}
+body[data-elab-page] .eb-page-header h1::before,
+body[data-elab-page] main.page > .head h1::before,
+body[data-elab-page="settings"] main.shell > .header h1::before{
+  content:"";
+  display:block;
+  width:27px;
+  height:27px;
+  flex:0 0 27px;
+  background:var(--eb-primary-600);
+  mask:var(--eb-page-icon) center/contain no-repeat;
+  -webkit-mask:var(--eb-page-icon) center/contain no-repeat;
+}
+body[data-elab-page="students"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='9' cy='8' r='3'/%3E%3Cpath d='M3.5 19c.5-4 2.3-6 5.5-6s5 2 5.5 6M16 8.5a2.5 2.5 0 1 0 0-5M16 13c2.8 0 4.4 1.8 4.8 5'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="assignments"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8.5 10l1.7 1.7 3.2-3.4M8.5 16l1.7 1.7 3.2-3.4M15.5 10H17M15.5 16H17'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="dashboard"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 20V11M10 20V5M16 20v-7M3 20h18M4 8l5-4 5 3 6-5'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="vocab"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M7 9h4M7 13h6M17 9v6M15 12h4'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="grammar"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5H5v14h3M16 5h3v14h-3M10 9h4M9 13h6M11 17h2'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="exam"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h9l4 4V21H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z'/%3E%3Cpath d='M15 3.5V8h4M9 12h6M9 16h3'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="practice"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 13l3-2M9 3h6M12 5V3M18 7l1.5-1.5'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="pdf"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3h8l4 4v14H6zM14 3v5h5M9 13h6M9 17h4'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="wrongnote"],body[data-elab-page="lesson"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 4h14v16H5zM8 8h8M8 12h4M8 16h3M15 14l3 3M18 14l-3 3'/%3E%3C/g%3E%3C/svg%3E")}
+body[data-elab-page="settings"]{--eb-page-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3Cpath d='M19 13.5v-3l-2-.7-.7-1.7.9-1.9-2.1-2.1-1.9.9-1.7-.7-.7-2h-3l-.7 2-1.7.7-1.9-.9-2.1 2.1.9 1.9-.7 1.7-2 .7v3l2 .7.7 1.7-.9 1.9 2.1 2.1 1.9-.9 1.7.7.7 2h3l.7-2 1.7-.7 1.9.9 2.1-2.1-.9-1.9.7-1.7 2-.7Z'/%3E%3C/g%3E%3C/svg%3E")}
+@media(max-width:768px){
+  body[data-elab-page] > #app,
+  body[data-elab-page] > main.page,
+  body[data-elab-page] > main.shell,
+  body[data-elab-page] > main.wrap,
+  body[data-elab-page] > main[class*="max-w-"],
+  body[data-elab-page] > .workspace,
+  body[data-elab-page] > #teacherWrap.wrap{
+    width:calc(100% - 32px)!important;
+    min-height:calc(100vh - 60px);
+    padding:20px 0 40px!important;
+  }
+  body[data-elab-page] .eb-page-header,
+  body[data-elab-page] main.page > .head,
+  body[data-elab-page="settings"] main.shell > .header{min-height:60px;margin-bottom:16px!important}
+  body[data-elab-page] .eb-page-header h1,
+  body[data-elab-page] main.page > .head h1,
+  body[data-elab-page="settings"] main.shell > .header h1{font-size:24px!important}
+}
