@@ -59,13 +59,22 @@ def _clip(sentence, start, end, pad=0):
 
 # ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
 TO_RE = re.compile(r"\bto\s+(?:not\s+|never\s+|fully\s+|really\s+)?([A-Za-z]+)\b")
+TO_NOUN_HEAD_RE = re.compile(r"\b(?:want|hope|decide|plan|need|try|learn|begin|start|like|love|prefer|intend|expect|promise|agree|refuse|choose|afford|manage|attempt|wish|ask|tell|encourage|allow|enable|require|force)\s+$", re.IGNORECASE)
+TO_ADJECTIVE_HEAD_RE = re.compile(r"\b(?:opportunity|chance|ability|way|time|reason|need|effort|decision|plan|right|thing|place|method|means|desire|request|proposal)\s+$", re.IGNORECASE)
 
 
 def rule_to_infinitive(sentence):
     hits = []
     for m in TO_RE.finditer(sentence):
         if _is_base_verb(m.group(1)):
-            hits.append({'text': sentence[m.start():m.end()], 'note': None})
+            before = sentence[max(0, m.start() - 45):m.start()]
+            if TO_ADJECTIVE_HEAD_RE.search(before):
+                usage = '형용사적 용법'
+            elif TO_NOUN_HEAD_RE.search(before):
+                usage = '명사적 용법'
+            else:
+                usage = '부사적 용법'
+            hits.append({'text': sentence[m.start():m.end()], 'note': usage})
     return hits
 
 
@@ -128,17 +137,43 @@ def rule_past_participle_clause(sentence):
     return _strip_tense([h for h in _participial_clause_hits(sentence) if h['tense'] == 'past'])
 
 
+def rule_participial_clause(sentence):
+    return [
+        {'text': h['text'], 'note': '현재분사형' if h['tense'] == 'present' else '과거분사형'}
+        for h in _participial_clause_hits(sentence)
+    ]
+
+
+def rule_present_participle(sentence):
+    # Accurate modifier-vs-gerund classification requires the spaCy backend.
+    return []
+
+
+def rule_past_participle(sentence):
+    return []
+
+
 # ---- 관계사절 (relative clause) PUBLIC_IDENTIFIER_REMOVED
-REL_PRONOUN_RE = re.compile(r"\b(who|whom|whose|which)\b")
+REL_PRONOUN_RE = re.compile(r"\b(who|whom|whose|which|that)\b", re.IGNORECASE)
 REL_ADVERB_RE = re.compile(r"\b(the|a|an)\s+\w+\s+(where|when|why)\b")
 
 
 def rule_relative_clause(sentence):
     hits = []
     for m in REL_PRONOUN_RE.finditer(sentence):
-        hits.append({'text': _clip(sentence, m.start(), m.end(), 40), 'note': m.group(1)})
+        pronoun = m.group(1).lower()
+        after = sentence[m.end():m.end() + 24].lstrip()
+        if pronoun == 'whose':
+            case = '소유격'
+        elif pronoun == 'whom' or re.match(r'(?:I|you|he|she|it|we|they|[A-Z][a-z]+)\b', after):
+            case = '목적격'
+        else:
+            case = '주격'
+        hits.append({'text': _clip(sentence, m.start(), m.end(), 40), 'note': pronoun + ' · ' + case})
     for m in REL_ADVERB_RE.finditer(sentence):
-        hits.append({'text': _clip(sentence, m.start(), m.end(), 40), 'note': '관계부사 ' + m.group(2)})
+        adverb = m.group(2).lower()
+        meaning = {'where': '장소', 'when': '시간', 'why': '이유'}[adverb]
+        hits.append({'text': _clip(sentence, m.start(), m.end(), 40), 'note': adverb + ' · ' + meaning + ' 관계부사'})
     return hits
 
 
@@ -297,8 +332,9 @@ def rule_modal_perfect(sentence):
 # Add a new grammar point by appending here -- ingest.py/query.py iterate
 # this list generically, so no other code needs to change.
 GRAMMAR_RULES = [
-    ('present_participle_clause', '분사구문(현재분사)', rule_present_participle_clause),
-    ('past_participle_clause', '분사구문(과거분사)', rule_past_participle_clause),
+    ('participial_clause', '분사구문', rule_participial_clause),
+    ('present_participle', '현재분사', rule_present_participle),
+    ('past_participle', '과거분사', rule_past_participle),
     ('to_infinitive', 'to부정사', rule_to_infinitive),
     ('relative_clause', '관계사절', rule_relative_clause),
     ('passive_voice', '수동태', rule_passive_voice),

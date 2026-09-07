@@ -25,18 +25,38 @@ DEFAULT_DB_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(_
 # regex_tagger.py(snake_case) -> grammar/index.html의 GRAMMAR_RULES(camelCase) id 매핑.
 # 나머지 5개(gerund/comparative/inversion/subjunctive/emphatic)는 이름이 이미 같아서 그대로 씀.
 TAG_ID_MAP = {
+    'participial_clause': 'participialClause',
+    'present_participle': 'presentParticiple',
+    'past_participle': 'pastParticiple',
     'present_participle_clause': 'presentParticiple',
     'past_participle_clause': 'pastParticiple',
-    'to_infinitive': 'toInfinitive',
-    'relative_clause': 'relativeClause',
     'passive_voice': 'passiveVoice',
     'noun_clause': 'nounClause',
     'modal_perfect': 'modalPerfect',
 }
 
 
-def to_js_tag_id(python_tag_id: str) -> str:
+def to_js_tag_id(python_tag_id: str, tag_subtype: str = '') -> str:
+    subtype = tag_subtype or ''
+    if python_tag_id == 'to_infinitive':
+        if '명사적' in subtype:
+            return 'toInfinitiveNoun'
+        if '형용사적' in subtype:
+            return 'toInfinitiveAdjective'
+        if '부사적' in subtype:
+            return 'toInfinitiveAdverb'
+        return 'toInfinitiveAdverb'
+    if python_tag_id == 'relative_clause':
+        return 'relativeAdverb' if '관계부사' in subtype else 'relativePronoun'
     return TAG_ID_MAP.get(python_tag_id, python_tag_id)
+
+
+def exported_ids_for_base_tag(python_tag_id: str, sentence_tags: dict) -> list:
+    if python_tag_id == 'to_infinitive':
+        return [tag_id for tag_id in sentence_tags if tag_id.startswith('toInfinitive')]
+    if python_tag_id == 'relative_clause':
+        return [tag_id for tag_id in sentence_tags if tag_id in ('relativePronoun', 'relativeAdverb')]
+    return [to_js_tag_id(python_tag_id)]
 
 
 def export_exam(db_path: str, year: int, month: int, grade: str, source_file: str = None) -> dict:
@@ -85,11 +105,15 @@ def export_exam(db_path: str, year: int, month: int, grade: str, source_file: st
         (exam_id,),
     ).fetchall()
     tags_by_sentence = {}
+    seen_tags = set()
     for sentence_id, tag_type, tag_subtype, matched_text in tag_rows:
         tags_by_sentence.setdefault(sentence_id, {})
-        js_id = to_js_tag_id(tag_type)
+        js_id = to_js_tag_id(tag_type, tag_subtype)
         tags_by_sentence[sentence_id].setdefault(js_id, [])
-        tags_by_sentence[sentence_id][js_id].append({'text': matched_text, 'note': tag_subtype})
+        tag_key = (sentence_id, js_id, tag_subtype or '', matched_text or '')
+        if tag_key not in seen_tags:
+            seen_tags.add(tag_key)
+            tags_by_sentence[sentence_id][js_id].append({'text': matched_text, 'note': tag_subtype})
 
     disagreement_rows = conn.execute(
         "SELECT sentence_id, tag_type FROM tag_disagreements "
@@ -98,7 +122,9 @@ def export_exam(db_path: str, year: int, month: int, grade: str, source_file: st
     ).fetchall()
     disagreements_by_sentence = {}
     for sentence_id, tag_type in disagreement_rows:
-        disagreements_by_sentence.setdefault(sentence_id, []).append(to_js_tag_id(tag_type))
+        sentence_tags = tags_by_sentence.get(sentence_id, {})
+        for js_id in exported_ids_for_base_tag(tag_type, sentence_tags):
+            disagreements_by_sentence.setdefault(sentence_id, []).append(js_id)
 
     verification_rows = conn.execute(
         "SELECT sentence_id, tag_type, verdict FROM tag_claude_verification "
@@ -107,9 +133,11 @@ def export_exam(db_path: str, year: int, month: int, grade: str, source_file: st
     ).fetchall()
     verification_by_sentence = {}
     for sentence_id, tag_type, verdict in verification_rows:
-        verification_by_sentence.setdefault(sentence_id, []).append(
-            {'tag': to_js_tag_id(tag_type), 'verdict': verdict}
-        )
+        sentence_tags = tags_by_sentence.get(sentence_id, {})
+        for js_id in exported_ids_for_base_tag(tag_type, sentence_tags):
+            verification_by_sentence.setdefault(sentence_id, []).append(
+                {'tag': js_id, 'verdict': verdict}
+            )
 
     sentences = []
     for sid, q_no, q_type, s_idx, text in sentence_rows:

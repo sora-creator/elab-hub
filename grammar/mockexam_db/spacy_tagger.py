@@ -61,6 +61,36 @@ def _subtree_span(token):
 
 
 # ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
+_NOUN_INFINITIVE_HEADS = {
+    'agree', 'afford', 'allow', 'ask', 'attempt', 'begin', 'choose', 'decide',
+    'encourage', 'expect', 'fail', 'force', 'forget', 'help', 'hope', 'intend',
+    'learn', 'like', 'love', 'manage', 'mean', 'need', 'offer', 'permit', 'plan',
+    'prefer', 'prepare', 'promise', 'refuse', 'remember', 'start', 'tell', 'try',
+    'want', 'wish', 'would', 'enable', 'require',
+}
+
+
+def _to_infinitive_usage(verb):
+    """Classify the infinitive using its dependency role for school grammar."""
+    # spaCy often attaches a purpose infinitive to the destination noun in
+    # "went to the library to study". Trace that noun through its preposition
+    # back to a motion verb before treating an acl as adjectival.
+    if verb.dep_ in ('acl', 'relcl') and verb.head.dep_ == 'pobj' and verb.head.head.dep_ == 'prep':
+        governing = verb.head.head.head
+        if governing.lemma_.lower() in {'go', 'come', 'leave', 'return', 'travel', 'visit', 'move', 'run', 'walk', 'drive', 'fly'}:
+            return '부사적 용법'
+    if verb.dep_ in ('acl', 'relcl') or verb.head.pos_ in ('NOUN', 'PROPN'):
+        return '형용사적 용법'
+    if verb.dep_ in ('nsubj', 'nsubjpass', 'csubj', 'csubjpass', 'attr', 'oprd'):
+        return '명사적 용법'
+    if verb.dep_ == 'xcomp' and verb.head.lemma_.lower() in _NOUN_INFINITIVE_HEADS:
+        return '명사적 용법'
+    if verb.dep_ == 'advcl' or verb.head.pos_ == 'ADJ':
+        return '부사적 용법'
+    # Purpose/result infinitives attached to an ordinary verb are adverbial.
+    return '부사적 용법'
+
+
 def _find_to_infinitives(doc):
     hits = []
     for tok in doc:
@@ -71,7 +101,7 @@ def _find_to_infinitives(doc):
                 span_tokens.append(tok)
                 text = _span_text(span_tokens)
                 if text:
-                    hits.append({'text': text, 'note': None})
+                    hits.append({'text': text, 'note': _to_infinitive_usage(verb)})
     return hits
 
 
@@ -118,6 +148,29 @@ def _find_past_participle_clauses(doc):
     return _find_participial_clauses(doc, 'VBN')
 
 
+def _find_participial_clauses_combined(doc):
+    hits = []
+    for hit in _find_present_participle_clauses(doc):
+        hits.append({'text': hit['text'], 'note': '현재분사형'})
+    for hit in _find_past_participle_clauses(doc):
+        hits.append({'text': hit['text'], 'note': '과거분사형'})
+    return hits
+
+
+def _find_present_participle(doc):
+    return [
+        {'text': _subtree_span(tok), 'note': '명사 수식'}
+        for tok in doc if tok.tag_ == 'VBG' and tok.dep_ in ('acl', 'amod', 'relcl')
+    ]
+
+
+def _find_past_participle(doc):
+    return [
+        {'text': _subtree_span(tok), 'note': '명사 수식'}
+        for tok in doc if tok.tag_ == 'VBN' and tok.dep_ in ('acl', 'amod')
+    ]
+
+
 # ---- 관계사절 PUBLIC_IDENTIFIER_REMOVED
 def _is_to_infinitive_clause(tok):
     """spaCy mislabels noun-modifying to-infinitives (e.g. 'reasons to do them')
@@ -131,9 +184,26 @@ def _find_relative_clause(doc):
     for tok in doc:
         # relcl = relative clause head; relpron dep on who/which/that etc.
         if tok.dep_ == 'relcl' and not _is_to_infinitive_clause(tok):
-            hits.append({'text': _subtree_span(tok), 'note': None})
+            relative_adverbs = [t for t in tok.subtree if t.lower_ in ('where', 'when', 'why') and t.dep_ == 'advmod']
+            relatives = [t for t in tok.subtree if t.lower_ in ('who', 'whom', 'whose', 'which', 'that')]
+            if relative_adverbs:
+                rel = relative_adverbs[0]
+                meaning = {'where': '장소', 'when': '시간', 'why': '이유'}[rel.lower_]
+                note = rel.lower_ + ' · ' + meaning + ' 관계부사'
+            elif relatives:
+                rel = relatives[0]
+                if rel.lower_ == 'whose':
+                    case = '소유격'
+                elif rel.dep_ in ('nsubj', 'nsubjpass'):
+                    case = '주격'
+                else:
+                    case = '목적격'
+                note = rel.lower_ + ' · ' + case
+            else:
+                note = '관계대명사 생략 · 목적격'
+            hits.append({'text': _subtree_span(tok), 'note': note})
         elif tok.dep_ == 'poss' and tok.lower_ == 'whose':
-            hits.append({'text': _subtree_span(tok.head), 'note': 'whose'})
+            hits.append({'text': _subtree_span(tok.head), 'note': 'whose · 소유격'})
     return hits
 
 
@@ -202,8 +272,9 @@ def _regex_based(rule_fn):
 
 
 _HANDLERS = {
-    'present_participle_clause': _find_present_participle_clauses,
-    'past_participle_clause': _find_past_participle_clauses,
+    'participial_clause': _find_participial_clauses_combined,
+    'present_participle': _find_present_participle,
+    'past_participle': _find_past_participle,
     'to_infinitive': _find_to_infinitives,
     'relative_clause': _find_relative_clause,
     'passive_voice': _find_passive_voice,

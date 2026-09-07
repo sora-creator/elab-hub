@@ -3,15 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>문법학습 · ELAB</title>
+<title>ELAB · 교사용</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
+<script src="../shared/pdfLibrary.js?v=preserve-reviewed-upload-16"></script>
+<script src="../shared/appsScriptTransport.js?v=p0-transport-1"></script>
 <style>
   :root {
-    /* ELAB 다른 모듈(단어암기/끊어읽기/시험보기)과 같은 인디고 계열로 맞춤 -- 이 변수만 바꾸면
+    /* ELAB 공통 블루/티일 톤(shared/theme.css)과 맞춤 -- 이 변수만 바꾸면
        버튼/배지/테두리 등 전체에 자동으로 반영됨(개별 요소 스타일은 안 건드림) */
-    --blue: #6366f1;
-    --blue-dark: #4f46e5;
-    --bg: #f8fafc;
+    --blue: #326b98;
+    --blue-dark: #245984;
+    --bg: #eeece2;
     --card: #ffffff;
     --border: #e2e8f0;
     --text: #1e293b;
@@ -27,17 +31,9 @@
     color: var(--text);
     line-height: 1.6;
   }
-  .wrap { max-width: 900px; margin: 0 auto; padding: 32px 20px 60px; }
-  .elab-nav { display:flex; align-items:center; gap:4px; overflow-x:auto; background:#fff; border:1px solid var(--border);
-    border-radius: 16px; padding: 6px; margin-bottom: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
-  .elab-nav a { flex-shrink:0; display:inline-block; padding: 8px 12px; border-radius: 10px; font-size: 12px;
-    font-weight: 700; text-decoration: none; color: var(--muted); white-space: nowrap; }
-  .elab-nav a:hover { background: #f1f5f9; }
-  .elab-nav a.home { color: #94a3b8; font-size: 14px; }
-  .elab-nav a.cur { background: var(--blue); color: #fff; }
-  .elab-nav a.cur:hover { background: var(--blue); }
-  h1 { font-size: 24px; margin-bottom: 4px; }
-  .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 15px; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 20px 60px; }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  .subtitle { color: var(--muted); margin-bottom: 28px; font-size: 13px; }
   .card {
     background: var(--card);
     border: 1px solid var(--border);
@@ -46,7 +42,7 @@
     margin-bottom: 20px;
     box-shadow: 0 1px 2px rgba(0,0,0,0.03);
   }
-  .card h2 { font-size: 17px; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2 { font-size: 14px; font-weight: 800; margin: 0 0 16px; display: flex; align-items: center; gap: 8px; }
   .step-num {
     display: inline-flex; align-items: center; justify-content: center;
     width: 24px; height: 24px; border-radius: 50%;
@@ -55,7 +51,7 @@
   }
   .row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; align-items: flex-end; }
   .field { display: flex; flex-direction: column; gap: 6px; }
-  .field label { font-size: 13px; color: var(--muted); }
+  .field label { font-size: 12px; color: var(--muted); }
   input[type=number], select, input[type=text] {
     padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 14px; background: #fff; color: var(--text);
@@ -70,7 +66,7 @@
   button:disabled { background: #cbd5e1; cursor: not-allowed; }
   button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
   button.secondary:hover { background: #f1f5f9; }
-  button.danger { background: #fff; color: var(--red); border: 1px solid #fecaca; padding: 6px 12px; font-size: 13px; }
+  button.danger { background: #fff; color: var(--red); border: 1px solid #fecaca; padding: 6px 12px; font-size: 12px; }
   button.danger:hover { background: #fef2f2; }
   .status { margin-top: 12px; font-size: 14px; padding: 10px 12px; border-radius: 8px; display: none; }
   .status.show { display: block; }
@@ -79,7 +75,7 @@
   .status.error { background: #fef2f2; color: var(--red); }
   table { width: 100%; border-collapse: collapse; font-size: 14px; }
   th, td { text-align: left; padding: 9px 8px; border-bottom: 1px solid var(--border); }
-  th { color: var(--muted); font-weight: 600; font-size: 13px; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; }
   .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
   .radio-group { display: flex; gap: 16px; align-items: center; }
   .radio-group label { display: flex; align-items: center; gap: 6px; font-size: 14px; cursor: pointer; }
@@ -97,7 +93,7 @@
   .result-item .qno { color: var(--blue); font-weight: 700; font-size: 12px; margin-bottom: 4px; }
   .result-item .tag-badges { margin-bottom: 6px; display: flex; gap: 6px; flex-wrap: wrap; }
   .tag-badge {
-    display: inline-block; background: #eef2ff; color: #4338ca; font-size: 11px;
+    display: inline-block; background: #f0f5fa; color: #17456f; font-size: 11px;
     font-weight: 600; padding: 2px 8px; border-radius: 999px;
   }
   .tag-badge-warn { background: #fffbeb; color: #92400e; }
@@ -109,33 +105,33 @@
     padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; display: none;
   }
   .warn-banner.show { display: block; }
-  .help-text { font-size: 13px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
+  .help-text { font-size: 12px; color: var(--muted); margin-top: -8px; margin-bottom: 14px; }
   .gtab-btn {
-    background: none; border: none; box-shadow: none; color: var(--muted);
-    font-weight: 600; font-size: 14px; padding: 10px 16px; cursor: pointer;
-    border-bottom: 2px solid transparent; margin-bottom: -2px; border-radius: 0;
+    flex:1; min-height:48px; background:#fff; border:0; box-shadow:none; color:var(--muted);
+    font-weight:750; font-size:14px; padding:10px 16px; cursor:pointer; border-radius:8px;
   }
-  .gtab-btn:hover { background: none; color: var(--text); }
-  .gtab-btn.gtab-active { color: var(--blue); border-bottom-color: var(--blue); }
+  .gtab-btn:hover { background:#f8fafc; color:var(--text); }
+  .gtab-btn.gtab-active { background:var(--eb-primary-600); color:#fff; }
+  body[data-elab-page="grammar"] .gtab-btn { flex:1 1 0!important; }
   textarea {
     padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 14px; background: #fff; color: var(--text); font-family: inherit; resize: vertical;
   }
-  .mcq-preview { margin: 10px 0; padding: 10px 12px; background: #eef2ff; border-radius: 8px; }
-  .mcq-preview-title { font-size: 12px; color: #4338ca; font-weight: 600; margin-bottom: 6px; }
-  .mcq-preview-item { font-size: 13px; margin-bottom: 3px; }
+  .mcq-preview { margin: 10px 0; padding: 10px 12px; background: #ecfeff; border-radius: 8px; }
+  .mcq-preview-title { font-size: 12px; color: #17456f; font-weight: 600; margin-bottom: 6px; }
+  .mcq-preview-item { font-size: 12px; margin-bottom: 3px; }
   .mcq-preview-item b { color: var(--blue-dark); }
   .video-embed { position: relative; width: 100%; padding-top: 56.25%; margin-bottom: 20px; border-radius: 12px; overflow: hidden; background:#000; }
   .video-embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
   .practice-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 14px; }
-  .practice-sentence { font-size: 15px; margin-bottom: 12px; }
+  .practice-sentence { font-size: 14px; margin-bottom: 12px; }
   .mcq-item { margin-bottom: 10px; padding: 8px 10px; background: #f8fafc; border-radius: 8px; }
   .mcq-phrase { font-weight: 700; color: var(--blue-dark); }
   .mcq-options { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
-  .mcq-options button { padding: 6px 12px; font-size: 13px; }
+  .mcq-options button { padding: 6px 12px; font-size: 12px; }
   .mcq-options button.mcq-correct { background: var(--green); }
   .mcq-options button.mcq-wrong { background: var(--red); }
-  .chunk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0; font-size: 15px; margin: 10px 0; line-height: 2.2; }
+  .chunk-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0; font-size: 14px; margin: 10px 0; line-height: 2.2; }
   .chunk-word { padding: 2px 3px; }
   .chunk-gap { display: inline-block; width: 10px; height: 20px; cursor: pointer; position: relative; vertical-align: middle; }
   .chunk-gap::after { content: ''; position: absolute; left: 4px; top: 2px; bottom: 2px; width: 2px; background: transparent; }
@@ -143,11 +139,11 @@
   .interp-box { margin-top: 10px; }
   .interp-box textarea { width: 100%; }
   .practice-submit-row { margin-top: 10px; display: flex; align-items: center; gap: 10px; }
-  .practice-submitted { font-size: 13px; color: var(--green); font-weight: 600; }
+  .practice-submitted { font-size: 12px; color: var(--green); font-weight: 600; }
   .sub-table-wrap { overflow-x: auto; }
   .final-folder-row { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-radius: 8px; font-size: 14px; }
   .final-folder-row:hover { background: #f8fafc; }
-  .final-folder-row.cur { background: #eef2ff; }
+  .final-folder-row.cur { background: #ecfeff; }
   .final-folder-row .fname { cursor: pointer; flex: 1; }
   .final-folder-row .fname:hover { text-decoration: underline; }
   .final-folder-row button { padding: 3px 9px; font-size: 11px; }
@@ -160,6 +156,37 @@
   .modal-box { background: #fff; border-radius: 12px; padding: 20px; max-width: 420px; width: 90%; max-height: 70vh; overflow-y: auto; }
   .modal-folder-row { padding: 9px 10px; border-radius: 8px; cursor: pointer; font-size: 14px; }
   .modal-folder-row:hover { background: #f1f5f9; }
+  .local-tool-head { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; }
+  .local-state { font-size:12px; font-weight:800; color:#64748b; }
+  .local-state.ready { color:#047857; }
+  .local-offline { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:16px; padding:12px 14px; border:1px solid #f0c36d; border-radius:8px; background:#fff8e8; color:#7c4a03; font-size:13px; line-height:1.55; }
+  .local-offline[hidden] { display:none; }
+  .local-offline b { display:block; color:#5f3700; }
+  .local-form { display:grid; grid-template-columns:minmax(240px,2fr) repeat(3,minmax(110px,1fr)); gap:10px; align-items:end; }
+  .local-form .field { min-width:0; }
+  .local-file input[type=file] { display:block; width:100%; max-width:100%; min-width:0; overflow:hidden; }
+  .local-file input[type=file] { border-color:var(--eb-primary-500)!important; background:#f5f9ff!important; }
+  .local-file input[type=file]::file-selector-button { height:38px; margin:-1px 12px -1px -1px; padding:0 16px; border:0; border-right:1px solid var(--eb-primary-600); background:var(--eb-primary-600); color:#fff; font:inherit; font-weight:800; cursor:pointer; }
+  .local-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:14px; }
+  .local-log { max-height:180px; overflow:auto; margin-top:12px; padding:12px; border:1px solid var(--border); border-radius:8px; background:#f8fafc; color:#475569; font:12px/1.6 Consolas,monospace; white-space:pre-wrap; }
+  .analysis-preview { margin-top:16px; border:1px solid var(--eb-primary-500); border-radius:10px; background:#f8fbff; overflow:hidden; }
+  .analysis-preview[hidden] { display:none; }
+  .analysis-preview-head { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:14px 16px; border-bottom:1px solid #dbeafe; }
+  .analysis-preview-head b { font-size:15px; }
+  .analysis-preview-list { max-height:360px; overflow:auto; padding:8px 16px; background:#fff; }
+  .analysis-question { padding:12px 0 4px; }
+  .analysis-question + .analysis-question { border-top:2px solid var(--eb-primary-100); }
+  .analysis-question-title { margin:0 0 4px; color:var(--eb-primary-700); font-size:14px; font-weight:900; }
+  .analysis-preview-row { padding:10px 0; border-bottom:1px solid #edf2f7; font-size:13px; line-height:1.55; }
+  .analysis-preview-row:last-child { border-bottom:0; }
+  .analysis-preview-row > span { display:block; margin-bottom:3px; color:var(--eb-primary-700); font-size:11px; font-weight:800; }
+  .analysis-sentence-text { color:var(--eb-text); font-size:14px; line-height:1.85; }
+  .grammar-mark { display:inline; padding:1px 2px; border-radius:3px; box-decoration-break:clone; -webkit-box-decoration-break:clone; }
+  .grammar-legend { display:flex; flex-wrap:wrap; gap:5px 10px; margin-top:7px; }
+  .grammar-legend-item { display:inline-flex; align-items:center; gap:5px; color:var(--eb-text-muted); font-size:11px; font-weight:700; }
+  .grammar-legend-dot { width:9px; height:9px; border-radius:2px; }
+  .local-fallback { margin-top:12px; color:#64748b; font-size:13px; }
+  @media(max-width:760px){.local-form{grid-template-columns:1fr 1fr}.local-form .local-file{grid-column:1/-1}}
 </style>
 </head>
 <body>
@@ -168,54 +195,40 @@
   <div id="stBody"></div>
 </div>
 <div id="teacherWrap" class="wrap">
-  <div class="elab-nav">
-    <a href="../index.html" class="home">🏠</a>
-    <a href="../vocab/index.html">📝 단어암기</a>
-    <a href="../grammar/index.html" class="cur">🔍 문법학습</a>
-    <a href="../sentence/index.html">🧩 끊어읽기</a>
-    <a href="../exam/index.html">🖊️ 시험보기</a>
+  <div data-elab-nav="grammar"></div>
+  <div class="eb-page-header">
+    <h1>문법학습</h1>
+    <p>모의고사 PDF를 넣으면, 분사구문 / to부정사가 쓰인 문장만 뽑아드려요. 설치 없이 이 화면에서 바로 됩니다.</p>
   </div>
-  <h1>🔍 문법학습 · 교사</h1>
-  <div class="subtitle">모의고사 PDF를 넣으면, 분사구문 / to부정사가 쓰인 문장만 뽑아드려요. 설치 없이 이 화면에서 바로 됩니다.</div>
 
-  <div class="tab-bar" style="display:flex; gap:6px; margin-bottom:16px; border-bottom:2px solid var(--border)">
-    <button data-gtab="accurate" class="gtab-btn gtab-active">🎯 문법 문장 찾기</button>
-    <button data-gtab="finals" class="gtab-btn">✅ 최종본 관리</button>
-    <button data-gtab="manage" class="gtab-btn">📥 공유한 세트 · 제출현황</button>
-    <button data-gtab="settings" class="gtab-btn">⚙️ 설정</button>
+  <div class="tab-bar" style="display:flex; gap:6px; margin-bottom:16px; padding:6px; border:1px solid var(--border); border-radius:10px; background:#fff">
+    <button data-gtab="accurate" class="gtab-btn gtab-active">문법 문장 찾기</button>
+    <button data-gtab="finals" class="gtab-btn">최종본 관리</button>
+    <button data-gtab="manage" class="gtab-btn">공유한 세트 · 제출현황</button>
+    <button data-gtab="settings" class="gtab-btn">설정</button>
   </div>
 
   <div id="gtabPanel-accurate" class="gtab-panel">
     <div class="card">
-      <h2>🎯 문법 문장 찾기: 구문분석기(spaCy) + 정규식(regex) 병행 — 더 정확해요</h2>
-      <div class="help-text" style="margin-top:0; margin-bottom:10px">
-        분사구문/to부정사/관계사절/수동태/동명사/명사절은 진짜 문장 구조를 분석하는
-        구문분석기(spaCy)로 판별하고, 나머지(비교구문/도치/가정법/강조구문/조동사+완료)는
-        패턴이 단순해서 정규식을 그대로 씁니다. 게다가 같은 문장을 정규식으로도 한 번 더
-        돌려서 spaCy와 판정이 갈리는 경우 ⚠️ 배지로 표시해줘요(아래 "① 정확한 태깅 결과
-        가져오기" 참고). 정확도가 가장 중요할 땐 이 방법을 쓰세요.
+      <div class="local-tool-head"><h2 style="margin:0">PDF 문법 분석</h2><span id="localBridgeState" class="local-state">분석 기능 확인 중</span></div>
+      <div id="localOfflineGuide" class="local-offline" hidden><div><b>PDF 분석 기능이 꺼져 있습니다.</b><span>통합 웹앱 → grammar → 문법학습 실행.bat를 더블클릭하세요.</span></div><button id="btnCheckLocalBridge" class="secondary" type="button">다시 확인</button></div>
+      <div class="local-form">
+        <div class="field local-file" style="grid-column:1/-1"><label>PDF 자료 자동 반영</label><input type="hidden" id="localYear"><input type="hidden" id="localMonth"><input type="hidden" id="localGrade"><div style="padding:12px;background:#f8fafc;border-radius:10px;color:#64748b;font-size:13px">PDF 렌더링 검수를 완료한 새 파일과 수정된 파일만 자동으로 분석해 문법학습에 반영합니다.</div><a href="../pdf/index.html" class="secondary" style="display:block;margin-top:8px;padding:10px;text-align:center;text-decoration:none">PDF 자료관리로 이동</a></div>
       </div>
-      <ol style="margin:0 0 4px; padding-left:20px; font-size:14px; line-height:1.8">
-        <li><code>grammar/mockexam_db/grammar_gui.pyw</code>를 더블클릭해서 도구 창 열기</li>
-        <li>"① PDF 분석 (spaCy)" 탭에서 PDF를 선택 (파일명에서 연/월/학년 자동 인식) →
-          "분석해서 저장하기" 클릭</li>
-        <li>분석이 끝나면 PDF 옆에 생긴 JSON 파일을 아래에서 선택</li>
-      </ol>
-      <div class="help-text" style="margin-top:6px">
-        이렇게 가져온 회차는 목록에 <b>🎯 spaCy</b> 배지가 붙어요. (같은 도구의
-        "② Claude 검증" 탭으로 판정 불일치 문장을 추가로 검증할 수도 있어요.)
-      </div>
+      <div id="localAnalyzeStatus" class="status"></div>
+      <div style="height:8px;overflow:hidden;border-radius:999px;background:#e2e8f0"><div id="grammarPdfAutoBar" style="width:0;height:100%;border-radius:999px;background:var(--blue);transition:width .2s"></div></div>
+      <div id="localAnalysisPreview" class="analysis-preview" hidden><div class="analysis-preview-head"><b id="localPreviewTitle">분석 결과</b><button id="btnSaveLocalPreview" type="button">이 결과 저장</button></div><div id="localPreviewList" class="analysis-preview-list"></div></div>
     </div>
 
     <div class="card">
-      <h2><span class="step-num">1</span> 정확한 태깅 결과 가져오기</h2>
-      <div class="help-text" style="margin-top:0">
-        파이썬 CLI(<code>export_json.py</code>)로 spaCy 기반 태깅을 미리 돌려서 만든 JSON 파일을 불러와요.
-        이렇게 가져온 문장은 <b>가져온 시점의 태그로 고정</b>돼요 — 나중에 문법 규칙이
-        추가되면 파이썬에서 다시 내보내 재가져오기 해야 반영돼요.
+      <h2>Claude 문법 검증</h2>
+      <div class="local-form">
+        <div class="field local-file"><label>검증할 모의고사</label><select id="localVerifyExam"></select></div>
+        <div class="field"><label>문법</label><select id="localVerifyTag"><option value="">판정 불일치 전체</option></select></div>
+        <div class="field" style="grid-column:span 2"><label>Claude API 키</label><input type="password" id="localApiKey" autocomplete="off" placeholder="저장된 키가 있으면 비워두세요"></div>
       </div>
-      <input type="file" id="inImportJson" accept="application/json" style="margin-top:8px">
-      <div id="importStatus" class="status"></div>
+      <div class="local-actions"><label><input type="checkbox" id="localVerifyAll"> 선택 문법 전체 검증</label><label><input type="checkbox" id="localRecheck"> 이미 검증한 문장도 다시 검증</label><button id="btnLocalPreview" class="secondary">대상 미리보기</button><button id="btnLocalVerify">검증 실행</button></div>
+      <div id="localVerifyStatus" class="status"></div><pre id="localVerifyLog" class="local-log" style="display:none"></pre>
     </div>
   </div>
 
@@ -281,6 +294,11 @@
         <div id="finalDropZoneLabel" style="color:var(--muted); font-size:14px">📄 여기(또는 페이지 아무 곳)에 pptx 파일을 끌어다 놓거나 클릭해서 선택하세요 — 여러 개 한 번에 가능</div>
       </div>
       <div class="row">
+        <div class="field"><label>학습 영역</label><select id="inFinalArea"><option value="GRAMMAR_INTEGRATED">종합</option><option value="GRAMMAR_VERB">동사</option><option value="GRAMMAR_NONFINITE">준동사</option><option value="GRAMMAR_CLAUSE_CONNECTOR">절·연결</option><option value="GRAMMAR_RELATIVE">관계사</option><option value="GRAMMAR_PARALLEL">병렬</option><option value="GRAMMAR_PRONOUN">대명사</option></select></div>
+        <div class="field"><label>세부 유형</label><select id="inFinalDetail"><option value="">선택 안 함</option><option value="GRAMMAR_SUBJECT_VERB_AGREEMENT">수일치</option><option value="GRAMMAR_ACTIVE_PASSIVE">능동·수동</option><option value="GRAMMAR_CONNECTOR_PREPOSITION">접속사·전치사</option><option value="GRAMMAR_PARALLEL_STRUCTURE">병렬구조</option><option value="GRAMMAR_PRONOUN_REFERENCE">대명사 지칭</option><option value="GRAMMAR_PRONOUN_CASE_NUMBER">대명사 격·수</option></select></div>
+        <div class="field"><label>난이도</label><select id="inFinalDifficulty"><option value="L1">Lv.1</option><option value="L2" selected>Lv.2</option><option value="L3">Lv.3</option></select></div>
+      </div>
+      <div class="row">
         <button id="btnUploadFinal" class="secondary">업로드</button>
       </div>
       <div id="finalUploadStatus" class="status"></div>
@@ -304,6 +322,20 @@
   </div>
 
   <div id="gtabSharedResults">
+  <div class="card" id="directGrammarAuthoring">
+    <h2>직접 문법문제 만들기</h2>
+    <div class="help-text" style="margin-top:0">PDF 없이 객관식 문법 연습을 직접 만듭니다. 각 문항의 선택지와 정답을 명시하세요.</div>
+    <div class="row">
+      <div class="field" style="flex:1;min-width:220px"><label>콘텐츠 제목</label><input id="directGrammarTitle" type="text" placeholder="예: E2E TEST 문법 기초 연습"></div>
+      <div class="field"><label>배정 역할</label><select id="directGrammarSubtype"><option value="BASIC_PRACTICE">기초 연습</option><option value="MIXED_PRACTICE">혼합 연습</option></select></div>
+      <div class="field"><label>학습 영역</label><select id="directGrammarArea"><option value="GRAMMAR_VERB">동사</option><option value="GRAMMAR_NONFINITE">준동사</option><option value="GRAMMAR_CLAUSE_CONNECTOR">절·연결</option><option value="GRAMMAR_RELATIVE">관계사</option><option value="GRAMMAR_PARALLEL">병렬</option><option value="GRAMMAR_PRONOUN">대명사</option><option value="GRAMMAR_INTEGRATED">종합</option></select></div>
+      <div class="field"><label>세부 유형</label><select id="directGrammarDetail"><option value="">선택 안 함</option><option value="GRAMMAR_SUBJECT_VERB_AGREEMENT">수일치</option><option value="GRAMMAR_ACTIVE_PASSIVE">능동·수동</option><option value="GRAMMAR_CONNECTOR_PREPOSITION">접속사·전치사</option><option value="GRAMMAR_PARALLEL_STRUCTURE">병렬구조</option><option value="GRAMMAR_PRONOUN_REFERENCE">대명사 지칭</option><option value="GRAMMAR_PRONOUN_CASE_NUMBER">대명사 격·수</option></select></div>
+      <div class="field"><label>난이도</label><select id="directGrammarDifficulty"><option value="L1">Lv.1</option><option value="L2">Lv.2</option><option value="L3">Lv.3</option></select></div>
+    </div>
+    <div id="directGrammarQuestions"></div>
+    <div class="row"><button type="button" class="secondary" id="btnAddDirectGrammarQuestion">+ 문항 추가</button><button type="button" id="btnSaveDirectGrammar">저장하고 배정하기</button></div>
+    <div id="directGrammarStatus" class="status"></div>
+  </div>
   <div class="card">
     <h2><span class="step-num">2</span> 저장된 모의고사 목록</h2>
     <div id="examListWrap"><div class="empty">아직 저장된 모의고사가 없어요. 위에서 PDF를 넣어보세요.</div></div>
@@ -333,6 +365,12 @@
     <div id="searchResults"></div>
     <div id="shareBox" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
       <div class="row">
+        <div class="field"><label>학습 역할</label><select id="inShareSubtype"><option value="THEORY">이론</option><option value="BASIC_PRACTICE" selected>기초 연습</option><option value="MIXED_PRACTICE">혼합 연습</option></select></div>
+        <div class="field"><label>학습 영역</label><select id="inShareArea"><option value="GRAMMAR_VERB">동사</option><option value="GRAMMAR_NONFINITE">준동사</option><option value="GRAMMAR_CLAUSE_CONNECTOR">절·연결</option><option value="GRAMMAR_RELATIVE">관계사</option><option value="GRAMMAR_PARALLEL">병렬</option><option value="GRAMMAR_PRONOUN">대명사</option><option value="GRAMMAR_INTEGRATED">종합</option></select></div>
+        <div class="field"><label>세부 유형</label><select id="inShareDetail"><option value="">선택 안 함</option><option value="GRAMMAR_SUBJECT_VERB_AGREEMENT">수일치</option><option value="GRAMMAR_ACTIVE_PASSIVE">능동·수동</option><option value="GRAMMAR_CONNECTOR_PREPOSITION">접속사·전치사</option><option value="GRAMMAR_PARALLEL_STRUCTURE">병렬구조</option><option value="GRAMMAR_PRONOUN_REFERENCE">대명사 지칭</option><option value="GRAMMAR_PRONOUN_CASE_NUMBER">대명사 격·수</option></select></div>
+        <div class="field"><label>난이도</label><select id="inShareDifficulty"><option value="L1">Lv.1</option><option value="L2" selected>Lv.2</option><option value="L3">Lv.3</option></select></div>
+      </div>
+      <div class="row">
         <div class="field" style="flex:1; min-width:260px">
           <label>강의영상 유튜브 링크 (선택, 나중에 "공유한 세트" 탭에서 추가/수정 가능)</label>
           <input type="text" id="inShareVideo" placeholder="https://youtu.be/..." style="width:100%">
@@ -344,7 +382,7 @@
     </div>
   </div>
 
-  <div class="card" style="font-size:13px; color:var(--muted)">
+  <div class="card" style="font-size:12px; color:var(--muted)">
     이 도구는 정규식(패턴) 기반으로 문장을 판별해요. 대부분 정확하지만 가끔 놓치거나 잘못 잡을 수 있으니,
     중요한 용도로 쓸 때는 결과를 한 번 눈으로 확인해 주세요.
   </div>
@@ -473,9 +511,18 @@
     let m;
     TO_RE.lastIndex = 0;
     while ((m = TO_RE.exec(sentence)) !== null) {
-      if (isBaseVerb(m[1])) hits.push({ text: sentence.slice(m.index, m.index + m[0].length), note: null });
+      if (isBaseVerb(m[1])) {
+        const before = sentence.slice(Math.max(0, m.index - 45), m.index);
+        const adjectiveHead = /\b(?:opportunity|chance|ability|way|time|reason|need|effort|decision|plan|right|thing|place|method|means|desire|request|proposal)\s+$/i;
+        const nounHead = /\b(?:want|hope|decide|plan|need|try|learn|begin|start|like|love|prefer|intend|expect|promise|agree|refuse|choose|afford|manage|attempt|wish|ask|tell|encourage|allow|enable|require|force)\s+$/i;
+        const usage = adjectiveHead.test(before) ? '형용사적 용법' : nounHead.test(before) ? '명사적 용법' : '부사적 용법';
+        hits.push({ text: sentence.slice(m.index, m.index + m[0].length), note: usage });
+      }
     }
     return hits;
+  }
+  function ruleToInfinitiveUsage(sentence, usage) {
+    return ruleToInfinitive(sentence).filter(function(hit){ return hit.note === usage; });
   }
 
   // ---- 분사구문 (participial clause) -----------------------------------
@@ -563,6 +610,12 @@
       hits.push({ text: clip(sentence, m.index, m.index + m[0].length, 40), note: '관계부사 ' + m[2] });
     }
     return hits;
+  }
+  function ruleRelativePronoun(sentence) {
+    return ruleRelativeClause(sentence).filter(function(hit){ return String(hit.note || '').indexOf('관계부사') === -1; });
+  }
+  function ruleRelativeAdverb(sentence) {
+    return ruleRelativeClause(sentence).filter(function(hit){ return String(hit.note || '').indexOf('관계부사') !== -1; });
   }
 
   // ---- 수동태 (passive voice) PUBLIC_IDENTIFIER_REMOVED
@@ -717,10 +770,14 @@
   // reads this list to build its checkboxes automatically, so no HTML
   // changes are needed to add more categories later.
   const GRAMMAR_RULES = [
-    { id: 'presentParticiple', label: '분사구문(현재분사)', detect: rulePresentParticipleClause },
-    { id: 'pastParticiple', label: '분사구문(과거분사)', detect: rulePastParticipleClause },
-    { id: 'toInfinitive', label: 'to부정사', detect: ruleToInfinitive },
-    { id: 'relativeClause', label: '관계사절', detect: ruleRelativeClause },
+    { id: 'participialClause', label: '분사구문', detect: function(sentence){return rulePresentParticipleClause(sentence).concat(rulePastParticipleClause(sentence));} },
+    { id: 'presentParticiple', label: '현재분사', detect: function(){return [];} },
+    { id: 'pastParticiple', label: '과거분사', detect: function(){return [];} },
+    { id: 'toInfinitiveNoun', label: 'to부정사 · 명사적 용법', detect: function(sentence){return ruleToInfinitiveUsage(sentence, '명사적 용법');} },
+    { id: 'toInfinitiveAdjective', label: 'to부정사 · 형용사적 용법', detect: function(sentence){return ruleToInfinitiveUsage(sentence, '형용사적 용법');} },
+    { id: 'toInfinitiveAdverb', label: 'to부정사 · 부사적 용법', detect: function(sentence){return ruleToInfinitiveUsage(sentence, '부사적 용법');} },
+    { id: 'relativePronoun', label: '관계대명사 (주격·목적격·소유격·생략)', detect: ruleRelativePronoun },
+    { id: 'relativeAdverb', label: '관계부사 (where·when·why)', detect: ruleRelativeAdverb },
     { id: 'passiveVoice', label: '수동태', detect: rulePassiveVoice },
     { id: 'gerund', label: '동명사', detect: ruleGerund },
     { id: 'comparative', label: '비교구문', detect: ruleComparative },
@@ -763,18 +820,16 @@
     return s;
   }
   function jsonpFetch(url, timeoutMs) {
-    timeoutMs = timeoutMs || 12000;
-    return new Promise(function (resolve) {
-      var cbName = '__gh_cb_' + uid(8);
-      var script = document.createElement('script');
-      var settled = false;
-      var cleanup = function () { delete window[cbName]; script.remove(); clearTimeout(timer); };
-      window[cbName] = function (data) { if (settled) return; settled = true; cleanup(); resolve(data); };
-      var timer = setTimeout(function () { if (settled) return; settled = true; cleanup(); resolve(null); }, timeoutMs);
-      script.onerror = function () { if (settled) return; settled = true; cleanup(); resolve(null); };
-      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-      document.body.appendChild(script);
-    });
+    return ELABAppsScript.read(url,{timeoutMs:timeoutMs||12000}).catch(function(error){console.error('[ELAB grammar read]',{code:error.code||'NETWORK_ERROR',message:error.message||String(error)});return null});
+  }
+  var grammarFetchInFlight = {}, grammarFetchCallNo = 0, grammarInitId = uid(12);
+  function fetchGrammarSetOnce(url, setKey, targetId, reason) {
+    var fetchKey = String(targetId || '') + '|' + String(setKey || ''), callNo = ++grammarFetchCallNo;
+    console.info('[GRAMMAR-FETCH]', {call_no:callNo,timestamp:new Date().toISOString(),setKey:setKey||'',assignment_id:new URLSearchParams(location.search).get('assignment_id')||'',assignment_target_id:targetId||'',reason:reason||'',document_ready_state:document.readyState,init_id:grammarInitId,reused:!!grammarFetchInFlight[fetchKey]});
+    if (grammarFetchInFlight[fetchKey]) return grammarFetchInFlight[fetchKey];
+    var request = jsonpFetch(url).finally(function(){delete grammarFetchInFlight[fetchKey]});
+    grammarFetchInFlight[fetchKey] = request;
+    return request;
   }
   async function hookPost(url, body) {
     try {
@@ -782,12 +837,18 @@
       return true;
     } catch (e) { return false; }
   }
+  async function verifyGrammarCompletion(url, body) {
+    if (!body || !body.attempt_id) return { complete:false, reason:'MISSING_CONTEXT' };
+    try { return await ELABAppsScript.verifyCompletion(url, body, { timeoutMs:20000 }); }
+    catch (error) { return { complete:false, reason:error.code || 'NETWORK_ERROR' }; }
+  }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
 
   function ghDeliveryCfg() {
     var c = null;
     try { c = JSON.parse(localStorage.getItem('grammarhub.delivery') || 'null'); } catch (e) {}
     if (!c) c = { url: '', token: '' };
+    console.info('[ELAB delivery]', { page:'grammar', source_key:'grammarhub.delivery', url:c.url || '' });
     return c;
   }
   function ghSaveDelivery(c) { localStorage.setItem('grammarhub.delivery', JSON.stringify(c)); }
@@ -795,6 +856,14 @@
   var DB_KEY = 'mockexam_gui_db_v2';
   var OLD_DB_KEY = 'mockexam_gui_db_v1'; // pre-multi-grammar schema, read-only migration source
   var RULES = MockExamCore.GRAMMAR_RULES;
+  function normalizedGrammarTags(rawTags) {
+    var source=rawTags||{},out={};
+    Object.keys(source).forEach(function(id){out[id]=(source[id]||[]).slice()});
+    function add(id,hit){(out[id]||(out[id]=[])).push(hit)}
+    (source.toInfinitive||[]).forEach(function(hit){var note=String(hit.note||'');if(note.indexOf('명사적')!==-1)add('toInfinitiveNoun',hit);else if(note.indexOf('형용사적')!==-1)add('toInfinitiveAdjective',hit);else if(note.indexOf('부사적')!==-1)add('toInfinitiveAdverb',hit)});
+    (source.relativeClause||[]).forEach(function(hit){add(String(hit.note||'').indexOf('관계부사')!==-1?'relativeAdverb':'relativePronoun',hit)});
+    return out;
+  }
 
   // PUBLIC_IDENTIFIER_REMOVED 끊어읽기 공용 유틸
   // 교사용(직독직해 자동생성 미리보기)과 학생용(끊어읽기 채점) 양쪽에서 같이 쓴다 —
@@ -856,7 +925,8 @@
     }
     fqBody.innerHTML = '<div class="empty">불러오는 중...</div>';
     var fqNums = studyParams.get('nums') || '';
-    var fqFetchUrl = fqHook + '?action=fetchGrammarFinal&key=' + encodeURIComponent(finalQuizKey);
+    var assignmentSuffix = ['assignment_target_id','student_id','assignmentCapability'].map(function(k){var v=studyParams.get(k);return v?'&'+k+'='+encodeURIComponent(v):'';}).join('');
+    var fqFetchUrl = fqHook + '?action=fetchGrammarFinal&key=' + encodeURIComponent(finalQuizKey) + assignmentSuffix;
     if (fqNums) fqFetchUrl += '&nums=' + encodeURIComponent(fqNums);
     jsonpFetch(fqFetchUrl).then(function (r) {
       if (!r || !r.found) {
@@ -864,7 +934,7 @@
         return;
       }
       document.getElementById('stTitle').textContent = '✅ ' + r.label;
-      document.title = 'VocaTest 형식 · ' + r.label;
+      document.title = 'ELAB · 학생용';
       var questions = r.questions || [];
       if (questions.length === 0) {
         fqBody.innerHTML = '<div class="empty">문제가 없어요.</div>';
@@ -893,13 +963,13 @@
         fqState = {
           name: name,
           queue: questions.map(function (q, i) {
-            return { srcLabel: q.srcLabel, text: q.text, phrase: q.phrase, options: q.options, correctIdx: q.correctIdx, qIdx: i };
+            return { question_id:q.question_id, srcLabel: q.srcLabel, text: q.text, phrase: q.phrase, options: q.options, correctIdx: q.correctIdx, qIdx: i };
           }),
           total: questions.length,
           firstTryCorrect: 0,
           attempted: {},
           wrongList: [],
-          startedAt: Date.now()
+          startedAt: Date.now(), questionStartedAt:Date.now(), firstAnswers:{}, elapsedByQuestion:{}
         };
         renderFinalQuestion();
       }
@@ -907,6 +977,7 @@
       function renderFinalQuestion() {
         if (fqState.queue.length === 0) { renderFinalResult(); return; }
         var q = fqState.queue[0];
+        fqState.questionStartedAt=Date.now();
         var phraseIdx = q.phrase ? q.text.indexOf(q.phrase) : -1;
         var sentenceHtml = phraseIdx !== -1
           ? escapeHtml(q.text.slice(0, phraseIdx)) + '<mark>' + escapeHtml(q.phrase) + '</mark>' + escapeHtml(q.text.slice(phraseIdx + q.phrase.length))
@@ -931,11 +1002,15 @@
         var q = fqState.queue[0];
         var correct = choiceIdx === q.correctIdx;
         var firstAttempt = !fqState.attempted[q.qIdx];
+        var elapsed=Date.now()-fqState.questionStartedAt;
+        fqState.elapsedByQuestion[q.qIdx]=(fqState.elapsedByQuestion[q.qIdx]||0)+elapsed;
+        if(firstAttempt)fqState.firstAnswers[q.qIdx]=choiceIdx;
         fqState.attempted[q.qIdx] = true;
         if (firstAttempt) {
           if (correct) fqState.firstTryCorrect++;
           else fqState.wrongList.push(q);
         }
+        if(r.attempt_id&&q.question_id){var p=new URLSearchParams(location.search);hookPost(fqHook,{action:'submitAttemptQuestionV2',studentCapability:r.attemptCapability,attemptCapability:r.attemptCapability,assignment_target_id:p.get('assignment_target_id')||'',student_id:p.get('student_id')||'',attempt_id:r.attempt_id,question_id:q.question_id,sequence:q.qIdx+1,answer:choiceIdx,elapsed_ms:elapsed});}
         fqBody.querySelectorAll('#fqOptions button').forEach(function (btn) { btn.disabled = true; });
         var fb = document.getElementById('fqFeedback');
         fqState.queue.shift();
@@ -967,11 +1042,20 @@
           '<button id="fqRetry" class="secondary" style="margin-top:14px">🔁 재시험 보기</button>' +
           '</div>';
         document.getElementById('fqRetry').addEventListener('click', renderFinalGate);
-        await hookPost(fqHook, {
-          action: 'submitGrammarFinalResult', token: r.submitToken, setKey: finalQuizKey,
+        var finalPayload = {
+          action: 'submitGrammarFinalResult',
+          ...(r.studentCapability ? { studentCapability: r.studentCapability } : { studentSubmitToken: r.studentSubmitToken || '' }),
+          setKey: finalQuizKey, nums: fqNums,
           name: fqState.name, score: pct, count: fqState.total,
-          wrong: fqState.wrongList.map(function (q) { return q.text; }), timeStr: timeStr
-        });
+          wrong: fqState.wrongList.map(function (q) { return q.text; }), timeStr: timeStr,
+          answers:questions.map(function(_,i){return fqState.firstAnswers[i];}),times:questions.map(function(_,i){return fqState.elapsedByQuestion[i]||0;}),
+          assignment_target_id:new URLSearchParams(location.search).get('assignment_target_id')||'',student_id:new URLSearchParams(location.search).get('student_id')||'',attempt_id:r.attempt_id||'',attemptCapability:r.attemptCapability||''
+        };
+        await hookPost(fqHook, finalPayload);
+        if (finalPayload.attempt_id) {
+          var finalVerified = await verifyGrammarCompletion(fqHook, finalPayload);
+          if (!finalVerified.complete) fqBody.innerHTML = '<div class="empty">일부 결과가 저장되지 않았습니다. 다시 시도해주세요.</div>';
+        }
       }
 
       renderFinalGate();
@@ -985,6 +1069,7 @@
   // 나머지 교사용 초기화는 건너뜀.
   var studyKey = studyParams.get('study');
   if (studyKey) {
+    document.title = 'ELAB · 학생용';
     document.getElementById('teacherWrap').style.display = 'none';
     var studentWrap = document.getElementById('studentWrap');
     studentWrap.style.display = 'block';
@@ -1012,13 +1097,15 @@
       return '<div class="chunk-row" data-chunk-row="' + sIdx + '">' + parts.join('') + '</div>';
     }
 
-    function renderMcq(sIdx, phraseIdx, phrase, correctId, optionIds) {
-      var options = optionIds.map(function (id) {
-        return '<button type="button" class="secondary" data-mcq="' + sIdx + ':' + phraseIdx + '" data-choice="' + id + '" data-correct="' + correctId + '">' +
-          escapeHtml(stRuleById[id] ? stRuleById[id].label : id) + '</button>';
+    function renderMcq(sIdx, phraseIdx, phrase, correctId, optionIds, questionId, sequence, prompt, explicitChoices, explicitAnswer) {
+      var choices = explicitChoices && explicitChoices.length ? explicitChoices : optionIds;
+      var answer = explicitChoices && explicitChoices.length ? explicitAnswer : correctId;
+      var options = choices.map(function (id) {
+        return '<button type="button" class="secondary" data-mcq="' + sIdx + ':' + phraseIdx + '" data-question-id="' + escapeHtml(questionId || '') + '" data-sequence="' + sequence + '" data-choice="' + escapeHtml(id) + '" data-correct="' + escapeHtml(answer) + '">' +
+          escapeHtml(explicitChoices && explicitChoices.length ? id : (stRuleById[id] ? stRuleById[id].label : id)) + '</button>';
       }).join('');
       return '<div class="mcq-item">' +
-        '<div>밑줄 친 <span class="mcq-phrase">' + escapeHtml(phrase) + '</span>은(는) 무엇일까요?</div>' +
+        '<div>' + (prompt ? escapeHtml(prompt) : '밑줄 친 <span class="mcq-phrase">' + escapeHtml(phrase) + '</span>은(는) 무엇일까요?') + '</div>' +
         '<div class="mcq-options" data-mcq-group="' + sIdx + ':' + phraseIdx + '">' + options + '</div>' +
         '</div>';
     }
@@ -1027,7 +1114,8 @@
       stBody.innerHTML = '<div class="empty">잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.</div>';
     } else {
       stBody.innerHTML = '<div class="empty">불러오는 중...</div>';
-      jsonpFetch(hook + '?action=fetchGrammarSet&key=' + encodeURIComponent(studyKey)).then(function (r) {
+      var assignmentSuffix = ['assignment_target_id','student_id','assignmentCapability'].map(function(k){var v=studyParams.get(k);return v?'&'+k+'='+encodeURIComponent(v):'';}).join('');
+      fetchGrammarSetOnce(hook + '?action=fetchGrammarSet&key=' + encodeURIComponent(studyKey) + assignmentSuffix,studyKey,studyParams.get('assignment_target_id')||'','student-study-init').then(function (r) {
         if (!r || !r.found) {
           stBody.innerHTML = '<div class="empty">공유된 문법 자료를 찾을 수 없어요.</div>';
           return;
@@ -1040,6 +1128,7 @@
         }
 
         var optionIds = (r.tag || '').split(',').filter(Boolean);
+        var isTheory = r.content_subtype === 'THEORY';
         var chunkDataBySentence = {}; // sIdx -> {words, gaps(correct Set)}
 
         var videoHtml = '';
@@ -1053,18 +1142,24 @@
           '<input type="text" id="stName" placeholder="이름을 입력하세요" style="max-width:220px" value="' + escapeHtml(localStorage.getItem('elab.studentName') || '') + '"></div>' +
           '</div>';
 
+        var mcqSequence=0;
         var sentencesHtml = sentences.map(function (s, sIdx) {
           var phraseItems = [];
           Object.keys(s.tags || {}).forEach(function (tagId) {
             (s.tags[tagId] || []).forEach(function (hit) {
-              phraseItems.push({ phrase: hit.text, correctId: tagId });
+              phraseItems.push({ phrase: hit.text, correctId: tagId, questionId: hit.question_id || '', prompt:hit.prompt || '', choices:hit.choices || [], correctAnswer:hit.correct_answer });
             });
           });
           var mcqHtml = '';
-          if (optionIds.length >= 2 && phraseItems.length > 0) {
+          if (!isTheory && phraseItems.length > 0 && (optionIds.length >= 2 || phraseItems.some(function(item){return item.choices && item.choices.length >= 2;}))) {
             mcqHtml = phraseItems.map(function (item, pIdx) {
-              return renderMcq(sIdx, pIdx, item.phrase, item.correctId, optionIds);
+              return renderMcq(sIdx, pIdx, item.phrase, item.correctId, optionIds, item.questionId, ++mcqSequence, item.prompt, item.choices, item.correctAnswer);
             }).join('');
+          }
+          if (isTheory) {
+            return '<div class="practice-card theory-card" data-sentence-idx="' + sIdx + '">' +
+              '<div class="practice-sentence">' + highlight(s.text, s.matches || []) + '</div>' +
+              '</div>';
           }
           var chunkInfo = correctChunkGaps(s.text, s.tags || {});
           chunkDataBySentence[sIdx] = chunkInfo;
@@ -1073,7 +1168,7 @@
             mcqHtml +
             '<div class="help-text" style="margin:10px 0 -4px">✂️ 끊어읽기: 의미 단위로 나뉘는 곳을 클릭해서 표시해보세요.</div>' +
             renderChunkRow(sIdx, chunkInfo.words, chunkInfo.gaps.size) +
-            '<div class="interp-box"><label style="font-size:13px;color:var(--muted)">📝 해석 제출 (채점 없이 선생님이 수업시간에 같이 볼 거예요)</label>' +
+            '<div class="interp-box"><label style="font-size:12px;color:var(--muted)">📝 해석 제출 (채점 없이 선생님이 수업시간에 같이 볼 거예요)</label>' +
             '<textarea rows="2" data-interp-idx="' + sIdx + '" placeholder="이 문장을 해석해보세요"></textarea></div>' +
             '<div class="practice-submit-row">' +
             '<button type="button" class="secondary" data-submit-idx="' + sIdx + '">제출</button>' +
@@ -1082,12 +1177,16 @@
             '</div>';
         }).join('');
 
+        var theoryCompleteHtml = isTheory && r.attempt_id ? '<div class="card"><button type="button" id="btnTheoryComplete">이론수업 완료</button><span id="theoryCompleteStatus" class="practice-submitted" style="display:none">✅ 완료</span></div>' : '';
         stBody.innerHTML = videoHtml + nameHtml +
-          '<div class="result-count">' + sentences.length + '개 문장</div>' + sentencesHtml;
+          '<div class="result-count">' + sentences.length + '개 문장</div>' + sentencesHtml + theoryCompleteHtml;
+
+        function attemptPayload(action) { return {action:action,studentCapability:r.attemptCapability||'',attemptCapability:r.attemptCapability||'',assignment_target_id:studyParams.get('assignment_target_id')||'',student_id:studyParams.get('student_id')||'',attempt_id:r.attempt_id||'',setKey:studyKey}; }
+        if (isTheory && document.getElementById('btnTheoryComplete')) document.getElementById('btnTheoryComplete').addEventListener('click', async function(){var button=this,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){button.style.display='none';document.getElementById('theoryCompleteStatus').style.display='inline';}else{button.disabled=false;button.textContent='이론수업 완료';alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
 
         // 구분문제: 클릭 즉시 정오 표시(간단한 개념확인이라 학생에게 바로 보여줌)
         stBody.querySelectorAll('[data-mcq]').forEach(function (btn) {
-          btn.addEventListener('click', function () {
+          btn.addEventListener('click', async function () {
             var groupSel = '[data-mcq-group="' + btn.dataset.mcq + '"]';
             var group = stBody.querySelector(groupSel);
             var correct = btn.dataset.correct;
@@ -1099,6 +1198,19 @@
               if (b.dataset.choice === correct) b.classList.add('mcq-correct');
             });
             if (btn.dataset.choice !== correct) btn.classList.add('mcq-wrong');
+            if (r.attempt_id && btn.dataset.questionId) {
+              var answerPayload=attemptPayload('submitAttemptQuestionV2');
+              answerPayload.question_id=btn.dataset.questionId;answerPayload.sequence=Number(btn.dataset.sequence)||0;answerPayload.answer=btn.dataset.choice;answerPayload.elapsed_ms=0;answerPayload.finalize=true;
+              await hookPost(hook,answerPayload);
+              group.dataset.submitted='1';
+              var groups=Array.from(stBody.querySelectorAll('[data-mcq-group]'));
+              if(groups.length&&groups.every(function(x){return x.dataset.submitted==='1';})){
+                var completePayload=attemptPayload('completeGrammarActivityV1');
+                await hookPost(hook,completePayload);
+                var completion=await verifyGrammarCompletion(hook,completePayload);
+                if(!completion.complete)alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');
+              }
+            }
           });
         });
 
@@ -1130,10 +1242,12 @@
             btn.disabled = true;
             btn.textContent = '제출 중...';
             await hookPost(hook, {
-              action: 'submitGrammarPractice', token: r.submitToken,
+              action: 'submitGrammarPractice',
+              ...(r.studentCapability ? { studentCapability: r.studentCapability } : { studentSubmitToken: r.studentSubmitToken || '' }),
               setKey: studyKey, name: name, sentenceIndex: parseInt(sIdx, 10),
               sentenceText: sentences[sIdx].text, interpretation: interp,
               chunkStudent: studentGaps, chunkCorrect: correctGaps, chunkScore: chunkScore
+              ,assignment_target_id:studyParams.get('assignment_target_id')||'', student_id:studyParams.get('student_id')||'', attempt_id:r.attempt_id||'', attemptCapability:r.attemptCapability||''
             });
             btn.style.display = 'none';
             stBody.querySelector('[data-submitted-idx="' + sIdx + '"]').style.display = 'inline';
@@ -1207,6 +1321,58 @@
   }
 
   // PUBLIC_IDENTIFIER_REMOVED import (spaCy JSON)
+  function sentenceClassificationKey(sentence) {
+    var text = String(sentence.text || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    var tags = sentence.tags || {};
+    var tagKey = Object.keys(tags).sort().map(function (tagId) {
+      var hits = (tags[tagId] || []).map(function (hit) {
+        return String(hit.text || '') + '|' + String(hit.note || '');
+      }).sort();
+      return tagId + ':' + hits.join(',');
+    }).join(';');
+    return text + '||' + tagKey;
+  }
+
+  function dedupeSentences(sentences) {
+    var seen = {};
+    return (sentences || []).filter(function (sentence) {
+      var key = sentenceClassificationKey(sentence);
+      if (seen[key]) return false;
+      seen[key] = true;
+      return true;
+    });
+  }
+
+  function importExamData(data, fallbackName, sourceMeta) {
+    if (!data || !Array.isArray(data.sentences) || !data.year || !data.month || !data.grade) {
+      throw new Error('올바른 분석 결과가 아닙니다.');
+    }
+    var db = loadDB();
+    var cleanSentences = dedupeSentences(data.sentences);
+    var importBackend = data.backend || 'spacy';
+    var importSourceFile = data.sourceFile || fallbackName || 'PDF';
+    var existingIdx = db.exams.findIndex(function (e) {
+      return e.year === data.year && e.month === data.month && e.grade === data.grade &&
+        e.sourceFile === importSourceFile && e.backend === importBackend;
+    });
+    var wasOverwrite = existingIdx !== -1;
+    var examRecord = {
+      id: wasOverwrite ? db.exams[existingIdx].id : (db.nextId++),
+      year: data.year, month: data.month, grade: data.grade,
+      sourceFile: importSourceFile,
+      ingestedAt: new Date().toISOString(), backend: importBackend, sentences: cleanSentences,
+      sourcePdfId: sourceMeta && sourceMeta.id || (wasOverwrite && db.exams[existingIdx].sourcePdfId) || '',
+      sourcePdfUpdatedAt: sourceMeta && sourceMeta.updatedAt || (wasOverwrite && db.exams[existingIdx].sourcePdfUpdatedAt) || 0,
+    };
+    if (wasOverwrite) db.exams[existingIdx] = examRecord;
+    else db.exams.push(examRecord);
+    saveDB(db);
+    renderExamList();
+    populateSearchExamSelect();
+    populateLocalVerifyExams();
+    return { overwritten: wasOverwrite, sentences: cleanSentences.length };
+  }
+
   async function handleImportJson() {
     var fileInput = document.getElementById('inImportJson');
     var statusEl = document.getElementById('importStatus');
@@ -1216,40 +1382,10 @@
     try {
       var text = await file.text();
       var data = JSON.parse(text);
-      if (!data || !Array.isArray(data.sentences) || !data.year || !data.month || !data.grade) {
-        setStatus(statusEl, 'error', '올바른 형식의 JSON이 아니에요 (export_json.py로 만든 파일인지 확인해주세요).');
-        return;
-      }
-
-      var db = loadDB();
-      var importBackend = data.backend || 'spacy';
-      // 같은 (연도, 월, 학년, 원본 파일명, 분석방식) 조합일 때만 "같은 회차 재가져오기"로
-      // 보고 덮어씀 -- 파일명이 같아도 분석방식(spaCy/regex)이 다르면 별개 결과라서 새로 추가함.
-      var existingIdx = db.exams.findIndex(function (e) {
-        return e.year === data.year && e.month === data.month && e.grade === data.grade &&
-          e.sourceFile === data.sourceFile && e.backend === importBackend;
-      });
-      var wasOverwrite = existingIdx !== -1;
-      var examRecord = {
-        id: wasOverwrite ? db.exams[existingIdx].id : (db.nextId++),
-        year: data.year, month: data.month, grade: data.grade,
-        sourceFile: data.sourceFile || file.name,
-        ingestedAt: new Date().toISOString(),
-        backend: importBackend,
-        sentences: data.sentences,
-      };
-      if (wasOverwrite) {
-        db.exams[existingIdx] = examRecord;
-      } else {
-        db.exams.push(examRecord);
-      }
-      saveDB(db);
-
+      var imported = importExamData(data, file.name);
       setStatus(statusEl, 'success',
-        (wasOverwrite ? '완료! (같은 원본 파일의 기존 회차를 덮어썼어요) ' : '완료! 새 회차로 추가했어요. ') +
-        '문장 ' + data.sentences.length + '개를 정확한 태깅 결과로 가져왔어요.');
-      renderExamList();
-      populateSearchExamSelect();
+        (imported.overwritten ? '기존 회차를 갱신했습니다. ' : '새 회차로 추가했습니다. ') +
+        '문장 ' + imported.sentences + '개를 가져왔습니다.');
       fileInput.value = '';
     } catch (e) {
       console.error(e);
@@ -1275,7 +1411,7 @@
         var ingestedLabel = e.ingestedAt ? formatDateTime(e.ingestedAt) : '-';
         return '<tr>' +
           '<td>' + e.year + '년</td>' +
-          '<td>' + e.month + '월</td>' +
+          '<td>' + monthLabel(e.month) + '</td>' +
           '<td>' + escapeHtml(e.grade) + badge + '</td>' +
           '<td>' + e.sentences.length + '문장</td>' +
           '<td>' + ingestedLabel + '</td>' +
@@ -1308,13 +1444,179 @@
         .sort(function (a, b) { return a.year - b.year || a.month - b.month; })
         .map(function (e) {
           var backendLabel = e.backend === 'spacy' ? 'spaCy' : 'regex';
-          return '<option value="' + e.id + '">' + e.year + '년 ' + e.month + '월 ' + escapeHtml(e.grade) +
+          return '<option value="' + e.id + '">' + e.year + '년 ' + monthLabel(e.month) + ' ' + escapeHtml(e.grade) +
             ' (' + backendLabel + ')' + '</option>';
         }).join('');
     if ([].some.call(sel.options, function (o) { return o.value === current; })) {
       sel.value = current;
     }
   }
+
+  // PUBLIC_IDENTIFIER_REMOVED local Python bridge
+  var LOCAL_BRIDGE = location.hostname === '127.0.0.1' && location.port === '8766'
+    ? location.origin : 'http://127.0.0.1:8766';
+  var pendingPreviewToken = '', pendingPreviewExam = null, pendingGrammarPreviews=[];
+  var PYTHON_TAG_BY_JS = {
+    participialClause:'participial_clause', presentParticiple:'present_participle', pastParticiple:'past_participle',
+    toInfinitiveNoun:'to_infinitive', toInfinitiveAdjective:'to_infinitive', toInfinitiveAdverb:'to_infinitive',
+    relativePronoun:'relative_clause', relativeAdverb:'relative_clause', passiveVoice:'passive_voice',
+    nounClause:'noun_clause', modalPerfect:'modal_perfect'
+  };
+
+  function populateLocalVerifyExams() {
+    var select = document.getElementById('localVerifyExam');
+    if (!select) return;
+    var current = select.value;
+    select.innerHTML = loadDB().exams.slice().sort(function(a,b){return b.year-a.year||b.month-a.month}).map(function(e){
+      return '<option value="'+e.id+'">'+e.year+'년 '+monthLabel(e.month)+' '+escapeHtml(e.grade)+' · '+escapeHtml(e.sourceFile||'PDF')+'</option>';
+    }).join('') || '<option value="">분석한 모의고사가 없습니다</option>';
+    if ([].some.call(select.options,function(o){return o.value===current})) select.value=current;
+  }
+
+  async function checkLocalBridge() {
+    var state = document.getElementById('localBridgeState'),guide=document.getElementById('localOfflineGuide');
+    try {
+      var response = await fetch(LOCAL_BRIDGE+'/api/grammar/status');
+      var data = await response.json();
+      if (!data.ok) throw new Error();
+      state.textContent = '분석 준비됨'; state.classList.add('ready');
+      guide.hidden=true;
+      if (data.has_api_key) document.getElementById('localApiKey').placeholder='저장된 API 키 사용 중';
+      return true;
+    } catch (e) {
+      state.textContent = '분석 기능 꺼짐'; state.classList.remove('ready');guide.hidden=false;
+      return false;
+    }
+  }
+
+  function monthLabel(month){return Number(month)===99?'수능':Number(month)+'월'}
+  var GRAMMAR_HIGHLIGHT_COLORS=['#ffe08a','#a7e8dc','#bcd7ff','#e6c4ff','#ffc2d1','#c9ed9d','#ffd0a6','#b9e4f4'];
+  function taggedSentenceInfo(sentence,tagLabels){
+    var normalizedTags=normalizedGrammarTags(sentence.tags),tagIds=Object.keys(normalizedTags).filter(function(id){return(normalizedTags[id]||[]).length&&tagLabels[id]});
+    if(!tagIds.length)return null;
+    var text=String(sentence.text||''),marks=Array.from({length:text.length},function(){return[]}),categories=[];
+    function categoryIndex(tagId,hit){
+      var usage=(tagId==='relativePronoun'||tagId==='relativeAdverb')&&hit.note?String(hit.note):'';
+      var key=tagId+'|'+usage,found=categories.findIndex(function(item){return item.key===key});
+      if(found!==-1)return found;
+      categories.push({key:key,label:(tagLabels[tagId]||tagId)+(usage?' ('+usage+')':'')});
+      return categories.length-1;
+    }
+    tagIds.forEach(function(tagId){
+      (normalizedTags[tagId]||[]).forEach(function(hit){
+        var phrase=String(hit.text||'').trim();if(!phrase)return;
+        var tagIndex=categoryIndex(tagId,hit);
+        var haystack=text.toLowerCase(),needle=phrase.toLowerCase(),from=0,at;
+        while((at=haystack.indexOf(needle,from))!==-1){
+          for(var i=at;i<Math.min(at+phrase.length,marks.length);i++)if(marks[i].indexOf(tagIndex)===-1)marks[i].push(tagIndex);
+          from=at+Math.max(1,phrase.length);
+        }
+      });
+    });
+    var html='',start=0,current=marks[0]||[];
+    function segment(end){
+      var content=escapeHtml(text.slice(start,end));
+      if(!current.length){html+=content;return}
+      var colors=current.map(function(index){return GRAMMAR_HIGHLIGHT_COLORS[index%GRAMMAR_HIGHLIGHT_COLORS.length]});
+      var background=colors.length===1?colors[0]:'linear-gradient(to bottom,'+colors.map(function(color,index){var a=Math.round(index*100/colors.length),b=Math.round((index+1)*100/colors.length);return color+' '+a+'%,'+color+' '+b+'%'}).join(',')+')';
+      var labels=current.map(function(index){return categories[index].label}).join(', ');
+      html+='<mark class="grammar-mark" style="background:'+background+'" title="'+escapeHtml(labels)+'">'+content+'</mark>';
+    }
+    for(var pos=1;pos<=text.length;pos++){
+      var next=marks[pos]||[],same=pos<text.length&&next.join(',')===current.join(',');
+      if(!same){segment(pos);start=pos;current=next}
+    }
+    var legend=categories.map(function(category,index){return'<span class="grammar-legend-item"><i class="grammar-legend-dot" style="background:'+GRAMMAR_HIGHLIGHT_COLORS[index%GRAMMAR_HIGHLIGHT_COLORS.length]+'"></i>'+escapeHtml(category.label)+'</span>'}).join('');
+    return{html:html,legend:legend,labels:categories.map(function(category){return category.label})};
+  }
+  function renderLocalAnalysisPreview(exam){
+    var tagLabels={};RULES.forEach(function(rule){tagLabels[rule.id]=rule.label});
+    var tagged=(exam.sentences||[]).map(function(sentence){return{sentence:sentence,info:taggedSentenceInfo(sentence,tagLabels)}}).filter(function(item){return item.info});
+    var groups={};tagged.forEach(function(item){var key=item.sentence.questionNo||'문항 미확인';(groups[key]||(groups[key]=[])).push(item)});
+    function questionOrder(value){var match=String(value).match(/\d+/);return match?Number(match[0]):Infinity}
+    var html=Object.keys(groups).sort(function(a,b){return questionOrder(a)-questionOrder(b)||String(a).localeCompare(String(b),'ko')}).map(function(questionNo){
+      groups[questionNo].sort(function(a,b){return(Number(a.sentence.sentenceIndex)||Infinity)-(Number(b.sentence.sentenceIndex)||Infinity)});
+      var rows=groups[questionNo].map(function(item,index){var sourceOrder=Number(item.sentence.sentenceIndex)||index+1;return'<div class="analysis-preview-row"><span>'+String(index+1)+'. '+String(sourceOrder)+'번째 문장 · '+escapeHtml(item.info.labels.join(' · '))+'</span><div class="analysis-sentence-text">'+item.info.html+'</div><div class="grammar-legend">'+item.info.legend+'</div></div>'}).join('');
+      return'<section class="analysis-question"><h3 class="analysis-question-title">'+escapeHtml(questionNo)+'</h3>'+rows+'</section>';
+    }).join('');
+    document.getElementById('localPreviewTitle').textContent=exam.year+'년 '+monthLabel(exam.month)+' '+exam.grade+' · 문법 문장 '+tagged.length+'개';
+    document.getElementById('localPreviewList').innerHTML=html||'<div class="empty">18번 이후 문항에서 문법 태그가 확인된 문장을 찾지 못했습니다.</div>';
+    document.getElementById('localAnalysisPreview').hidden=false;
+  }
+
+  async function saveLocalPreview(){
+    var status=document.getElementById('localAnalyzeStatus'),button=document.getElementById('btnSaveLocalPreview');
+    if(!pendingGrammarPreviews.length){setStatus(status,'error','먼저 PDF를 분석하세요.');return}
+    button.disabled=true;button.textContent='저장 중';
+    try{var total=0;for(var index=0;index<pendingGrammarPreviews.length;index++){button.textContent='저장 중 '+(index+1)+'/'+pendingGrammarPreviews.length;var item=pendingGrammarPreviews[index],response=await fetch(LOCAL_BRIDGE+'/api/grammar/save-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preview_token:item.token})}),data=await response.json();if(!response.ok||!data.ok)throw new Error(data.error||'저장하지 못했습니다.');var imported=importExamData(data.exam,item.exam.sourceFile);total+=imported.sentences}pendingGrammarPreviews=[];document.getElementById('localAnalysisPreview').hidden=true;setStatus(status,'success','PDF 분석 결과를 저장했습니다. 문장 '+total+'개가 반영되었습니다.')}catch(e){setStatus(status,'error',e.message)}finally{button.disabled=false;button.textContent='이 결과 저장'}
+  }
+
+  function selectedLocalExam(){var id=Number(document.getElementById('localVerifyExam').value);return loadDB().exams.find(function(e){return Number(e.id)===id})}
+  async function verifyLocal(dryRun) {
+    var exam=selectedLocalExam(),status=document.getElementById('localVerifyStatus'),log=document.getElementById('localVerifyLog'),button=document.getElementById(dryRun?'btnLocalPreview':'btnLocalVerify');
+    if(!exam){setStatus(status,'error','검증할 모의고사를 선택하세요.');return}
+    var tag=document.getElementById('localVerifyTag').value,all=document.getElementById('localVerifyAll').checked;
+    if(all&&!tag){setStatus(status,'error','전체 검증은 문법을 하나 선택해야 합니다.');return}
+    button.disabled=true;button.textContent=dryRun?'확인 중':'검증 중';setStatus(status,'success',dryRun?'검증 대상을 확인하고 있습니다.':'Claude 검증을 실행하고 있습니다.');
+    try{
+      var response=await fetch(LOCAL_BRIDGE+'/api/grammar/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({year:exam.year,month:exam.month,grade:exam.grade,source_file:exam.sourceFile,tag:PYTHON_TAG_BY_JS[tag]||tag,all:all,recheck:document.getElementById('localRecheck').checked,dry_run:dryRun,api_key:document.getElementById('localApiKey').value.trim()})}),data=await response.json();
+      if(!response.ok||!data.ok)throw new Error(data.error||'검증하지 못했습니다.');
+      log.style.display='block';log.textContent=data.output||'검증 대상이 없습니다.';
+      if(data.exam){var imported=importExamData(data.exam,exam.sourceFile);setStatus(status,'success','검증 결과를 반영했습니다. 문장 '+imported.sentences+'개가 갱신되었습니다.')}else setStatus(status,'success','검증 대상을 확인했습니다.');
+      document.getElementById('localApiKey').value='';
+    }catch(e){setStatus(status,'error',e.message)}finally{button.disabled=false;button.textContent=dryRun?'대상 미리보기':'검증 실행'}
+  }
+
+  document.getElementById('localYear').value=new Date().getFullYear();
+  var grammarPdfAutoSyncRunning=false,grammarPdfAutoFailures={};
+  async function syncGrammarPdfLibrary(){
+    if(grammarPdfAutoSyncRunning)return;
+    grammarPdfAutoSyncRunning=true;
+    var status=document.getElementById('localAnalyzeStatus');
+    function paint(percent,done,total,kind,message){var value=Math.max(0,Math.min(100,Math.round(percent))),bar=document.getElementById('grammarPdfAutoBar');if(bar)bar.style.width=value+'%';setStatus(status,kind,'전체 '+value+'% ('+done+'/'+total+') · '+message)}
+    try{
+      var allRecords=await ElabPdfLibrary.list(),records=allRecords.filter(ElabPdfLibrary.isReviewed),approvedIds=new Set(records.map(function(record){return record.id})),reviewWaiting=allRecords.length-records.length,db=loadDB(),pending=[],knownFailures=[];
+      db.exams=(db.exams||[]).filter(function(exam){return !exam.sourcePdfId||approvedIds.has(exam.sourcePdfId)});
+      records.forEach(function(record){
+        var existing=db.exams.find(function(exam){
+          return exam.sourcePdfId===record.id || (!exam.sourcePdfId && exam.sourceFile===record.name && Number(exam.year)===Number(record.year) && Number(exam.month)===Number(record.month) && exam.grade===record.grade);
+        });
+        var failed=grammarPdfAutoFailures[record.id],version=Number(record.updatedAt||0);
+        if(existing&&!existing.sourcePdfId){existing.sourcePdfId=record.id;existing.sourcePdfUpdatedAt=record.updatedAt||0;delete grammarPdfAutoFailures[record.id];return}
+        if(!existing||version>Number(existing.sourcePdfUpdatedAt||0)){if(failed&&failed.version===version)knownFailures.push(failed);else pending.push(record)}else delete grammarPdfAutoFailures[record.id];
+      });
+      saveDB(db);
+      if(!pending.length){if(knownFailures.length){var firstKnown=knownFailures[0],knownMore=knownFailures.length>1?' 외 '+(knownFailures.length-1)+'개':'';paint(100,records.length,records.length,'error','처리 완료 · 성공 '+(records.length-knownFailures.length)+'개 · 실패 '+knownFailures.length+'개: '+firstKnown.name+knownMore+' ('+firstKnown.reason+')')}else paint(100,records.length,records.length,'success',reviewWaiting?'검수 완료 PDF는 문법학습에 반영되어 있습니다. · 검수 대기 '+reviewWaiting+'개':'PDF 자료가 문법학습에 반영되어 있습니다.');return}
+      var totalFiles=records.length,alreadyDone=totalFiles-pending.length;
+      if(!await checkLocalBridge()){paint(alreadyDone/totalFiles*100,alreadyDone,totalFiles,'error','문법학습 실행.bat를 실행하면 새 PDF가 자동으로 반영됩니다.');return}
+      var completed=0,failed=[];
+      for(var index=0;index<pending.length;index++){
+        var record=pending[index],file=ElabPdfLibrary.asFile(record),done=alreadyDone+index;
+        try{
+          if(!file||!record.year||!record.month||!record.grade)throw new Error('연도·월·학년 정보를 확인하세요.');
+          paint(done/totalFiles*100,done,totalFiles,'success','문법학습 자동 반영 중');
+          var analyzeResponse=await fetch(LOCAL_BRIDGE+'/api/grammar/analyze?filename='+encodeURIComponent(file.name)+'&year='+encodeURIComponent(record.year)+'&month='+encodeURIComponent(record.month)+'&grade='+encodeURIComponent(record.grade),{method:'POST',headers:{'Content-Type':'application/pdf'},body:file});
+          var analyzed=await analyzeResponse.json();
+          if(!analyzeResponse.ok||!analyzed.ok)throw new Error(analyzed.error||'분석하지 못했습니다.');
+          paint((done+.8)/totalFiles*100,done,totalFiles,'success','문법학습 자동 반영 중');
+          var saveResponse=await fetch(LOCAL_BRIDGE+'/api/grammar/save-preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({preview_token:analyzed.preview_token})});
+          var saved=await saveResponse.json();
+          if(!saveResponse.ok||!saved.ok)throw new Error(saved.error||'저장하지 못했습니다.');
+          importExamData(saved.exam,record.name,record);delete grammarPdfAutoFailures[record.id];completed++;paint((done+1)/totalFiles*100,done+1,totalFiles,'success','문법학습 자동 반영 중');
+        }catch(error){var failure={name:record.name||'이름 없는 PDF',reason:error.message||'분석하지 못했습니다.',version:Number(record.updatedAt||0)};failed.push(failure);grammarPdfAutoFailures[record.id]=failure}
+      }
+      var allFailures=knownFailures.concat(failed);
+      if(allFailures.length){var first=allFailures[0],more=allFailures.length>1?' 외 '+(allFailures.length-1)+'개':'';paint(100,totalFiles,totalFiles,'error','처리 완료 · 성공 '+(totalFiles-allFailures.length)+'개 · 실패 '+allFailures.length+'개: '+first.name+more+' ('+first.reason+')')}
+      else paint(100,totalFiles,totalFiles,'success','PDF 자료가 문법학습에 반영되었습니다.');
+    }catch(error){paint(0,0,0,'error','PDF 자동 반영 중 문제가 생겼습니다: '+error.message)}finally{grammarPdfAutoSyncRunning=false}
+  }
+  ElabPdfLibrary.subscribe(function(){clearTimeout(window.grammarPdfTreeTimer);window.grammarPdfTreeTimer=setTimeout(syncGrammarPdfLibrary,120)});
+  document.getElementById('localVerifyTag').innerHTML='<option value="">판정 불일치 전체</option>'+RULES.map(function(r){return'<option value="'+r.id+'">'+escapeHtml(r.label)+'</option>'}).join('');
+  document.getElementById('btnSaveLocalPreview').addEventListener('click',saveLocalPreview);
+  document.getElementById('btnCheckLocalBridge').addEventListener('click',function(){checkLocalBridge().then(function(ready){if(ready)syncGrammarPdfLibrary()})});
+  document.getElementById('btnLocalPreview').addEventListener('click',function(){verifyLocal(true)});
+  document.getElementById('btnLocalVerify').addEventListener('click',function(){verifyLocal(false)});
+  populateLocalVerifyExams();checkLocalBridge().then(syncGrammarPdfLibrary);
 
   // PUBLIC_IDENTIFIER_REMOVED search
   var lastResults = [];
@@ -1367,7 +1669,7 @@
         // spaCy로 가져온 문장은 s.tags 필드 자체가 있음(매칭이 하나도 없어도 {}로 존재) —
         // 그 경우 고정된 태깅 결과를 그대로 쓰고, 직접 올린 PDF(필드 자체가 없음)는 지금처럼
         // 검색할 때마다 regex로 즉석 계산(최신 규칙 자동 반영)
-        var tags = s.tags !== undefined ? s.tags : MockExamCore.tagSentence(s.text);
+        var tags = normalizedGrammarTags(s.tags !== undefined ? s.tags : MockExamCore.tagSentence(s.text));
         // 판정 불일치는 "spaCy는 0개로 판정, regex는 찾음" 경우도 많은데, 그런 문장은
         // spaCy 히트가 없어서 결과에서 통째로 빠지면 grammar_gui.pyw의 판정불일치
         // 미리보기(tag_disagreements 테이블을 직접 조회 — spaCy 히트 개수 무관)와
@@ -1397,8 +1699,14 @@
           var verifiedForIds = (s.claudeVerified || []).filter(function (v) {
             return matchedRuleIds.indexOf(v.tag) !== -1;
           });
+          var matchedLabels=[];
+          confirmedRuleIds.forEach(function(id){
+            if(id==='relativePronoun'||id==='relativeAdverb'){
+              (tags[id]||[]).forEach(function(hit){var label=ruleById[id].label+(hit.note?' ('+hit.note+')':'');if(matchedLabels.indexOf(label)===-1)matchedLabels.push(label)});
+            }else matchedLabels.push(ruleById[id].label);
+          });
           results.push({
-            examLabel: e.year + '년 ' + e.month + '월 ' + e.grade + ' (' + (e.backend === 'spacy' ? 'spaCy' : 'regex') + ')',
+            examLabel: e.year + '년 ' + monthLabel(e.month) + ' ' + e.grade + ' (' + (e.backend === 'spacy' ? 'spaCy' : 'regex') + ')',
             examYear: e.year,
             examMonth: e.month,
             examGrade: e.grade,
@@ -1406,12 +1714,21 @@
             text: s.text,
             hits: hits,
             tagsForShare: tagsForShare,
-            matchedLabels: confirmedRuleIds.map(function (id) { return ruleById[id].label; }),
+            matchedLabels: matchedLabels,
             disagreedLabels: disagreedIds.map(function (id) { return ruleById[id].label; }),
             verifiedForIds: verifiedForIds,
           });
         }
       });
+    });
+
+    var uniqueResults = {};
+    results = results.filter(function (result) {
+      var key = String(result.text || '').replace(/\s+/g, ' ').trim().toLowerCase() + '||' +
+        result.matchedLabels.slice().sort().join('|') + '||' + result.disagreedLabels.slice().sort().join('|');
+      if (uniqueResults[key]) return false;
+      uniqueResults[key] = true;
+      return true;
     });
 
     // 모의고사(연/월/학년) 순 -> 그 안에서 문제번호 오름차순으로 정렬. questionNo는
@@ -1479,10 +1796,53 @@
     var hasMcq = selectedIds.length >= 2 && lastResults.some(function (r) { return r.phraseItems && r.phraseItems.length > 0; });
     exportMcqBtn.style.display = hasMcq ? 'inline-block' : 'none';
     exportPptxBtn.style.display = hasMcq ? 'inline-block' : 'none';
+    suggestGrammarClassification_(selectedIds);
     shareBox.style.display = 'block';
   }
 
   // PUBLIC_IDENTIFIER_REMOVED 학생 공유
+  var directGrammarQuestionCount = 0;
+  function addDirectGrammarQuestion_(seed) {
+    seed=seed||{};directGrammarQuestionCount++;
+    var wrap=document.createElement('div');wrap.className='practice-card direct-grammar-question';wrap.dataset.directQuestion=String(directGrammarQuestionCount);
+    wrap.innerHTML='<b>문항 '+directGrammarQuestionCount+'</b><div class="row" style="margin-top:10px">'+
+      '<div class="field" style="flex:1;min-width:260px"><label>문장</label><input data-direct="sentence" type="text" value="'+escapeHtml(seed.sentence||'')+'"></div>'+
+      '<div class="field" style="flex:1;min-width:260px"><label>문제</label><input data-direct="prompt" type="text" value="'+escapeHtml(seed.prompt||'')+'"></div></div>'+
+      '<div class="row"><div class="field" style="flex:1;min-width:220px"><label>선택지 (줄바꿈으로 구분)</label><textarea data-direct="choices" rows="3">'+escapeHtml((seed.choices||[]).join('\n'))+'</textarea></div>'+
+      '<div class="field" style="flex:1;min-width:180px"><label>정답 (선택지와 정확히 일치)</label><input data-direct="answer" type="text" value="'+escapeHtml(seed.answer||'')+'"></div></div>';
+    document.getElementById('directGrammarQuestions').appendChild(wrap);
+  }
+  function directGrammarRows_(){return Array.from(document.querySelectorAll('.direct-grammar-question')).map(function(row){var value=function(key){return String(row.querySelector('[data-direct="'+key+'"]').value||'').trim()};return{sentence:value('sentence'),prompt:value('prompt'),choices:value('choices').split(/\r?\n/).map(function(x){return x.trim()}).filter(Boolean),answer:value('answer')}});}
+  async function saveDirectGrammar_(){
+    var status=document.getElementById('directGrammarStatus'),title=String(document.getElementById('directGrammarTitle').value||'').trim(),rows=directGrammarRows_(),area=document.getElementById('directGrammarArea').value,detail=document.getElementById('directGrammarDetail').value,difficulty=document.getElementById('directGrammarDifficulty').value,subtype=document.getElementById('directGrammarSubtype').value;
+    var error=!title?'콘텐츠 제목을 입력하세요.':'';
+    rows.some(function(q,index){if(!q.sentence||!q.prompt)error=(index+1)+'번 문항의 문장과 문제를 입력하세요.';else if(q.choices.length<2)error=(index+1)+'번 문항의 선택지를 2개 이상 입력하세요.';else if(!q.answer||q.choices.indexOf(q.answer)===-1)error=(index+1)+'번 문항의 정답은 선택지 중 하나와 정확히 같아야 합니다.';return !!error;});
+    if(!rows.length)error='문항을 하나 이상 추가하세요.';if(!area)error='학습 영역을 선택하세요.';if(!difficulty)error='난이도를 선택하세요.';
+    if(error){status.className='status show error';status.textContent=error;return;}
+    var cfg=ghDeliveryCfg();if(!cfg.url||!cfg.token){status.className='status show error';status.textContent='설정에서 Apps Script 주소와 토큰을 먼저 저장하세요.';return;}
+    var setKey=uid(12),categoryKeys=[area].concat(detail?[detail]:[]),sentences=rows.map(function(q,index){var hit={text:q.answer,prompt:q.prompt,choices:q.choices,correct_answer:q.answer,question_id:crypto.randomUUID?crypto.randomUUID():uid(32),category_keys:categoryKeys,difficulty:difficulty};return{text:q.sentence,matches:[],tags:{DIRECT_QUESTION:[hit]},source_question_no:index+1};});
+    status.className='status show info';status.textContent='문법문제를 저장하는 중...';
+    var ok=await hookPost(cfg.url,{action:'saveGrammarSet',token:cfg.token,setKey:setKey,tag:'DIRECT_QUESTION',tagLabel:title,sentences:sentences,category_keys:categoryKeys,difficulty:difficulty});
+    await sleep(1000);var check=ok?await jsonpFetch(cfg.url+'?action=fetchGrammarSet&key='+encodeURIComponent(setKey)):null;
+    if(!check||!check.found){status.className='status show error';status.textContent='저장된 문법문제를 확인하지 못했습니다. 다시 시도해주세요.';return;}
+    status.className='status show success';status.textContent='저장되었습니다. 과제배정 화면으로 이동합니다.';
+    location.href='../teacher/assignments.html?content_type=GRAMMAR&content_ref_id='+encodeURIComponent(setKey)+'&content_subtype='+encodeURIComponent(subtype);
+  }
+  document.getElementById('btnAddDirectGrammarQuestion').addEventListener('click',function(){addDirectGrammarQuestion_({})});
+  document.getElementById('btnSaveDirectGrammar').addEventListener('click',saveDirectGrammar_);
+  addDirectGrammarQuestion_({sentence:'The list of items is on the desk.',prompt:'알맞은 동사를 고르세요.',choices:['is','are'],answer:'is'});
+  addDirectGrammarQuestion_({sentence:'The windows were broken by the storm.',prompt:'알맞은 동사 형태를 고르세요.',choices:['were broken','broke'],answer:'were broken'});
+
+  function suggestGrammarClassification_(selectedIds) {
+    var first=(selectedIds||[])[0]||'',area='GRAMMAR_INTEGRATED',detail='';
+    if(/presentParticiple|pastParticiple|toInfinitive|gerund/.test(first))area='GRAMMAR_NONFINITE';
+    else if(/relative/.test(first))area='GRAMMAR_RELATIVE';
+    else if(/passiveVoice|modalPerfect/.test(first)){area='GRAMMAR_VERB';if(first==='passiveVoice')detail='GRAMMAR_ACTIVE_PASSIVE';}
+    else if(first==='nounClause')area='GRAMMAR_CLAUSE_CONNECTOR';
+    else if(first==='parallel')area='GRAMMAR_PARALLEL';
+    var areaSelect=document.getElementById('inShareArea'),detailSelect=document.getElementById('inShareDetail');
+    if(areaSelect)areaSelect.value=area;if(detailSelect)detailSelect.value=detail;
+  }
   async function handleShare() {
     var cfg = ghDeliveryCfg();
     var statusEl = document.getElementById('shareStatus');
@@ -1497,8 +1857,14 @@
     var tagLabel = selectedIds.map(function (id) { return ruleById[id].label; }).join(' · ');
     var setKey = uid(12);
     var videoUrl = (document.getElementById('inShareVideo').value || '').trim();
-    var sentences = lastResults.map(function (r) {
-      return { text: r.text, matches: r.hits, tags: r.tagsForShare };
+    var subtype = document.getElementById('inShareSubtype').value;
+    var area = document.getElementById('inShareArea').value;
+    var detail = document.getElementById('inShareDetail').value;
+    var difficulty = document.getElementById('inShareDifficulty').value;
+    var categoryKeys = [area].concat(detail ? [detail] : []);
+    var sentences = lastResults.map(function (r, sentenceIndex) {
+      var tags={};Object.keys(r.tagsForShare||{}).forEach(function(tagId){var legacyKey='GRAMMAR_'+tagId.replace(/([a-z])([A-Z])/g,'$1_$2').toUpperCase();tags[tagId]=(r.tagsForShare[tagId]||[]).map(function(hit){return Object.assign({},hit,{question_id:crypto.randomUUID?crypto.randomUUID():uid(32),category_keys:categoryKeys.concat([legacyKey]),difficulty:difficulty});});});
+      return { text: r.text, matches: r.hits, tags: tags, source_question_no:r.questionNo||sentenceIndex+1 };
     });
 
     statusEl.className = 'status show info';
@@ -1507,7 +1873,7 @@
     await hookPost(cfg.url, {
       action: 'saveGrammarSet', token: cfg.token,
       setKey: setKey, tag: selectedIds.join(','), tagLabel: tagLabel, sentences: sentences,
-      videoUrl: videoUrl
+      videoUrl: videoUrl, category_keys:categoryKeys, difficulty:difficulty
     });
     await sleep(1000);
 
@@ -1520,7 +1886,12 @@
 
     var link = location.origin + location.pathname + '?study=' + setKey + '&hook=' + encodeURIComponent(cfg.url);
     statusEl.className = 'status show success';
-    statusEl.innerHTML = '학생에게 공유할 링크: <br><input type="text" readonly value="' + escapeHtml(link) + '" style="width:100%;margin-top:6px" onclick="this.select()">';
+    var assignmentUrl = '../teacher/assignments.html?content_type=GRAMMAR&content_ref_id=' + encodeURIComponent(setKey) + '&content_subtype=' + encodeURIComponent(subtype);
+    statusEl.innerHTML = '학생에게 공유할 링크: <br><input type="text" readonly value="' + escapeHtml(link) + '" style="width:100%;margin-top:6px" onclick="this.select()"><br><a href="' + assignmentUrl + '" class="secondary" style="display:inline-block;margin-top:10px;text-decoration:none">학생·그룹 선택하고 배정하기</a>';
+    if (new URLSearchParams(location.search).get('assignment_pick') === '1') {
+      location.href = assignmentUrl;
+      return;
+    }
   }
 
   function handleExport() {
@@ -2159,7 +2530,7 @@
   // 드래그 중엔 전체 화면에 반투명 안내를 띄워서 "여기에 놓으면 된다"는 걸 보여준다.
   var pageDropOverlay = document.createElement('div');
   pageDropOverlay.textContent = '📄 pptx 파일을 놓으면 "최종본 관리"에 업로드됩니다';
-  pageDropOverlay.style.cssText = 'position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; background:rgba(37,99,235,0.12); border:4px dashed #2563eb; font-size:20px; font-weight:700; color:#1d4ed8; pointer-events:none;';
+  pageDropOverlay.style.cssText = 'position:fixed; inset:0; z-index:2000; display:none; align-items:center; justify-content:center; background:rgba(18,187,175,0.12); border:4px dashed #12bbaf; font-size:20px; font-weight:700; color:#245984; pointer-events:none;';
   document.body.appendChild(pageDropOverlay);
   var pageDragDepth = 0; // dragenter/dragleave가 자식 요소마다 중첩 발생해서 카운터로 관리
 
@@ -2232,7 +2603,19 @@
       }
 
       var setKey = uid(12);
-      await hookPost(cfg.url, { action: 'saveGrammarFinal', token: cfg.token, setKey: setKey, label: label, questions: questions, folderId: curFinalFolder });
+      var finalArea=document.getElementById('inFinalArea').value,finalDetail=document.getElementById('inFinalDetail').value,finalDifficulty=document.getElementById('inFinalDifficulty').value;
+      questions.forEach(function(q){
+        if (!q.question_id) q.question_id = (crypto.randomUUID ? crypto.randomUUID() : uid(32));
+        q.content_type = 'GRAMMAR';
+        q.answer_type = 'MULTIPLE_CHOICE';
+        q.source_question_no = q.source_question_no || (q.srcLabel || '').match(/(\d+)번/)?.[1] || '';
+        var answerLabel = q.options[q.correctIdx] || '';
+        var rule = RULES.find(function(r){ return r.label === answerLabel; });
+        var suggested=rule ? ['GRAMMAR_' + rule.id.replace(/([a-z])([A-Z])/g, '$1_$2').toUpperCase()] : [];
+        q.category_keys = [finalArea].concat(finalDetail?[finalDetail]:[]).concat(suggested);
+        q.difficulty=finalDifficulty;
+      });
+      await hookPost(cfg.url, { action: 'saveGrammarFinal', token: cfg.token, setKey: setKey, label: label, questions: questions, folderId: curFinalFolder, category_keys:[finalArea].concat(finalDetail?[finalDetail]:[]), difficulty:finalDifficulty });
       await sleep(800);
       var check = await jsonpFetch(cfg.url + '?action=fetchGrammarFinal&key=' + encodeURIComponent(setKey));
       if (!check || !check.found) {
@@ -2256,7 +2639,6 @@
   document.getElementById('btnUploadFinal').addEventListener('click', handleUploadFinal);
   document.getElementById('btnLoadFinals').addEventListener('click', loadFinalsAndFolders);
 
-  document.getElementById('inImportJson').addEventListener('change', handleImportJson);
   document.getElementById('btnSearch').addEventListener('click', handleSearch);
   document.getElementById('btnExport').addEventListener('click', handleExport);
   document.getElementById('btnExportMcq').addEventListener('click', handleExportMcq);

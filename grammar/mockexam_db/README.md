@@ -17,6 +17,11 @@ ELAB의 **문법학습** 모듈이 "정확한 방법(spaCy)"으로 쓰는 백엔
 - `grammar_gui.pyw` — 터미널 명령어 없이 마우스로 PDF 분석 + Claude 검증을 하는 화면(GUI)
 
 ## GUI로 쓰기 (터미널 명령어 안 치고 싶을 때)
+교사용 웹 화면에 통합된 기본 실행 방법은 `grammar/문법학습 실행.bat`를 더블클릭하는
+것이다. 로컬 처리기와 `grammar/index.html`이 함께 열리며, 웹 화면에서 PDF 분석과
+Claude 검증 결과 반영까지 진행할 수 있다.
+
+기존 독립 창이 필요한 경우에는 아래 Tkinter GUI도 계속 사용할 수 있다.
 `mockexam_db/grammar_gui.pyw`를 더블클릭하면 창이 뜹니다(콘솔 창 없이 pythonw로 실행).
 - **① PDF 분석 (spaCy) 탭** — PDF를 선택하면 파일명에서 연/월/학년을 자동 인식하고,
   "분석해서 저장하기"를 누르면 `여기에 PDF 끌어놓기.bat`/`drop_ingest.py`와 똑같이

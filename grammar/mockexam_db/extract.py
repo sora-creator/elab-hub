@@ -10,10 +10,21 @@ reliable given quotes, abbreviations ("Mr.", "U.S."), decimals, etc.
 import re
 import pdfplumber
 
+# Black circled numbers are sentence boundaries in the supported exam PDFs.
+# White circled numbers (①) are commonly answer choices, so treating them as
+# boundaries incorrectly extracts Korean choices and fragments such as "(c)".
 MARKER_RE = re.compile(r'[❶-❿⓫-⓴]')
 KOREAN_RE = re.compile(r'[가-힣]')
 QUESTION_HEADER_RE = re.compile(r'^(\d+(?:~\d+)?번)\s*\[(.+?)\]')
+QUESTION_SECTION_RE = re.compile(
+    # 일부 시험지는 PDF 텍스트가 ``18.다음``처럼 문항번호 점 뒤의
+    # 공백을 잃는다. 공백 유무와 관계없이 18. / 18.다음을 모두 잡는다.
+    r'^(?:(\d+(?:~\d+)?번)\s*\[(.+?)\]|(\d{1,2})\.\s*([^\n]+))\s*',
+    re.MULTILINE,
+)
+WHITE_OPTION_RE = re.compile(r'[①-⑳]')
 TRAILING_LABEL_RE = re.compile(r'\(\s*[A-E]\s*\)\s*$')
+LEADING_LABEL_RE = re.compile(r'^\s*(?:\(\s*[A-Ea-e]\s*\)|[A-Ea-e][.)])\s*')
 TERMINAL_PUNCT_RE = re.compile(r'[.!?][\'"”’]?')
 # question-number markers like " 43. " that show up right after a real
 # sentence ends, introducing the next Korean question -- treated as a cut point
@@ -52,7 +63,51 @@ def _strip_trailing_label(text: str) -> str:
     return TRAILING_LABEL_RE.sub('', text).strip()
 
 
+def _strip_leading_label(text: str) -> str:
+    return LEADING_LABEL_RE.sub('', text).strip()
+
+
 SENT_SPLIT_RE = re.compile(r'(?<=[.!?])[\'"”’]?\s+(?=[A-Z"“‘(])')
+LATIN_WORD_RE = re.compile(r"[A-Za-z]+(?:['’-][A-Za-z]+)?")
+
+
+def _is_english_sentence(text: str) -> bool:
+    words = LATIN_WORD_RE.findall(text)
+    korean_count = len(KOREAN_RE.findall(text))
+    return len(text.strip()) >= 20 and len(words) >= 4 and korean_count <= max(2, len(words) // 3)
+
+
+def _fallback_sentences(page_text: str, keep_numbered_lines: bool = False):
+    """Extract English prose from PDFs that have no circled markers."""
+    # Lines containing white circled numbers are answer/example choices, not
+    # the passage to analyze. Removing the whole line also prevents the first
+    # choice from surviving when only ② onwards are preserved by the PDF font.
+    if keep_numbered_lines:
+        # 35번은 지문의 각 문장 앞에 ①~⑤를 붙이는 유형이다. 이 원문자를
+        # 객관식 보기로 오인해 줄 전체를 삭제하면 지문이 모두 사라진다.
+        page_text = WHITE_OPTION_RE.sub(' ', page_text)
+    else:
+        page_text = '\n'.join(
+            line for line in page_text.splitlines() if not WHITE_OPTION_RE.search(line)
+        )
+    text = PUA_RE.sub(' ', page_text)
+    text = _normalize_punctuation(text)
+    text = re.sub(r'(?<=\w)-\s*\n\s*(?=\w)', '', text)
+    text = re.sub(r'\s+', ' ', text).strip()
+    if not text:
+        return []
+
+    sentences = []
+    for candidate in SENT_SPLIT_RE.split(text):
+        candidate = re.sub(r'^.*?\]\s*', '', candidate).strip()
+        candidate = re.sub(r'^\d{1,3}[.)]\s*', '', candidate).strip()
+        first = re.search(r'[A-Za-z"\']', candidate)
+        if first:
+            candidate = candidate[first.start():].strip()
+        candidate = _strip_leading_label(candidate)
+        if _is_english_sentence(candidate):
+            sentences.append(candidate)
+    return sentences
 
 
 def _trim_last_chunk(text: str):
@@ -74,6 +129,9 @@ def _trim_last_chunk(text: str):
         idx = text.find(marker)
         if idx != -1:
             cut_candidates.append(idx)
+    m = WHITE_OPTION_RE.search(text)
+    if m:
+        cut_candidates.append(m.start())
     m = QUESTION_NUM_RE.search(text)
     if m:
         cut_candidates.append(m.start())
@@ -94,39 +152,59 @@ def _trim_last_chunk(text: str):
     return pieces if pieces else [text]
 
 
+def _extract_sentences_from_body(page_text: str, keep_numbered_lines: bool = False):
+    """Extract passage sentences from one already-separated question body."""
+    parts = MARKER_RE.split(page_text)
+    markers = MARKER_RE.findall(page_text)
+    if not markers:
+        return _fallback_sentences(page_text, keep_numbered_lines)
+    sentences = []
+    n = len(markers)
+    for i in range(n):
+        chunk = parts[i + 1] if i + 1 < len(parts) else ''
+        if i == n - 1:
+            for piece in _trim_last_chunk(_clean_marker_text_raw(chunk)):
+                piece = _strip_leading_label(piece)
+                if piece and _is_english_sentence(piece):
+                    sentences.append(piece)
+        else:
+            chunk = _strip_leading_label(_strip_trailing_label(_clean_marker_text(chunk))).strip()
+            if chunk and _is_english_sentence(chunk):
+                sentences.append(chunk)
+    return sentences
+
+
+def extract_question_sections_from_page(page_text: str):
+    """Return every question on a page as (number, type, sentences)."""
+    headers = list(QUESTION_SECTION_RE.finditer(page_text))
+    if not headers:
+        return [(None, None, _extract_sentences_from_body(page_text))]
+    sections = []
+    for index, header in enumerate(headers):
+        body_start = header.end()
+        body_end = headers[index + 1].start() if index + 1 < len(headers) else len(page_text)
+        body = page_text[body_start:body_end]
+        if header.group(1):
+            question_no, question_type = header.group(1), header.group(2)
+        else:
+            question_no = header.group(3) + '번'
+            question_type = re.sub(r'\s*\[[^]]+\]\s*$', '', header.group(4)).strip()
+        question_match = re.search(r'\d+', str(question_no or ''))
+        keep_numbered_lines = bool(question_match and int(question_match.group()) == 35)
+        sections.append((question_no, question_type, _extract_sentences_from_body(body, keep_numbered_lines)))
+    return sections
+
+
 def extract_sentences_from_page(page_text: str):
     """
     Returns (question_no, question_type, [sentence, sentence, ...])
     for one page of the PDF. question_type is the bracketed label,
     e.g. '목적 추론'.
     """
-    lines = page_text.split('\n')
-    question_no, question_type = None, None
-    for line in lines[:4]:
-        m = QUESTION_HEADER_RE.match(line.strip())
-        if m:
-            question_no, question_type = m.group(1), m.group(2)
-            break
-
-    parts = MARKER_RE.split(page_text)
-    markers = MARKER_RE.findall(page_text)
-    # parts[0] is header/instruction text before the first marker (discarded)
-    sentences = []
-    n = len(markers)
-    for i in range(n):
-        chunk = parts[i + 1] if i + 1 < len(parts) else ''
-        is_last = (i == n - 1)
-        if is_last:
-            for piece in _trim_last_chunk(_clean_marker_text_raw(chunk)):
-                if piece:
-                    sentences.append(piece)
-        else:
-            chunk = _clean_marker_text(chunk)
-            chunk = _strip_trailing_label(chunk)
-            chunk = chunk.strip()
-            if chunk:
-                sentences.append(chunk)
-    return question_no, question_type, sentences
+    sections = extract_question_sections_from_page(page_text)
+    if not sections:
+        return None, None, []
+    return sections[0]
 
 
 def _clean_marker_text_raw(raw: str) -> str:
@@ -141,16 +219,31 @@ def extract_exam_sentences(pdf_path: str):
     Yields dicts: {question_no, question_type, sentence_index, text}
     for every English sentence found in the PDF.
     """
+    seen = set()
     with pdfplumber.open(pdf_path) as pdf:
         for page in pdf.pages:
-            text = page.extract_text() or ''
-            if not text.strip():
-                continue
-            q_no, q_type, sentences = extract_sentences_from_page(text)
-            for idx, sent in enumerate(sentences, start=1):
-                yield {
-                    'question_no': q_no,
-                    'question_type': q_type,
-                    'sentence_index': idx,
-                    'text': sent,
-                }
+            # Korean mock-exam sheets use two independent columns. Extracting
+            # the full page interleaves the left listening questions with the
+            # right reading passage, so parse each column separately.
+            gutter = float(page.width) / 2
+            columns = [page.crop((0, 0, gutter, page.height)), page.crop((gutter, 0, page.width, page.height))]
+            for column in columns:
+                text = column.extract_text() or ''
+                if not text.strip():
+                    continue
+                for q_no, q_type, sentences in extract_question_sections_from_page(text):
+                    question_match = re.search(r'\d+', str(q_no or ''))
+                    if not question_match or int(question_match.group()) < 18:
+                        continue
+                    for idx, sent in enumerate(sentences, start=1):
+                        sent = _strip_leading_label(sent)
+                        duplicate_key = re.sub(r'\s+', ' ', sent).strip().casefold()
+                        if duplicate_key in seen:
+                            continue
+                        seen.add(duplicate_key)
+                        yield {
+                            'question_no': q_no,
+                            'question_type': q_type,
+                            'sentence_index': idx,
+                            'text': sent,
+                        }
