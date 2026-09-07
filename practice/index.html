@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ELAB · 교사용</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
+<script src="../shared/pdfLibrary.js?v=preserve-reviewed-upload-16"></script>
+<script src="../shared/appsScriptTransport.js?v=p0-transport-1"></script>
+<script src="../exam/js/questionTypes.js?v=reading-v1"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: {
+      brand: { 50:'#f0f5fa',100:'#e0eaf3',200:'#bfd2e3',400:'#5484aa',500:'#326b98',600:'#245984' },
+      coral: { 200:'#fecaca',400:'#f87171',500:'#ef4444' },
+      grass: { 400:'#4ade80',500:'#22c55e' }
+    } } }
+  };
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+  body{overflow-x:hidden;font-family:"Pretendard",-apple-system,BlinkMacSystemFont,sans-serif;background:var(--eb-bg);}
+  .btn3d{--btn-edge:#17456f;position:relative;border-radius:1rem;font-weight:800;box-shadow:0 4px 0 var(--btn-edge);transition:transform .05s,box-shadow .05s;}
+  .btn3d:active{transform:translateY(3px);box-shadow:0 1px 0 var(--btn-edge);}
+  .btn3d:disabled{opacity:.45;cursor:not-allowed;}
+  .pageimg{max-width:100%;display:block;border-radius:.75rem;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:9998;padding:16px;}
+  .omr-circle{display:inline-flex;flex:1;align-items:center;justify-content:center;height:32px;border-radius:999px;border:2px solid #cbd5e1;font-size:12px;font-weight:800;color:#475569;cursor:pointer;background:#fff;transition:.1s;}
+  .omr-circle.on{background:#22c55e;border-color:#22c55e;color:#fff;}
+  .practice-workspace{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) 330px;height:100vh;background:#dbe4ec;overflow:hidden}
+  .practice-viewer{display:flex;min-width:0;flex-direction:column;overflow:hidden}
+  .practice-viewer+.practice-viewer{border-left:1px solid #b9c7d4}
+  .practice-toolbar{display:flex;align-items:center;gap:6px;min-height:54px;padding:8px 12px;border-bottom:1px solid #cbd5e1;background:#f8fafc}
+  .practice-toolbar button{min-width:38px;height:36px;padding:0 11px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-weight:800;cursor:pointer}
+  .practice-toolbar button:hover{border-color:#326b98;color:#245984}.practice-toolbar .viewer-scale{min-width:58px;text-align:center;font-size:12px;font-weight:850;color:#475569}
+  .practice-toolbar .pen-toggle.on{border-color:#2563eb;background:#2563eb;color:#fff;box-shadow:0 0 0 2px rgba(37,99,235,.16)}
+  .practice-toolbar .pen-eraser.on{border-color:#d97706;background:#d97706;color:#fff;box-shadow:0 0 0 2px rgba(217,119,6,.16)}
+  .practice-toolbar .pen-clear{color:#be123c}.practice-toolbar .pen-clear:disabled{opacity:.4;cursor:not-allowed}
+  .viewer-pane-label{flex:0 0 auto;color:#245984;font-size:11px;font-weight:900}
+  .practice-toolbar-help{display:none;color:#64748b;font-size:11px;font-weight:700;white-space:nowrap}
+  .practice-timer{margin-left:auto;padding:7px 12px;border-radius:8px;background:#17263a;color:#fff;font-variant-numeric:tabular-nums;font-size:13px;font-weight:850;letter-spacing:.04em}
+  .pdf-viewport{flex:1;overflow:auto;cursor:grab;overscroll-behavior:contain;user-select:none}.pdf-viewport.dragging{cursor:grabbing}.pdf-viewport.pen-mode{cursor:crosshair}
+  .pdf-document{position:relative;width:100%;padding:18px;transform-origin:top left}.pdf-document .pageimg{width:100%;margin:0 auto 14px;border-radius:4px;box-shadow:0 3px 18px rgba(15,23,42,.18);pointer-events:none}
+  .pdf-ink-layer{position:absolute;inset:0;z-index:3;width:100%;height:100%;pointer-events:none}.pdf-viewport.pen-mode .pdf-ink-layer{pointer-events:auto;touch-action:none}
+  .practice-omr{overflow-y:auto;border-left:1px solid #d8e1ea;background:#fff}
+  .practice-preview-wide{position:relative;left:50%;width:calc(100vw - 40px);margin-left:calc(-50vw + 20px);padding-right:0!important;padding-left:0!important;border-right:0!important;border-left:0!important;border-radius:0!important}
+  .practice-preview-wide .teacher-practice-preview{border-right:1px solid #cbd5e1;border-left:1px solid #cbd5e1;border-radius:12px}
+  .student-practice-workspace{position:relative;left:50%;width:calc(100vw - 40px);margin-left:calc(-50vw + 20px);border-radius:12px}
+  .teacher-practice-preview{height:clamp(820px,88vh,1000px);border:1px solid #cbd5e1;border-radius:16px;overflow:hidden}
+  @media(max-width:820px){.practice-workspace{display:flex;height:auto;min-height:100vh;flex-direction:column;overflow:visible}.practice-viewer{height:68vh}.practice-viewer+.practice-viewer{border-top:1px solid #b9c7d4;border-left:0}.practice-omr{border-top:1px solid #d8e1ea;border-left:0}.practice-toolbar{overflow-x:auto}.teacher-practice-preview{height:auto;max-height:none;overflow:visible}}
+</style>
+</head>
+<body>
+<div id="app" class="mx-auto min-h-screen max-w-[1900px] pb-16"></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =====================================================================
+   공통 유틸 (exam/index.html 관습 재사용)
+===================================================================== */
+function uid(n){ n=n||10; const c='PUBLIC_IDENTIFIER_REMOVED'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// 모듈 간 이동 바 -- exam/index.html의 elabNav와 동일한 마크업+클래스(shared/theme.css의 .eb-nav)를
+// 그대로 씀(학생 화면에는 안 씀).
+function elabNav(current){
+  return `<div data-elab-nav="${current}"></div>`;
+}
+function $(sel, root){ return (root||document).querySelector(sel); }
+function $all(sel, root){ return Array.from((root||document).querySelectorAll(sel)); }
+
+let toastTimer=null;
+function toast(msg){
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.opacity = '1';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>{ el.style.opacity='0'; }, 2200);
+}
+
+function askConfirm(msg){
+  return new Promise(resolve=>{
+    const wrap = document.createElement('div');
+    wrap.className = 'modal-backdrop';
+    wrap.innerHTML = `
+      <div class="w-full max-w-sm rounded-3xl bg-white p-5 shadow-2xl">
+        <p class="mb-4 whitespace-pre-line text-sm font-bold text-slate-700">${esc(msg)}</p>
+        <div class="flex gap-2">
+          <button data-a="0" class="btn3d flex-1 bg-slate-100 py-2.5 text-sm text-slate-600" style="--btn-edge:#cbd5e1">취소</button>
+          <button data-a="1" class="btn3d flex-1 bg-brand-500 py-2.5 text-sm text-white">확인</button>
+        </div>
+      </div>`;
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', e=>{
+      const b = e.target.closest('button');
+      if(!b && e.target!==wrap) return;
+      const ok = b ? b.dataset.a==='1' : false;
+      wrap.remove();
+      resolve(ok);
+    });
+  });
+}
+
+// 동적 script JSONP가 file:// 보안 정책에 막힐 때를 위한 예비 방식
+// Apps Script 응답은 CORS를 허용하므로 우선 일반 fetch로 읽는다. file://에서 동적
+// script 콜백만 차단되는 브라우저에서도 동작하며, fetch가 불가능할 때만 JSONP로 되돌아간다.
+async function jsonpFetch(url, timeoutMs){
+  try{return await ELABAppsScript.read(url,{timeoutMs:timeoutMs||12000})}
+  catch(error){console.error('[ELAB practice read]',{code:error.code||'NETWORK_ERROR',message:error.message||String(error)});return null}
+}
+
+// POST (no-cors — 응답 확인 불가, 전송 시도만)
+async function hookPost(url, body){
+  try{
+    await fetch(url, { method:'POST', mode:'no-cors', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+    return true;
+  }catch(e){ return false; }
+}
+
+async function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+function formatElapsed(ms){const total=Math.max(0,Math.floor(ms/1000)),h=Math.floor(total/3600),m=Math.floor(total%3600/60),s=total%60;return(h?String(h).padStart(2,'0')+':':'')+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')}
+function mountPdfViewer(viewport,documentEl,controls){
+  if(!viewport||!documentEl)return null;
+  let scale=1,drag=null,penOn=false,eraserOn=false,activeStroke=null,erasing=false;
+  const strokes=[];
+  const ink=document.createElement('canvas');ink.className='pdf-ink-layer';ink.setAttribute('aria-label','시험지 필기 영역');documentEl.appendChild(ink);
+  const eraserCursor=document.createElement('div');eraserCursor.setAttribute('aria-hidden','true');Object.assign(eraserCursor.style,{position:'absolute',zIndex:'4',display:'none',width:'36px',height:'36px',border:'2px solid #d97706',borderRadius:'999px',background:'rgba(255,255,255,.18)',pointerEvents:'none',transform:'translate(-50%,-50%)'});documentEl.appendChild(eraserCursor);
+  const renderInk=()=>{const rect=documentEl.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2),w=Math.max(1,Math.round(rect.width*dpr)),h=Math.max(1,Math.round(rect.height*dpr));if(ink.width!==w||ink.height!==h){ink.width=w;ink.height=h}const ctx=ink.getContext('2d');ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,w,h);ctx.setTransform(dpr,0,0,dpr,0,0);ctx.strokeStyle='#185adb';ctx.lineWidth=2.4;ctx.lineCap='round';ctx.lineJoin='round';strokes.forEach(points=>{if(!points.length)return;ctx.beginPath();ctx.moveTo(points[0].x*rect.width,points[0].y*rect.height);points.slice(1).forEach(p=>ctx.lineTo(p.x*rect.width,p.y*rect.height));ctx.stroke()});if(controls&&controls.clear)controls.clear.disabled=!strokes.length};
+  const pointFromEvent=event=>{const rect=ink.getBoundingClientRect();return{x:(event.clientX-rect.left)/rect.width,y:(event.clientY-rect.top)/rect.height}};
+  const segmentDistance=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,length2=dx*dx+dy*dy;if(!length2)return Math.hypot(p.x-a.x,p.y-a.y);const t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/length2)),x=a.x+t*dx,y=a.y+t*dy;return Math.hypot(p.x-x,p.y-y)};
+  const eraseAt=event=>{const rect=ink.getBoundingClientRect(),point=pointFromEvent(event),radius=18,next=[];eraserCursor.style.left=(point.x*rect.width)+'px';eraserCursor.style.top=(point.y*rect.height)+'px';strokes.forEach(stroke=>{let chunk=[];stroke.forEach(value=>{const outside=Math.hypot((value.x-point.x)*rect.width,(value.y-point.y)*rect.height)>radius;if(outside)chunk.push(value);else{if(chunk.length>1)next.push(chunk);chunk=[]}});if(chunk.length>1)next.push(chunk)});strokes.splice(0,strokes.length,...next);renderInk()};
+  const apply=()=>{documentEl.style.width=(scale*100)+'%';if(controls&&controls.scale)controls.scale.textContent=Math.round(scale*100)+'%'};
+  const zoom=(delta,clientX,clientY)=>{const old=scale;scale=Math.max(.55,Math.min(2.6,Math.round((scale+delta)*20)/20));if(scale===old)return;const rect=viewport.getBoundingClientRect(),x=(clientX==null?rect.left+rect.width/2:clientX)-rect.left+viewport.scrollLeft,y=(clientY==null?rect.top+rect.height/2:clientY)-rect.top+viewport.scrollTop;apply();viewport.scrollLeft=x*scale/old-(clientX==null?rect.width/2:clientX-rect.left);viewport.scrollTop=y*scale/old-(clientY==null?rect.height/2:clientY-rect.top)};
+  viewport.addEventListener('wheel',event=>{if(!event.ctrlKey)return;event.preventDefault();zoom(event.deltaY<0?.1:-.1,event.clientX,event.clientY)},{passive:false});
+  viewport.addEventListener('pointerdown',event=>{if(event.button!==0||penOn||eraserOn)return;drag={x:event.clientX,y:event.clientY,left:viewport.scrollLeft,top:viewport.scrollTop};viewport.classList.add('dragging');viewport.setPointerCapture(event.pointerId)});
+  viewport.addEventListener('pointermove',event=>{if(!drag)return;viewport.scrollLeft=drag.left-(event.clientX-drag.x);viewport.scrollTop=drag.top-(event.clientY-drag.y)});
+  const end=()=>{drag=null;viewport.classList.remove('dragging')};viewport.addEventListener('pointerup',end);viewport.addEventListener('pointercancel',end);
+  ink.addEventListener('pointerdown',event=>{if(event.button!==0||(!penOn&&!eraserOn))return;event.preventDefault();ink.setPointerCapture(event.pointerId);if(eraserOn){erasing=true;eraseAt(event);return}activeStroke=[pointFromEvent(event)];strokes.push(activeStroke);renderInk()});
+  ink.addEventListener('pointermove',event=>{if(eraserOn){const point=pointFromEvent(event),rect=ink.getBoundingClientRect();eraserCursor.style.left=(point.x*rect.width)+'px';eraserCursor.style.top=(point.y*rect.height)+'px'}if(erasing){eraseAt(event);return}if(!activeStroke)return;activeStroke.push(pointFromEvent(event));renderInk()});ink.addEventListener('pointerleave',()=>{if(!erasing)eraserCursor.style.display='none'});ink.addEventListener('pointerenter',()=>{if(eraserOn)eraserCursor.style.display='block'});
+  const endInk=()=>{activeStroke=null;erasing=false};ink.addEventListener('pointerup',endInk);ink.addEventListener('pointercancel',endInk);
+  const syncTools=()=>{viewport.classList.toggle('pen-mode',penOn||eraserOn);eraserCursor.style.display=eraserOn?'block':'none';if(controls&&controls.pen){controls.pen.classList.toggle('on',penOn);controls.pen.textContent=penOn?'펜 끄기':'펜 쓰기';controls.pen.setAttribute('aria-pressed',String(penOn))}if(controls&&controls.eraser){controls.eraser.classList.toggle('on',eraserOn);controls.eraser.textContent=eraserOn?'지우개 끄기':'지우개';controls.eraser.setAttribute('aria-pressed',String(eraserOn))}};
+  if(controls){controls.zoomIn.onclick=()=>zoom(.1);controls.zoomOut.onclick=()=>zoom(-.1);controls.fit.onclick=()=>{scale=1;apply();viewport.scrollTo(0,0)};controls.pen.onclick=()=>{penOn=!penOn;if(penOn)eraserOn=false;syncTools()};controls.eraser.onclick=()=>{eraserOn=!eraserOn;if(eraserOn)penOn=false;syncTools()};controls.clear.onclick=()=>{strokes.length=0;renderInk()}}
+  const resizeObserver=new ResizeObserver(renderInk);resizeObserver.observe(documentEl);documentEl.querySelectorAll('img').forEach(img=>{if(!img.complete)img.addEventListener('load',renderInk,{once:true})});
+  apply();renderInk();return{zoom};
+}
+function viewerToolbar(idPrefix,showTimer,label){return`<div class="practice-toolbar"><span class="viewer-pane-label">${label||''}</span><button id="${idPrefix}-fit" type="button">맞춤</button><button id="${idPrefix}-zoom-out" type="button" title="축소">축소 −</button><span id="${idPrefix}-scale" class="viewer-scale">100%</span><button id="${idPrefix}-zoom-in" type="button" title="확대">확대 ＋</button><button id="${idPrefix}-pen" class="pen-toggle" type="button" aria-pressed="false" title="시험지 위에 필기">펜 쓰기</button><button id="${idPrefix}-eraser" class="pen-eraser" type="button" aria-pressed="false" title="마우스로 문질러 선 하나씩 지우기">지우개</button><button id="${idPrefix}-clear" class="pen-clear" type="button" title="이 창의 필기를 모두 지우기" disabled>필기 전체 지우기</button><span class="practice-toolbar-help">휠: 위아래 이동 · Ctrl+휠: 확대/축소 · 펜/지우개를 끄면 드래그 이동</span>${showTimer?`<span id="${idPrefix}-timer" class="practice-timer">00:00</span>`:''}</div>`}
+function viewerControls(prefix){return{zoomOut:document.getElementById(prefix+'-zoom-out'),zoomIn:document.getElementById(prefix+'-zoom-in'),fit:document.getElementById(prefix+'-fit'),scale:document.getElementById(prefix+'-scale'),pen:document.getElementById(prefix+'-pen'),eraser:document.getElementById(prefix+'-eraser'),clear:document.getElementById(prefix+'-clear')}}
+
+/* =====================================================================
+   설정 저장소 — 웹훅 URL/토큰은 exam/index.html과 완전히 같은 localStorage
+   키(mockexam.delivery)를 그대로 씀(같은 origin이라 자동 공유, 한 번만 설정하면 됨).
+   만든 실전연습 목록은 exam의 myExams()와 같은 패턴, 별도 키(mockexam.myPractice).
+===================================================================== */
+const DEFAULT_DELIVERY_URL='https://example.invalid/apps-script-endpoint';
+function deliveryCfg(){
+  let c=null;
+  try{ c=JSON.parse(localStorage.getItem('mockexam.delivery')||'null'); }catch(e){}
+  if(!c || !c.url){ try{ c=JSON.parse(localStorage.getItem('hub.delivery')||'null'); }catch(e){} }
+  if(!c) c = { url:'', token:'' };
+  return c;
+}
+function saveDelivery(c){
+  const value=JSON.stringify({url:String(c&&c.url||'').trim(),token:String(c&&c.token||'').trim()});
+  ['hub.delivery','mockexam.delivery','grammarhub.delivery','vpang.delivery'].forEach(key=>localStorage.setItem(key,value));
+}
+
+function myPractice(){
+  try{ return JSON.parse(localStorage.getItem('mockexam.myPractice')||'[]'); }catch(e){ return []; }
+}
+function saveMyPractice(entry){
+  const list = myPractice();
+  const idx = list.findIndex(x=>x.practiceKey===entry.practiceKey);
+  if(idx===-1) list.unshift(entry); else list[idx]=entry;
+  localStorage.setItem('mockexam.myPractice', JSON.stringify(list));
+}
+
+/* =====================================================================
+   PDF → 페이지 이미지 (문항 경계 감지 없이 페이지 그대로) — exam의 analyzePdf보다
+   훨씬 단순함(OMR 방식은 문항별로 안 자르니까 마커/⑤보기줄 감지가 필요 없음).
+===================================================================== */
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const GRADE_DIGIT_RE = /([123])\s*학년/;
+const GRADE_DIRECT_RE = /(고[123])/;
+const YEAR_RE = /(20\d{2})\s*년/;
+const MONTH_RE = /(?<!\d)(\d{1,2})\s*월/;
+function guessFromFilename(filename){
+  let grade = null, m;
+  m = GRADE_DIGIT_RE.exec(filename);
+  if(m) grade = '고'+m[1];
+  else { m = GRADE_DIRECT_RE.exec(filename); if(m) grade = m[1]; }
+  let year = null;
+  m = YEAR_RE.exec(filename);
+  if(m) year = parseInt(m[1], 10);
+  let month = null;
+  m = MONTH_RE.exec(filename);
+  if(m) month = parseInt(m[1], 10);
+  return { year, month, grade };
+}
+
+async function renderPdfPages(arrayBuffer, onProgress){
+  const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(arrayBuffer) }).promise;
+  const images = [];
+  const RENDER_SCALE = 4.0;
+  const TARGET_W = 2200; // 교사 미리보기와 학생 화면에서 크게 확대해도 선명하도록 초고해상도로 보관
+  for(let i=0;i<pdf.numPages;i++){
+    const page = await pdf.getPage(i+1);
+    const viewport = page.getViewport({ scale: RENDER_SCALE });
+    const canvas = document.createElement('canvas');
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+    let outCanvas = canvas;
+    if(canvas.width > TARGET_W){
+      const scale = TARGET_W / canvas.width;
+      const oc = document.createElement('canvas');
+      oc.width = TARGET_W; oc.height = Math.round(canvas.height*scale);
+      oc.getContext('2d').drawImage(canvas, 0, 0, oc.width, oc.height);
+      outCanvas = oc;
+    }
+    images.push(outCanvas.toDataURL('image/jpeg', 0.96));
+    if(onProgress) onProgress(i+1, pdf.numPages);
+  }
+  return images;
+}
+
+/* =====================================================================
+   교사 앱
+===================================================================== */
+const TeacherApp = {
+  draft: null, // { pageImages, title, range, startNum, endNum, nums, answersByNum, step, publish }
+
+  async init(){
+    const approved=await ElabPdfLibrary.list().then(rows=>rows.filter(ElabPdfLibrary.isReviewed));
+    const approvedIds=new Set(approved.map(record=>record.id)),approvedTitles=new Set(approved.map(record=>record.title||record.examName||record.name));
+    const kept=myPractice().filter(item=>item.sourcePdfId?approvedIds.has(item.sourcePdfId):approvedTitles.has(item.title));
+    localStorage.setItem('mockexam.myPractice',JSON.stringify(kept));
+    this.render();
+  },
+
+  render(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div>
+        ${elabNav('practice')}
+        <div class="eb-page-header">
+          <h1>실전연습</h1>
+          <p>PDF를 페이지 그대로 보여주고, OMR 카드처럼 마킹하며 전체 소요시간을 재는 모의고사 모드예요.</p>
+        </div>
+      </div>
+      <main class="px-5 pt-3" id="tab-root"></main>
+    `;
+    const root = document.getElementById('tab-root');
+    this.renderMake(root);
+  },
+
+  renderMake(root){
+    if(!this.draft){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-3 text-base font-extrabold">PDF 자료 선택</h2>
+          <div id="practice-pdf-library" class="mb-3 max-h-64 overflow-auto rounded-xl bg-slate-50 p-2"></div>
+          <a href="../pdf/index.html" class="mb-3 block rounded-xl border border-slate-200 bg-white px-4 py-3 text-center text-sm font-bold text-slate-600">PDF 자료관리로 이동</a>
+          <div id="pdf-progress" class="hidden text-xs font-bold text-brand-500"></div>
+        </section>`;
+      ElabPdfLibrary.mountPicker('#practice-pdf-library',record=>this.loadPdf(ElabPdfLibrary.asFile(record),record),{reviewedOnly:true});
+      return;
+    }
+    if(this.draft.step==='range') return RangeStep.render(root, this.draft, ()=>this.render());
+    if(this.draft.step==='publish') return PracticePublishStep.render(root, this.draft, ()=>{ this.draft=null; this.render(); });
+  },
+
+  async loadPdf(file,sharedRecord){
+    if(!ElabPdfLibrary.isReviewed(sharedRecord)){toast('PDF 자료관리에서 렌더링 검수를 완료해주세요.');return}
+    const record=sharedRecord||await ElabPdfLibrary.saveFile(file);
+    const progress=document.getElementById('pdf-progress');
+    progress.classList.remove('hidden');progress.textContent='페이지를 이미지로 변환하는 중...';
+    const pageImages=await renderPdfPages(await file.arrayBuffer(),(cur,total)=>{progress.textContent=`페이지 변환 중 (${cur}/${total})`});
+    const guessed=guessFromFilename(file.name),autoTitle=record.title||((guessed.year&&guessed.month&&guessed.grade)?`${guessed.year}년 ${guessed.month}월 ${guessed.grade} 모의고사`:'');
+    this.draft={pageImages,title:autoTitle,range:'',startNum:record.startNum||'',endNum:record.endNum||'',nums:[],answersByNum:{...(record.answers||{})},sourcePdfId:record.id,sourcePdfReviewedAt:record.renderReviewedAt||record.updatedAt||0,step:'range'};
+    this.render();
+  }
+};
+
+/* --------- 1단계: 시험 정보 + 문항 범위 --------- */
+const RangeStep = {
+  render(root, draft, rerender){
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-4 shadow">
+        <h2 class="mb-3 text-base font-extrabold">시험 정보 · 문항 범위</h2>
+        <label class="mb-1 block text-xs font-bold text-slate-500">시험 이름표 ${draft.title?'<span class="font-normal text-slate-400">(파일명에서 자동으로 채웠어요, 필요하면 고치세요)</span>':''}</label>
+        <input id="rs-title" value="${esc(draft.title||'')}" placeholder="예: 2025년 9월 고2 모의고사" class="mb-3 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <label class="mb-1 block text-xs font-bold text-slate-500">범위 표시(선택)</label>
+        <input id="rs-range" value="${esc(draft.range||'')}" placeholder="예: 18~45번" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <div class="mb-2 flex items-end gap-2">
+          <div class="flex-1">
+            <label class="mb-1 block text-xs font-bold text-slate-500">시작 문항번호</label>
+            <input id="rs-start" type="number" value="${draft.startNum||''}" class="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+          </div>
+          <div class="pb-2.5 text-slate-400">~</div>
+          <div class="flex-1">
+            <label class="mb-1 block text-xs font-bold text-slate-500">끝 문항번호</label>
+            <input id="rs-end" type="number" value="${draft.endNum||''}" class="w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+          </div>
+        </div>
+        <p class="mb-4 text-[11px] text-slate-500">업로드한 PDF는 총 ${draft.pageImages.length}쪽이에요. 입력한 시작·끝 번호 전체가 학생 OMR 답안지에 표시됩니다. 정답은 PDF 자료관리에서 입력합니다.</p>
+        <div class="flex gap-2">
+          <button id="rs-cancel" class="btn3d flex-1 bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">취소</button>
+          <button id="rs-next" class="btn3d flex-1 bg-brand-500 py-3 text-sm text-white">과제배정으로 이동 →</button>
+        </div>
+      </section>
+      <section class="practice-preview-wide mt-4 bg-white p-4 shadow">
+        <div class="mb-3"><h2 class="text-base font-extrabold">학생 화면 미리보기</h2><p class="mt-1 text-xs text-slate-500">두 시험지 창은 각각 따로 이동·확대할 수 있습니다. ‘펜 쓰기’를 켜면 시험지 위에 메모할 수 있고, 펜을 끄면 다시 드래그로 이동할 수 있습니다. 휠은 위아래 이동, Ctrl+휠은 확대·축소이며 OMR은 가장 오른쪽에 있습니다.</p></div>
+        <div class="teacher-practice-preview practice-workspace">
+          <div class="practice-viewer">${viewerToolbar('tp-left',false,'시험지 1')}<div id="tp-left-viewport" class="pdf-viewport"><div id="tp-left-document" class="pdf-document">${draft.pageImages.map((src,i)=>`<img class="pageimg" src="${esc(src)}" alt="왼쪽 시험지 ${i+1}쪽">`).join('')}</div></div></div>
+          <div class="practice-viewer">${viewerToolbar('tp-right',false,'시험지 2')}<div id="tp-right-viewport" class="pdf-viewport"><div id="tp-right-document" class="pdf-document">${draft.pageImages.map((src,i)=>`<img class="pageimg" src="${esc(src)}" alt="오른쪽 시험지 ${i+1}쪽">`).join('')}</div></div></div>
+          <aside class="practice-omr p-4"><div class="sticky top-0 z-10 -mx-4 -mt-4 mb-3 border-b border-slate-100 bg-white px-4 py-3 text-center text-xs font-extrabold text-slate-500">OMR 답안지</div><div id="tp-omr"></div></aside>
+        </div>
+      </section>`;
+    mountPdfViewer(document.getElementById('tp-left-viewport'),document.getElementById('tp-left-document'),viewerControls('tp-left'));
+    mountPdfViewer(document.getElementById('tp-right-viewport'),document.getElementById('tp-right-document'),viewerControls('tp-right'));
+    const previewAnswers={};
+    const paintPreviewOmr=()=>{
+      const start=parseInt(document.getElementById('rs-start').value,10)||18,end=parseInt(document.getElementById('rs-end').value,10)||45;
+      const nums=[];for(let n=start;n<=end&&nums.length<200;n++)nums.push(n);
+      document.getElementById('tp-omr').innerHTML=nums.map(n=>`<div class="mb-1.5 flex items-center gap-1"><b class="w-7 text-xs text-slate-500">${n}</b>${[1,2,3,4,5].map(v=>`<button type="button" data-n="${n}" data-v="${v}" class="omr-circle ${previewAnswers[n]===v?'on':''}">${v}</button>`).join('')}</div>`).join('');
+    };
+    document.getElementById('tp-omr').addEventListener('click',event=>{const button=event.target.closest('button[data-n]');if(!button)return;const n=Number(button.dataset.n),v=Number(button.dataset.v);previewAnswers[n]=previewAnswers[n]===v?null:v;paintPreviewOmr()});
+    ['rs-start','rs-end'].forEach(id=>document.getElementById(id).addEventListener('input',paintPreviewOmr));
+    paintPreviewOmr();
+    document.getElementById('rs-cancel').addEventListener('click', async ()=>{
+      const ok = await askConfirm('지금까지 변환한 페이지가 사라져요. 취소할까요?');
+      if(!ok) return;
+      TeacherApp.draft=null; rerender();
+    });
+    document.getElementById('rs-next').addEventListener('click', ()=>{
+      draft.title = document.getElementById('rs-title').value.trim();
+      draft.range = document.getElementById('rs-range').value.trim();
+      const start = parseInt(document.getElementById('rs-start').value, 10);
+      const end = parseInt(document.getElementById('rs-end').value, 10);
+      if(!draft.title) return toast('시험 이름표를 입력해주세요');
+      if(!start || !end || end<start) return toast('시작/끝 문항번호를 확인해주세요');
+      if(end-start+1 > 200) return toast('문항 수가 너무 많아요');
+      draft.startNum = start; draft.endNum = end;
+      draft.nums = [];
+      for(let n=start;n<=end;n++) draft.nums.push(n);
+      ElabPdfLibrary.update({title:draft.title,startNum:start,endNum:end});
+      draft.step = 'publish';
+      rerender();
+    });
+  }
+};
+
+/* --------- 2단계: OMR 정답지 입력 --------- */
+const PracticeAnswerStep = {
+  firstUnanswered(draft){
+    return draft.nums.find(n => !draft.answersByNum[n]) || null;
+  },
+  render(root, draft, rerender){
+    const nextNum = this.firstUnanswered(draft);
+    const answeredCount = draft.nums.filter(n=>draft.answersByNum[n]).length;
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-4 shadow">
+        <h2 class="mb-3 text-base font-extrabold">정답 입력 (OMR 정답지)</h2>
+        <div class="mb-4 rounded-2xl border-2 border-dashed border-brand-200 bg-brand-50 p-3">
+          <label class="mb-1 block text-xs font-bold text-brand-600">⚡ 빠른 입력 (문항번호,정답 입력 후 Enter) — ${answeredCount}/${draft.nums.length}개 입력됨</label>
+          <textarea id="pa-quick" rows="1" autocomplete="off" placeholder="예: 18,3" class="w-full resize-none rounded-xl border-2 border-slate-100 bg-white px-3 py-2 text-sm font-mono outline-none focus:border-brand-400">${esc(nextNum?nextNum+',':'')}</textarea>
+          <p class="mt-1 text-[11px] leading-relaxed text-slate-500">Enter를 누르면 자동으로 다음 문항번호가 채워져요. 여러 줄 붙여넣기도 가능해요(줄마다 "번호,정답").</p>
+        </div>
+        <div id="pa-grid" class="grid grid-cols-1 gap-1.5 sm:grid-cols-2"></div>
+        <div class="mt-4 flex gap-2">
+          <button id="pa-back" class="btn3d flex-1 bg-slate-100 py-3 text-sm text-slate-600" style="--btn-edge:#cbd5e1">← 뒤로</button>
+          <button id="pa-next" class="btn3d flex-1 bg-brand-500 py-3 text-sm text-white">다음: 게시 →</button>
+        </div>
+      </section>`;
+    const grid = document.getElementById('pa-grid');
+    draft.nums.forEach(n=>{
+      const row = document.createElement('div');
+      row.className = 'flex items-center gap-1.5 rounded-xl border border-slate-100 p-2';
+      row.innerHTML = `<span class="w-10 shrink-0 text-xs font-bold text-slate-500">${n}번</span>
+        <div class="flex flex-1 gap-1">
+          ${[1,2,3,4,5].map(v=>`<button data-n="${n}" data-v="${v}" class="pa-ans flex-1 rounded-lg border-2 py-1.5 text-xs font-bold ${draft.answersByNum[n]===v?'border-brand-500 bg-brand-50 text-brand-600':'border-slate-100 text-slate-600'}">${'①②③④⑤'[v-1]}</button>`).join('')}
+        </div>`;
+      grid.appendChild(row);
+    });
+    grid.addEventListener('click', e=>{
+      const b = e.target.closest('.pa-ans');
+      if(!b) return;
+      draft.answersByNum[+b.dataset.n] = +b.dataset.v;
+      ElabPdfLibrary.update({answers:draft.answersByNum});
+      this.render(root, draft, rerender);
+    });
+
+    const quick = document.getElementById('pa-quick');
+    quick.focus();
+    quick.setSelectionRange(quick.value.length, quick.value.length);
+    quick.addEventListener('keydown', e=>{
+      if(e.key!=='Enter' || e.shiftKey) return;
+      e.preventDefault();
+      const raw = quick.value.trim();
+      if(!raw) return;
+      const lines = raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      let applied = 0, unknown = [];
+      lines.forEach(line=>{
+        const m = line.match(/^(\d{1,3})\s*[,.\s]\s*([1-5])$/);
+        if(!m){ unknown.push(line); return; }
+        const num = parseInt(m[1], 10);
+        if(!draft.nums.includes(num)){ unknown.push(line); return; }
+        draft.answersByNum[num] = parseInt(m[2], 10);
+        applied++;
+      });
+      if(applied===0) return toast('형식을 확인해주세요 (예: 18,3)');
+      if(unknown.length) toast(`${unknown.length}개는 범위 안에 없어요: ${unknown.join(', ')}`);
+      ElabPdfLibrary.update({answers:draft.answersByNum});
+      this.render(root, draft, rerender);
+    });
+
+    document.getElementById('pa-back').addEventListener('click', ()=>{ draft.step='range'; rerender(); });
+    document.getElementById('pa-next').addEventListener('click', ()=>{
+      const missing = draft.nums.filter(n=>!draft.answersByNum[n]).length;
+      if(missing>0) toast(`정답 없는 문항 ${missing}개는 나중에 "결과" 탭에서 다시 만들어 채울 수 있어요`);
+      draft.step = 'publish';
+      rerender();
+    });
+  }
+};
+
+/* --------- 3단계: 게시 (exam의 PublishStep과 같은 백그라운드 진행 패턴) --------- */
+const PracticePublishStep = {
+  paintProgress(draft){
+    const progress = document.getElementById('pp-progress');
+    const btn = document.getElementById('pp-go');
+    if(!progress || !btn) return;
+    if(draft.publish && draft.publish.status==='running'){
+      progress.classList.remove('hidden');
+      progress.textContent = draft.publish.message;
+      btn.disabled = true;
+    }
+  },
+
+  async runJob(draft){
+    const cfg = deliveryCfg();
+    draft.publish = { status:'running', message:'시작하는 중...', link:null, error:null };
+    this.paintProgress(draft);
+    try{
+      const practiceKey = draft.practiceKey || (draft.practiceKey=uid(14));
+      draft.publish.practiceKey=practiceKey;
+      // 검수 완료된 같은 PDF는 페이지 이미지를 과제마다 다시 올리지 않는다.
+      // 여백 수정 등으로 재검수하면 renderReviewedAt이 바뀌므로 새 페이지 버전이 저장된다.
+      const sourceKey=String(draft.sourcePdfId||practiceKey).replace(/[^a-zA-Z0-9_-]/g,'_');
+      const reviewedVersion=Math.max(0,Number(draft.sourcePdfReviewedAt)||0);
+      const pageImageKeys = draft.pageImages.map((_, i)=> 'practice-'+sourceKey+'-'+reviewedVersion+'-page'+i);
+      // 가벼운 공개 조회로 먼저 URL/배포 접근 자체를 확인한다. 학생 목록은 시트 초기화나
+      // 캐시 갱신 때문에 오래 걸릴 수 있으므로 URL 연결 검사로 사용하지 않는다.
+      draft.publish.message='웹훅 주소 확인 중...';
+      this.paintProgress(draft);
+      let endpointCheck=await jsonpFetch(cfg.url+'?action=imageStatus&key='+encodeURIComponent('practice-endpoint-check-'+practiceKey),20000);
+      // file:// 실행에서는 페이지별 localStorage에 예전 배포 주소가 남을 수 있다. 저장된
+      // 주소만 실패하고 프로젝트 기본 주소가 응답하면 토큰은 유지한 채 주소를 자동 복구한다.
+      if(!endpointCheck&&cfg.url!==DEFAULT_DELIVERY_URL){
+        draft.publish.message='기본 저장 서버로 다시 연결 중...';
+        this.paintProgress(draft);
+        const fallbackCheck=await jsonpFetch(DEFAULT_DELIVERY_URL+'?action=imageStatus&key='+encodeURIComponent('practice-endpoint-check-'+practiceKey),20000);
+        if(fallbackCheck){cfg.url=DEFAULT_DELIVERY_URL;saveDelivery(cfg);endpointCheck=fallbackCheck}
+      }
+      if(!endpointCheck){
+        draft.publish={status:'error',message:'',link:null,error:'웹훅 주소에 연결할 수 없습니다. 환경설정의 Apps Script 웹앱 주소가 /exec로 끝나는지, 배포 액세스 권한이 허용되어 있는지 확인해주세요.'};
+        this.repaint(draft);
+        return;
+      }
+      // 주소가 살아 있으면 별도로 교사용 TOKEN을 검사한다. 첫 시트 접근이 느린 배포를
+      // 주소 장애로 오인하지 않도록 충분히 기다린다.
+      draft.publish.message='비밀 토큰 확인 중...';
+      this.paintProgress(draft);
+      const authCheck=await jsonpFetch(cfg.url+'?action=listStudents&token='+encodeURIComponent(cfg.token),45000);
+      if(!authCheck){
+        draft.publish={status:'error',message:'',link:null,error:'웹훅 주소는 정상 응답하지만 교사용 데이터 확인이 지연되고 있습니다. 잠시 후 다시 시도해주세요.'};
+        this.repaint(draft);
+        return;
+      }
+      if(authCheck.error){
+        draft.publish={status:'error',message:'',link:null,error:'환경설정의 비밀 토큰이 Apps Script 프로젝트 설정의 스크립트 속성 TOKEN 값과 일치하지 않습니다.'};
+        this.repaint(draft);
+        return;
+      }
+      // 고해상도 전체 페이지를 보내기 전에 현재 웹앱 배포/토큰으로 쓰기가 가능한지 짧게 확인한다.
+      // 이 단계가 실패하면 같은 원인으로 모든 페이지를 오래 재시도하지 않는다.
+      const probeKey='practice-upload-probe-'+practiceKey;
+      const probeDataUrl='data:image/png;base64,PUBLIC_IDENTIFIER_REMOVED+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      let uploadChannelReady=false;
+      for(let probeAttempt=0;probeAttempt<2&&!uploadChannelReady;probeAttempt++){
+        draft.publish.message='저장 서버 연결 확인 중...';
+        this.paintProgress(draft);
+        await hookPost(cfg.url,{action:'uploadImage',token:cfg.token,imageKey:probeKey,dataUrl:probeDataUrl});
+        for(let check=0;check<5&&!uploadChannelReady;check++){
+          await sleep(350+check*150);
+          const probe=await jsonpFetch(cfg.url+'?action=imageStatus&key='+encodeURIComponent(probeKey),12000);
+          uploadChannelReady=!!(probe&&probe.found);
+        }
+      }
+      if(!uploadChannelReady){
+        draft.publish={status:'error',message:'',link:null,error:'웹훅 주소와 토큰은 정상입니다. Apps Script에서 Drive 저장 권한을 승인하고, 웹앱을 “실행 사용자: 나”, “액세스 권한: 모든 사용자”로 새 버전 재배포해주세요. PDF 페이지 업로드는 시작하지 않았습니다.'};
+        this.repaint(draft);
+        return;
+      }
+      const failedPages=[];
+      let completedPages=0;
+      const uploadPage=async i=>{
+        let found = false;
+        for(let uploadAttempt=0;uploadAttempt<3&&!found;uploadAttempt++){
+          const existing=await jsonpFetch(cfg.url+'?action=imageStatus&key='+encodeURIComponent(pageImageKeys[i]),20000);
+          if(existing&&existing.found){found=true;break}
+          draft.publish.message=`전체 ${completedPages}/${pageImageKeys.length} · ${i+1}쪽 업로드 중${uploadAttempt?' · 자동 재시도 '+(uploadAttempt+1):''}`;
+          this.paintProgress(draft);
+          const sent=await hookPost(cfg.url,{action:'uploadImage',token:cfg.token,imageKey:pageImageKeys[i],dataUrl:draft.pageImages[i]});
+          if(!sent)continue;
+          for(let check=0;check<10&&!found;check++){
+            await sleep(250+check*120);
+            draft.publish.message=`전체 ${completedPages}/${pageImageKeys.length} · ${i+1}쪽 저장 확인 중 (${check+1}/10)`;
+            this.paintProgress(draft);
+            const r=await jsonpFetch(cfg.url+'?action=imageStatus&key='+encodeURIComponent(pageImageKeys[i]),20000);
+            if(r&&r.found)found=true;
+          }
+        }
+        if(!found)failedPages.push(i+1);
+        completedPages++;
+        draft.publish.message=`전체 ${completedPages}/${pageImageKeys.length} · 페이지 저장 중`;
+        this.paintProgress(draft);
+      };
+      // Apps Script의 Drive 생성과 ExamImages 시트 기록은 공유 자원을 사용한다.
+      // 과도한 동시 요청으로 전 페이지 확인이 실패하지 않도록 2개까지만 병렬 처리한다.
+      let nextPage=0;
+      const worker=async()=>{while(nextPage<pageImageKeys.length){const pageIndex=nextPage++;await uploadPage(pageIndex)}};
+      await Promise.all(Array.from({length:Math.min(2,pageImageKeys.length)},worker));
+      if(failedPages.length){
+        failedPages.sort((a,b)=>a-b);
+        draft.publish = { status:'error', message:'', link:null, error:`${failedPages.join(', ')}쪽 업로드를 확인하지 못했습니다. ‘다시 시도’를 누르면 이 페이지만 다시 확인·업로드합니다.` };
+        this.repaint(draft);
+        return;
+      }
+
+      draft.publish.message = '시험 정보 저장 중...';
+      this.paintProgress(draft);
+      const answers = draft.nums.map(n=>draft.answersByNum[n]||null);
+      const sourceText=String(draft.title||''),year=(sourceText.match(/(20\d{2})\s*년?/)||[])[1]||'',month=(sourceText.match(/(1[0-2]|[1-9])\s*월/)||[])[1]||'',grade=(sourceText.match(/고\s*([123])/)||[])[1]||'';
+      const source={exam_type:'PRACTICE_EXAM',year,grade:grade?'고'+grade:'',month,exam_name:draft.title||'',source_file:draft.sourcePdfId||''};
+      await hookPost(cfg.url, {
+        action:'savePractice', token: cfg.token, practiceKey,
+        title: draft.title, range: draft.range,
+        pageImageKeys, answers, questionNums: draft.nums, expiresAt: 0,
+        questions:draft.nums.map((num,index)=>{const type=classifyQuestionTypeByNum(num);return{
+          content_type:'PRACTICE_EXAM',answer_type:'MULTIPLE_CHOICE',source_question_no:num,
+          correct_answer_json:answers[index],source,
+          category_keys:readingCategoryKey(type)?[readingCategoryKey(type)]:[]
+        }})
+      });
+      await sleep(300);
+
+      const link = location.origin + location.pathname + '?session=' + practiceKey + '&hook=' + encodeURIComponent(cfg.url);
+      const answersComplete = answers.every(a=>a!=null);
+      saveMyPractice({ practiceKey, title: draft.title, range: draft.range, count: draft.nums.length,sourcePdfId:draft.sourcePdfId||'',
+        pageCount: draft.pageImages.length, link, createdAt: Date.now(), questionNums: draft.nums, answers, answersComplete });
+
+      draft.publish = { status:'done', message:'', link, practiceKey, error:null };
+      this.repaint(draft);
+    }catch(e){
+      draft.publish = { status:'error', message:'', link:null, error:(e&&e.message)||String(e) };
+      this.repaint(draft);
+    }
+  },
+
+  repaint(draft){
+    const root = document.getElementById('tab-root');
+    if(!root || !TeacherApp.draft || TeacherApp.draft.step!=='publish') return;
+    this.render(root, draft, this._onDone);
+  },
+
+  render(root, draft, onDone){
+    this._onDone = onDone;
+    const cfg = deliveryCfg();
+    if(!cfg.url || !cfg.token){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-2 text-base font-extrabold">먼저 백엔드 설정이 필요해요</h2>
+          <p class="mb-3 text-xs text-slate-600">환경설정에서 Google Sheets 연결 정보를 먼저 등록해주세요.</p>
+          <a href="../teacher/settings.html" class="btn3d block w-full bg-brand-500 py-3 text-center text-sm text-white">환경설정으로 이동</a>
+        </section>`;
+      return;
+    }
+
+    const status = draft.publish ? draft.publish.status : 'idle';
+
+    if(status==='done'){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-2 text-base font-extrabold text-grass-500">✅ 과제자료 저장 완료</h2>
+          <p class="text-xs text-slate-600">통합 과제배정 화면으로 이동하고 있습니다.</p>
+        </section>`;
+      sessionStorage.removeItem('elab.assignment.workspace.v1');
+      let assignmentDraft={};try{assignmentDraft=JSON.parse(sessionStorage.getItem('elab.assignment.draft.v2')||'{}')||{}}catch(error){}
+      const ref=String(draft.publish.practiceKey||''),cart=Array.isArray(assignmentDraft.cart)?assignmentDraft.cart:[],pending=Array.isArray(assignmentDraft.pendingItems)?assignmentDraft.pendingItems:[];
+      if(ref&&!cart.some(item=>item.content_type==='PRACTICE_EXAM'&&String(item.content_ref_id)===ref))cart.push({content_type:'PRACTICE_EXAM',content_ref_id:ref});
+      if(ref&&!pending.some(item=>item.content_type==='PRACTICE_EXAM'&&String(item.content_ref_id)===ref))pending.push({content_type:'PRACTICE_EXAM',content_ref_id:ref,title:draft.title||'실전연습',content_link:draft.publish.link||'',extra:{questionNums:draft.nums||[]}});
+      assignmentDraft.cart=cart;assignmentDraft.pendingItems=pending;
+      try{sessionStorage.setItem('elab.assignment.draft.v2',JSON.stringify(assignmentDraft))}catch(error){}
+      location.replace('../teacher/assignments.html');
+      return;
+    }
+
+    if(status==='error'){
+      root.innerHTML = `
+        <section class="rounded-3xl bg-white p-5 shadow">
+          <h2 class="mb-2 text-base font-extrabold text-coral-500">⚠️ 과제자료 저장 실패</h2>
+          <p class="mb-3 text-xs text-slate-600">${esc(draft.publish.error||'')}</p>
+          <button id="pp-retry" class="btn3d w-full bg-brand-500 py-3 text-sm text-white">다시 시도</button>
+        </section>`;
+      document.getElementById('pp-retry').addEventListener('click', ()=>{ this.runJob(draft); });
+      return;
+    }
+
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-5 shadow">
+        <h2 class="mb-2 text-base font-extrabold">과제자료 저장 중</h2>
+        <p class="mb-3 text-xs text-slate-600">페이지 ${draft.pageImages.length}장을 저장한 뒤 통합 과제배정 화면으로 자동 이동합니다.</p>
+        <div id="pp-progress" class="text-xs font-bold text-brand-500">저장을 준비하고 있습니다.</div>
+        <button id="pp-go" class="hidden" type="button" aria-hidden="true"></button>
+      </section>`;
+    if(status==='running')this.paintProgress(draft);
+    else setTimeout(()=>{if(TeacherApp.draft===draft&&!draft.publish)this.runJob(draft)},0);
+  }
+};
+
+/* =====================================================================
+   결과 탭
+===================================================================== */
+const ResultsTab = {
+  render(root){
+    const list = myPractice();
+    if(list.length===0){
+      root.innerHTML = `<p class="rounded-2xl bg-white p-5 text-center text-xs text-slate-500 shadow">아직 만든 시험이 없어요.</p>`;
+      return;
+    }
+    root.innerHTML = `<div class="space-y-3">${list.map((x,i)=>`
+      <div class="rounded-3xl bg-white p-4 shadow">
+        <div class="mb-1 flex items-center justify-between gap-2">
+          <b class="text-sm">${esc(x.title)}</b>
+          <span class="shrink-0 text-[11px] text-slate-400">${x.count}문항 · ${x.pageCount}쪽</span>
+        </div>
+        <div class="mb-2 text-xs text-slate-500">${esc(x.range||'')}</div>
+        <div class="flex flex-wrap gap-1.5">
+          <a href="../teacher/assignments.html?content_type=PRACTICE_EXAM&content_ref_id=${encodeURIComponent(x.practiceKey)}" class="rounded-lg bg-grass-50 px-2.5 py-1.5 text-[11px] font-bold text-grass-600">과제 배정</a>
+          <button data-view="${i}" class="rounded-lg bg-slate-100 px-2.5 py-1.5 text-[11px] font-bold text-slate-600">결과 보기</button>
+          <button data-copy="${i}" class="rounded-lg bg-brand-50 px-2.5 py-1.5 text-[11px] font-bold text-brand-600">링크 복사</button>
+        </div>
+        <div data-detail="${i}" class="mt-2 hidden"></div>
+      </div>`).join('')}</div>`;
+
+    list.forEach((x,i)=>{
+      document.querySelector(`[data-copy="${i}"]`).addEventListener('click', ()=>{
+        navigator.clipboard.writeText(x.link).then(()=>toast('링크를 복사했어요')).catch(()=>toast('복사 실패'));
+      });
+      document.querySelector(`[data-view="${i}"]`).addEventListener('click', ()=>{
+        const detail = document.querySelector(`[data-detail="${i}"]`);
+        const opening = detail.classList.contains('hidden');
+        detail.classList.toggle('hidden');
+        if(opening) loadDetail(detail, x.practiceKey);
+      });
+    });
+
+    async function loadDetail(detail, practiceKey){
+      detail.innerHTML = `<p class="text-xs text-slate-400">불러오는 중...</p>`;
+      const cfg = deliveryCfg();
+      const r = await jsonpFetch(cfg.url + '?action=listPracticeResults&key=' + encodeURIComponent(practiceKey) + '&token=' + encodeURIComponent(cfg.token));
+      if(!r || r.error){ detail.innerHTML = `<p class="text-xs text-coral-500">결과를 못 불러왔어요.</p>`; return; }
+      if(r.results.length===0){ detail.innerHTML = `<p class="text-xs text-slate-400">아직 제출한 학생이 없어요.</p>`; return; }
+      detail.innerHTML = r.results.map(res=>{
+        const min = Math.floor((res.totalTimeMs||0)/60000), sec = Math.floor(((res.totalTimeMs||0)%60000)/1000);
+        return `<div class="mb-1.5 rounded-xl bg-slate-50 px-3 py-2 text-xs">
+          <b>${esc(res.name)}</b> · ${res.score}/${r.correctAnswers.length}개 정답 · ${min}분 ${sec}초
+        </div>`;
+      }).join('');
+    }
+  }
+};
+
+/* =====================================================================
+   설정 탭 — 웹훅 URL/토큰은 개별문제 시험보기와 같은 키를 그대로 공유
+===================================================================== */
+const SettingsTab = {
+  render(root){
+    const cfg = deliveryCfg();
+    root.innerHTML = `
+      <section class="rounded-3xl bg-white p-5 shadow">
+        <h2 class="mb-2 text-base font-extrabold">백엔드 설정</h2>
+        <p class="mb-3 text-xs text-slate-600">🖊️ 개별문제 시험보기와 같은 구글시트 웹훅 주소를 그대로 쓰면 돼요 — 한 번만 설정하면 두 곳 다 적용돼요(같은 localStorage를 공유).</p>
+        <label class="mb-1 block text-xs font-bold text-slate-500">웹훅 URL</label>
+        <input id="st-url" value="${esc(cfg.url)}" class="mb-3 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <label class="mb-1 block text-xs font-bold text-slate-500">토큰</label>
+        <input id="st-token" value="${esc(cfg.token)}" class="mb-4 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2.5 text-sm outline-none focus:border-brand-400" />
+        <button id="st-save" class="btn3d w-full bg-brand-500 py-3 text-sm text-white">저장</button>
+      </section>`;
+    document.getElementById('st-save').addEventListener('click', ()=>{
+      saveDelivery({ url: document.getElementById('st-url').value.trim(), token: document.getElementById('st-token').value.trim() });
+      toast('저장했어요');
+    });
+  }
+};
+
+/* =====================================================================
+   학생 앱 — PDF 페이지 전체 + 옆(또는 아래)에 고정된 OMR 마킹 패널.
+   문항별 타이머가 아니라 시작~제출까지 전체 소요시간 하나만 잼.
+===================================================================== */
+const StudentApp = {
+  key: null, hookUrl: null, practice: null, name: '', answers: {}, tStart: 0,
+
+  async init(key, hookUrl){
+    this.key = key;
+    this.hookUrl = hookUrl;
+    const app = document.getElementById('app');
+    if(!hookUrl){
+      app.innerHTML = `<div class="p-6 text-center text-sm text-coral-500">잘못된 링크예요(hook 누락). 선생님께 다시 문의해주세요.</div>`;
+      return;
+    }
+    app.innerHTML = `<div class="p-6 text-center text-sm text-slate-600">불러오는 중...</div>`;
+    const pageParams = new URLSearchParams(location.search);
+    const assignmentSuffix = ['assignment_target_id','student_id','assignmentCapability'].map(k=>pageParams.get(k)?'&'+k+'='+encodeURIComponent(pageParams.get(k)):'').join('');
+    const r = await jsonpFetch(hookUrl + '?action=fetchPractice&key=' + encodeURIComponent(key) + assignmentSuffix);
+    if(!r || !r.found){
+      app.innerHTML = `<div class="p-6 text-center text-sm text-coral-500">${r&&r.expired?'시험이 만료됐어요.':'시험을 찾을 수 없어요.'}</div>`;
+      return;
+    }
+    this.practice = r;
+    this.renderGate();
+  },
+
+  renderGate(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div class="mb-2 text-2xl font-extrabold text-slate-800">🧾 ${esc(this.practice.title)}</div>
+        <div class="mb-6 text-sm text-slate-600">${esc(this.practice.range||'')} · ${this.practice.questionNums.length}문항 · ${this.practice.pageImages.length}쪽</div>
+        <input id="sg-name" placeholder="이름을 입력하세요" class="mb-4 w-full max-w-xs rounded-xl border-2 border-slate-100 bg-slate-50 px-4 py-3 text-center text-sm outline-none focus:border-brand-400" />
+        <button id="sg-start" class="btn3d w-full max-w-xs bg-brand-500 py-3.5 text-sm text-white">시작하기</button>
+      </div>`;
+    document.getElementById('sg-start').addEventListener('click', ()=>{
+      const name = document.getElementById('sg-name').value.trim();
+      if(!name) return toast('이름을 입력해주세요');
+      this.name = name;
+      this.renderNotice();
+    });
+  },
+
+  // 문항별이 아니라 "전체 소요시간"을 측정한다는 걸 시작 전에 미리 안내
+  renderNotice(){
+    const app = document.getElementById('app');
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+        <div class="mb-3 text-3xl">⏱️</div>
+        <div class="mb-2 text-lg font-extrabold text-slate-800">시작하면 시간이 측정돼요</div>
+        <p class="mb-3 max-w-sm text-sm leading-relaxed text-slate-600">문항별로 재는 게 아니라, <b>시험 전체를 마치는 데 걸리는 시간</b> 하나만 측정해요. 실제 시험처럼 끝까지 풀고 제출해보세요.</p>
+        <div class="mb-6 max-w-sm rounded-2xl bg-slate-100 px-4 py-3 text-left text-xs font-bold leading-relaxed text-slate-600">시험지 조작<br>• 마우스 휠: 위아래 이동<br>• Ctrl + 마우스 휠: 확대·축소<br>• 시험지를 왼쪽 버튼으로 끌기: 원하는 위치로 이동<br>• 상단의 맞춤·확대·축소 버튼도 사용할 수 있어요.</div>
+        <button id="nt-start" class="btn3d w-full max-w-xs bg-brand-500 py-3.5 text-sm text-white">시험 시작 🚀</button>
+      </div>`;
+    document.getElementById('nt-start').addEventListener('click', ()=>{
+      this.answers = {};
+      this.tStart = Date.now();
+      this.renderMain();
+    });
+  },
+
+  renderMain(){
+    const app = document.getElementById('app');
+    const nums = this.practice.questionNums;
+    app.innerHTML = `
+      <div class="practice-workspace student-practice-workspace">
+        <section class="practice-viewer">
+          ${viewerToolbar('sm-left',true,'시험지 1')}
+          <div id="sm-left-pages" class="pdf-viewport"><div id="sm-left-document" class="pdf-document">
+            ${this.practice.pageImages.map((url,i)=>`<img class="pageimg" src="${esc(url)}" alt="왼쪽 시험지 ${i+1}쪽" />`).join('')}
+          </div></div>
+        </section>
+        <section class="practice-viewer">
+          ${viewerToolbar('sm-right',false,'시험지 2')}
+          <div id="sm-right-pages" class="pdf-viewport"><div id="sm-right-document" class="pdf-document">
+            ${this.practice.pageImages.map((url,i)=>`<img class="pageimg" src="${esc(url)}" alt="오른쪽 시험지 ${i+1}쪽" />`).join('')}
+          </div></div>
+        </section>
+        <aside id="sm-omr-wrap" class="practice-omr p-4">
+          <div class="sticky top-0 z-10 -mx-4 -mt-4 mb-3 border-b border-slate-100 bg-white px-4 py-3"><div class="text-center text-xs font-extrabold text-slate-500">OMR 답안지</div><div id="sm-answer-count" class="mt-1 text-center text-[11px] font-bold text-brand-600">0 / ${nums.length} 마킹</div></div>
+          <div id="sm-omr" class="space-y-1.5"></div>
+          <button id="sm-submit" class="btn3d sticky bottom-2 mt-4 w-full bg-grass-500 py-3 text-sm text-white">시험 종료하고 제출하기</button>
+        </aside>
+      </div>
+    `;
+    const omr = document.getElementById('sm-omr');
+    omr.innerHTML = nums.map(n=>`
+      <div class="flex items-center gap-1.5">
+        <span class="w-8 shrink-0 text-[11px] font-bold text-slate-500">${n}</span>
+        <div class="flex flex-1 gap-1">
+          ${[1,2,3,4,5].map(v=>`<button type="button" data-n="${n}" data-v="${v}" class="omr-circle">${v}</button>`).join('')}
+        </div>
+      </div>`).join('');
+    omr.addEventListener('click', e=>{
+      const b = e.target.closest('button[data-n]');
+      if(!b) return;
+      const n = +b.dataset.n, v = +b.dataset.v;
+      this.answers[n] = (this.answers[n]===v) ? null : v;
+      this.paintOmr();
+    });
+    this.paintOmr();
+    mountPdfViewer(document.getElementById('sm-left-pages'),document.getElementById('sm-left-document'),viewerControls('sm-left'));
+    mountPdfViewer(document.getElementById('sm-right-pages'),document.getElementById('sm-right-document'),viewerControls('sm-right'));
+    clearInterval(this.timerId);const timer=document.getElementById('sm-left-timer'),paintTimer=()=>{if(timer)timer.textContent=formatElapsed(Date.now()-this.tStart)};paintTimer();this.timerId=setInterval(paintTimer,1000);
+    document.getElementById('sm-submit').addEventListener('click', ()=>this.finish());
+  },
+
+  paintOmr(){
+    const nums = this.practice.questionNums;
+    $all('#sm-omr button[data-n]').forEach(b=>{
+      const n = +b.dataset.n, v = +b.dataset.v;
+      b.classList.toggle('on', this.answers[n]===v);
+    });
+    const count=document.getElementById('sm-answer-count');if(count)count.textContent=nums.filter(n=>this.answers[n]).length+' / '+nums.length+' 마킹';
+  },
+
+  async finish(){
+    const nums = this.practice.questionNums;
+    const missing = nums.filter(n=>!this.answers[n]).length;
+    if(missing>0){
+      const ok = await askConfirm(`아직 답을 고르지 않은 문항이 ${missing}개 있어요. 그래도 제출할까요?`);
+      if(!ok) return;
+    }
+    const totalTimeMs = Date.now() - this.tStart;
+    clearInterval(this.timerId);
+    const answersArr = nums.map(n=>this.answers[n]||null);
+    const app = document.getElementById('app');
+    app.innerHTML = `<div class="p-6 text-center text-sm text-slate-600">채점 중...</div>`;
+    const resultKey = uid(24);
+    const studentAuth = this.practice.studentCapability
+      ? { studentCapability:this.practice.studentCapability }
+      : { studentSubmitToken:this.practice.studentSubmitToken||'' };
+    await hookPost(this.hookUrl, {
+      action:'submitPracticeResult', ...studentAuth,
+      practiceKey: this.key, name: this.name, answers: answersArr, totalTimeMs, resultKey,
+      assignment_target_id:new URLSearchParams(location.search).get('assignment_target_id')||'',
+      student_id:new URLSearchParams(location.search).get('student_id')||'',attempt_id:this.practice.attempt_id||'',attemptCapability:this.practice.attemptCapability||''
+    });
+
+    // no-cors POST 응답은 못 읽으므로, 채점 결과는 별도 GET으로 재조회(약간의 지연 대비 재시도)
+    let result = null;
+    for(let attempt=0; attempt<3 && !result; attempt++){
+      await sleep(800);
+      let resultUrl = this.hookUrl + '?action=fetchMyPracticeResult&key=' + encodeURIComponent(this.key)
+        + '&name=' + encodeURIComponent(this.name) + '&resultKey=' + encodeURIComponent(resultKey);
+      if(this.practice.studentCapability) resultUrl += '&studentCapability=' + encodeURIComponent(this.practice.studentCapability);
+      else resultUrl += '&studentSubmitToken=' + encodeURIComponent(this.practice.studentSubmitToken||'');
+      const r = await jsonpFetch(resultUrl);
+      if(r && r.found) result = r;
+    }
+
+    if(!result){
+      app.innerHTML = `
+        <div class="flex min-h-screen flex-col items-center justify-center px-6 text-center">
+          <div class="mb-2 text-3xl">🎉</div>
+          <div class="mb-2 text-lg font-extrabold text-slate-800">제출 완료!</div>
+          <div class="text-sm text-slate-600">${esc(this.name)}님, 수고했어요.<br/>선생님이 결과를 확인할 거예요.</div>
+        </div>`;
+      return;
+    }
+
+    if(this.practice.attempt_id){
+      const completion=await ELABAppsScript.verifyCompletion(this.hookUrl,{assignment_target_id:new URLSearchParams(location.search).get('assignment_target_id')||'',student_id:new URLSearchParams(location.search).get('student_id')||'',attempt_id:this.practice.attempt_id||'',attemptCapability:this.practice.attemptCapability||''}).catch(error=>({complete:false,reason:error.code||'NETWORK_ERROR'}));
+      if(!completion.complete){app.innerHTML='<div class="flex min-h-screen flex-col items-center justify-center px-6 text-center"><div class="mb-2 text-lg font-extrabold text-coral-600">일부 결과가 저장되지 않았습니다.</div><div class="text-sm text-slate-600">다시 시도해주세요. ('+esc(completion.reason||'VERIFY_FAILED')+')</div></div>';return}
+    }
+
+    const min = Math.floor(totalTimeMs/60000), sec = Math.floor((totalTimeMs%60000)/1000);
+    app.innerHTML = `
+      <div class="flex min-h-screen flex-col items-center px-6 py-10">
+        <div class="mb-2 text-3xl">🎉</div>
+        <div class="mb-1 text-lg font-extrabold text-slate-800">${esc(this.name)}님, 수고했어요!</div>
+        <div class="mb-6 text-sm text-slate-600">${result.score} / ${result.total}개 정답 · ${min}분 ${sec}초</div>
+        <div class="w-full max-w-md space-y-1.5">
+          ${nums.map((n,i)=>{
+            const mine = result.studentAnswers[i], correct = result.correctAnswers[i];
+            const ok = mine!=null && Number(mine)===Number(correct);
+            return `<div class="flex items-center justify-between rounded-xl px-3 py-2 text-xs ${ok?'bg-grass-50 text-grass-700':'bg-coral-50 text-coral-600'}">
+              <span class="font-bold">${n}번</span>
+              <span>${ok?'✓ 정답':`✗ 내 답 ${mine||'-'} · 정답 ${correct||'-'}`}</span>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+  }
+};
+
+function boot(){
+  const params = new URLSearchParams(location.search);
+  const session = params.get('session');
+  document.title = session ? 'ELAB · 학생용' : 'ELAB · 교사용';
+  if(session) StudentApp.init(session, params.get('hook'));
+  else TeacherApp.init();
+}
+boot();
+</script>
+</body>
+</html>
