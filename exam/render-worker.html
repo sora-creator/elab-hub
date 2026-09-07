@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELAB · PDF 렌더링</title>
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="../shared/pdfLibrary.js?v=grade-year-folder-2"></script>
+</head>
+<body class="bg-slate-50 p-5 text-slate-700">
+<main class="mx-auto max-w-md rounded-3xl bg-white p-5 shadow">
+  <h1 class="text-lg font-extrabold">PDF 렌더링</h1>
+  <p class="mt-2 text-sm text-slate-500">이 작업 창을 열어 둔 채 다른 페이지를 이용할 수 있습니다.</p>
+  <p id="progress" class="mt-5 rounded-xl bg-slate-50 p-4 text-sm font-bold">준비 중...</p>
+  <button id="stop" type="button" class="mt-4 w-full rounded-xl bg-red-500 px-4 py-3 font-extrabold text-white">렌더링 중단</button>
+</main>
+<script>window.appState={teacher:{tool:'sentence-structure',tab:'make',draft:null}};</script>
+<script src="js/utils.js"></script>
+<script src="js/questionTypes.js?v=sentence-clean-2"></script>
+<script src="js/examDataStore.js?v=idb-db-2"></script>
+<script src="js/examMediaStore.js?v=idb-media-1"></script>
+<script src="js/pdfService.js?v=connected-complete-24"></script>
+<script src="js/passageBank.js?v=sticky-marker-tools-1"></script>
+<script src="js/teacherApp.js?v=background-render-stop-1"></script>
+<script>
+(async function(){
+  const progress=document.getElementById('progress'),stopButton=document.getElementById('stop'),channel=new BroadcastChannel('elab-pdf-render');
+  let stopped=false;const stop=()=>{stopped=true;progress.textContent='현재 페이지 처리를 멈추는 중입니다...';stopButton.disabled=true};
+  stopButton.onclick=stop;channel.onmessage=event=>{if(event.data&&event.data.type==='stop')stop()};
+  const ids=(new URLSearchParams(location.search).get('ids')||'').split(',').filter(Boolean),records=[];
+  for(const id of ids){const record=await ElabPdfLibrary.get(id);if(record)records.push(record)}
+  let done=0,failed=0;
+  for(const record of records){
+    if(stopped)break;
+    const message=`PDF 렌더링 ${done+failed+1}/${records.length} · ${record.name}`;progress.textContent=message;channel.postMessage({type:'progress',message});
+    const result=await TeacherApp.importPdf(ElabPdfLibrary.asFile(record),record,{background:true,shouldStop:()=>stopped});
+    if(stopped)break;if(result)done++;else failed++;
+  }
+  stopButton.hidden=true;
+  const type=stopped?'stopped':'done',message=stopped?`렌더링을 중단했습니다. 완료된 PDF ${done}개는 저장되어 있습니다.`:`렌더링 완료 · 성공 ${done}개${failed?` · 실패 ${failed}개`:''}`;
+  progress.textContent=message;channel.postMessage({type,message});
+})();
+</script>
+</body>
+</html>
