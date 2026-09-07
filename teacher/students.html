@@ -3,67 +3,61 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>학생 관리 · ELAB</title>
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<title>ELAB · 교사용</title>
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = { theme: { extend: { colors: {
-    brand: { 50:'#eef2ff',100:'#e0e7ff',500:'#6366f1',600:'#4f46e5' },
-    teal: { 50:'#e1f5ee',500:'#1d9e75',600:'#0f6e56' },
-    coral: { 50:'#faece7',500:'#d85a30',600:'#993c1d' }
+    brand: { 50:'#f0f5fa',100:'#e0eaf3',500:'#326b98',600:'#245984' },
+    teal: { 50:'#e9fbf9',500:'#12bbaf',600:'#0e968e',700:'#0b746f' },
+    coral: { 50:'#fde2dd',500:'#b3492f',600:'#8f3a25' }
   } } } };
 </script>
 <style>
-  body{font-family:-apple-system,BlinkMacSystemFont,"Pretendard",sans-serif;background:#f8fafc;}
-  input[type=text]{padding:.55rem .7rem;border:2px solid #f1f5f9;background:#f8fafc;border-radius:.75rem;font-size:.85rem;outline:none;width:100%}
-  input[type=text]:focus{border-color:#a5b4fc}
-  label.f{display:block;font-size:.72rem;font-weight:700;color:#475569;margin-bottom:.25rem}
+  body{font-family:"Pretendard",-apple-system,BlinkMacSystemFont,sans-serif;background:var(--eb-bg);}
+  input[type=text]{width:100%;min-height:40px;padding:.55rem .72rem;border:1px solid var(--eb-border);background:#fff;border-radius:var(--eb-control-radius);font-size:.9rem;outline:none}
+  input[type=text]:focus{border-color:var(--eb-primary-600);box-shadow:0 0 0 3px rgba(14,116,144,.1)}
+  label.f{display:block;margin-bottom:.35rem;color:var(--eb-text-muted);font-size:.8rem;font-weight:700}
+  .workspace{width:calc(100% - 64px);max-width:1320px;margin:0 auto;padding:28px 0 48px}
+  .panel{border:1px solid var(--eb-border);border-radius:var(--eb-panel-radius);background:#fff;box-shadow:none}
+  .eb-page-header{min-height:52px!important;margin-bottom:12px!important}.student-register-label{position:relative;z-index:1;margin-bottom:-8px!important}.student-form{display:grid;grid-template-columns:minmax(125px,1fr) minmax(125px,1fr) 90px minmax(130px,1fr) minmax(170px,1.2fr) 140px 105px auto;align-items:end;column-gap:12px;row-gap:10px;margin-bottom:20px}.date-field label{display:block;margin-bottom:1px;color:var(--eb-text-muted);font-size:10px;font-weight:700;line-height:12px}.date-field input{height:40px;color:#94a3b8!important}.date-field input::-webkit-datetime-edit{color:#94a3b8}.date-field input.has-value,.date-field input.has-value::-webkit-datetime-edit{color:var(--eb-text)!important}.student-form #addStudent{min-height:40px;padding-top:.5rem;padding-bottom:.5rem}
+  @media(max-width:1100px){.student-form{grid-template-columns:repeat(3,minmax(0,1fr))}.student-form #newName{grid-column:span 2}.student-form #newEmail{grid-column:span 2}.student-form #addStudent{min-height:44px}}
+  @media(max-width:780px){.workspace{width:calc(100% - 40px)}.student-form{grid-template-columns:1fr 1fr}.student-form #newName,.student-form #newEmail{grid-column:1/-1}.student-form #addStudent{min-height:44px}}
+  @media(max-width:480px){.workspace{width:calc(100% - 28px);padding-top:16px}.student-form{grid-template-columns:1fr}.student-form #newName{grid-column:auto}.student-form input,.student-form button{width:100%!important}}
 </style>
 </head>
 <body>
-<div class="mx-auto min-h-screen max-w-2xl px-5 py-8">
-  <header class="mb-6">
-    <a href="../index.html" class="text-xs text-slate-600">&larr; 허브로</a>
-    <a href="./dashboard.html" class="ml-3 text-xs text-slate-600">📊 통합 대시보드</a>
-    <h1 class="mt-1 text-xl font-extrabold text-slate-800">👩‍🏫 학생 관리</h1>
-    <p class="mt-1 text-sm text-slate-600">학생별로 단어암기 · 시험보기 · 문법학습을 각각 배정해요</p>
-  </header>
+<div class="workspace min-h-screen">
+  <div data-elab-nav="students"></div>
+  <div class="eb-page-header">
+    <h1>학생관리</h1>
+  </div>
 
-  <section class="mb-5 rounded-3xl bg-white p-5 shadow">
-    <h2 class="mb-3 text-sm font-extrabold text-slate-700">⚙️ 설정 (허브 백엔드)</h2>
-    <p class="mb-3 text-xs text-slate-600">시험보기 모듈에 등록한 것과 같은 구글시트 웹훅 주소를 여기에도 등록하세요.</p>
-    <div class="mb-2 grid grid-cols-1 gap-2 sm:grid-cols-[1fr_160px]">
-      <div>
-        <label class="f">웹훅 URL</label>
-        <input type="text" id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec" />
-      </div>
-      <div>
-        <label class="f">비밀 토큰</label>
-        <input type="text" id="cfgToken" />
-      </div>
-    </div>
-    <button id="cfgSave" class="rounded-xl bg-slate-700 px-4 py-2 text-xs font-bold text-white">저장</button>
-    <span id="cfgStatus" class="ml-2 text-xs text-teal-600"></span>
-    <div id="portalLinkBox" class="mt-3 hidden rounded-2xl bg-slate-50 p-3">
-      <div class="mb-1 text-xs font-bold text-slate-600">🔗 학생 포털 링크 (학생 전체 공용, 이름·PIN은 학생이 직접 입력)</div>
-      <div class="flex gap-2">
-        <input type="text" id="portalLinkInput" readonly class="text-xs" style="background:#fff" />
-        <button id="portalLinkCopy" class="shrink-0 rounded-lg bg-slate-700 px-3 py-1.5 text-xs font-bold text-white">복사</button>
-      </div>
-    </div>
-  </section>
-
-  <section class="mb-5 rounded-3xl bg-white p-5 shadow">
-    <h2 class="mb-3 text-sm font-extrabold text-slate-700">👥 학생 로스터</h2>
-    <div class="mb-3 flex gap-2">
+  <section class="panel mb-5 p-4">
+    <label class="f student-register-label" for="newName">학생 등록</label>
+    <div class="student-form">
       <input type="text" id="newName" placeholder="이름" style="flex:1" />
+      <input type="text" id="newSchool" placeholder="학교(선택)" />
+      <input type="text" id="newGrade" placeholder="학년(선택)" style="width:100px" />
+      <input type="text" id="newContact" placeholder="연락처(선택)" />
+      <input type="text" id="newEmail" placeholder="이메일(선택)" />
+      <div class="date-field"><label for="newStartDate">수강 시작일(선택)</label><input type="date" id="newStartDate" /></div>
       <input type="text" id="newPin" placeholder="PIN(숫자 등)" style="width:120px" />
-      <button id="addStudent" class="shrink-0 rounded-xl bg-brand-500 px-4 py-2 text-xs font-bold text-white">추가</button>
+      <button id="addStudent" class="shrink-0 rounded-lg bg-brand-500 px-5 py-2.5 text-sm font-bold text-white">학생 추가</button>
     </div>
+    <label class="f" for="rosterFilter">학생 상태</label>
+    <select id="rosterFilter" class="mb-3 w-full rounded-xl border-2 border-slate-100 bg-slate-50 px-3 py-2 text-sm sm:w-48">
+      <option value="active">수강중</option><option value="inactive">수강종료</option><option value="all">전체</option>
+    </select>
     <div id="rosterStatus" class="mb-2 text-xs text-slate-600"></div>
     <div id="rosterList" class="space-y-2"></div>
   </section>
 
-  <section id="assignSection" class="mb-5 hidden rounded-3xl bg-white p-5 shadow">
+  <section id="assignSection" class="mb-5 hidden rounded-3xl bg-white p-5 shadow" aria-hidden="true">
     <div class="mb-3 flex items-center justify-between">
       <h2 class="text-sm font-extrabold text-slate-700">📋 <span id="assignName"></span> 배정</h2>
       <button id="assignClose" class="text-xs text-slate-600">닫기 ✕</button>
@@ -78,7 +72,7 @@
     </div>
 
     <div class="mb-4 rounded-2xl bg-teal-50 p-3">
-      <div class="mb-2 text-xs font-extrabold text-teal-600">🖊️ 시험보기</div>
+      <div class="mb-2 text-xs font-extrabold text-teal-600">🖊️ 개별문제 시험보기</div>
       <label class="f">이미 만든 시험 선택</label>
       <select id="a-exam-select" class="mb-2 w-full rounded-xl border-2 border-slate-100 bg-white px-3 py-2 text-sm"></select>
       <label class="f">문항 번호(콤마로, 예: 30,31 — 비우면 전체)</label>
@@ -110,8 +104,6 @@
     <div id="assignStatus" class="mt-2 text-xs"></div>
   </section>
 
-  <p class="text-center text-[11px] text-slate-500">학생 접속 링크는 위 "🔗 학생 포털 링크"를 복사해서 공유하세요
-    (아래 로스터에서 학생별로 "포털 링크" 버튼을 누르면 이름·PIN이 이미 채워진 링크도 복사할 수 있어요).</p>
 </div>
 
 <script>
@@ -126,19 +118,34 @@
     return s;
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (m) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]; }); }
-  function jsonpFetch(url, timeoutMs) {
-    timeoutMs = timeoutMs || 12000;
-    return new Promise(function (resolve) {
-      var cbName = '__st_cb_' + uid(8);
-      var script = document.createElement('script');
-      var settled = false;
-      var cleanup = function () { delete window[cbName]; script.remove(); clearTimeout(timer); };
-      window[cbName] = function (data) { if (settled) return; settled = true; cleanup(); resolve(data); };
-      var timer = setTimeout(function () { if (settled) return; settled = true; cleanup(); resolve(null); }, timeoutMs);
-      script.onerror = function () { if (settled) return; settled = true; cleanup(); resolve(null); };
-      script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
-      document.body.appendChild(script);
-    });
+  function jsonpFetchOnce(url, timeoutMs) {
+    return corsFetch(url, timeoutMs || 12000);
+  }
+  async function corsFetch(url, timeoutMs) {
+    var controller = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = controller ? setTimeout(function () { controller.abort(); }, timeoutMs || 20000) : null;
+    try {
+      var requestUrl = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=__elab_fetch&_ts=' + Date.now();
+      var response = await fetch(requestUrl, { method: 'GET', mode: 'cors', cache: 'no-store', redirect: 'follow', signal: controller ? controller.signal : undefined });
+      if (!response.ok) return null;
+      var text = (await response.text()).trim();
+      var wrapped = text.match(/^[^(]+\(([\s\S]*)\)\s*;?$/);
+      return JSON.parse(wrapped ? wrapped[1] : text);
+    } catch (error) {
+      console.warn('학생 서버 CORS 요청 실패, JSONP로 재시도합니다.', error);
+      return null;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  }
+  async function jsonpFetch(url, timeoutMs) {
+    var result = await corsFetch(url, timeoutMs || 20000);
+    if (result) return result;
+    result = await jsonpFetchOnce(url, timeoutMs);
+    if (result) return result;
+    await sleep(500);
+    result = await corsFetch(url, Math.max(Number(timeoutMs) || 12000, 30000));
+    return result || jsonpFetchOnce(url, Math.max(Number(timeoutMs) || 12000, 30000));
   }
   async function hookPost(url, body) {
     try {
@@ -147,12 +154,35 @@
     } catch (e) { return false; }
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  var DEFAULT_DELIVERY_URL = 'https://example.invalid/apps-script-endpoint';
 
+  function normalizeDeliveryUrl(url) {
+    var value = String(url || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');
+    return /\/exec$/i.test(value) ? value : '';
+  }
+
+  // 시험보기(mockexam.delivery)/문법학습(grammarhub.delivery)/단어암기(vpang.delivery)
+  // 모듈에 이미 같은 웹훅을 등록해뒀다면(같은 브라우저) 여기서 매번 다시 입력하지 않도록
+  // 그 값을 그대로 가져와 hub.delivery로도 저장해준다 -- 값이 없을 때만 동작하므로
+  // 이미 저장된 hub.delivery는 절대 덮어쓰지 않는다.
   function cfg() {
     var c = null;
     try { c = JSON.parse(localStorage.getItem('hub.delivery') || 'null'); } catch (e) {}
-    if (!c) c = { url: '', token: '' };
-    return c;
+    if (c && c.url) {
+      var normalized = normalizeDeliveryUrl(c.url);
+      if (normalized) {
+        if (normalized !== c.url) { c.url = normalized; saveCfg(c); }
+        console.info('[ELAB delivery]', {page:'teacher',source_key:'hub.delivery',url:c.url,default_url:DEFAULT_DELIVERY_URL});
+        return c;
+      }
+    }
+    var fallbackKeys = ['mockexam.delivery', 'grammarhub.delivery', 'vpang.delivery'];
+    for (var i = 0; i < fallbackKeys.length; i++) {
+      var f = null;
+      try { f = JSON.parse(localStorage.getItem(fallbackKeys[i]) || 'null'); } catch (e) {}
+      if (f && f.url && normalizeDeliveryUrl(f.url)) { f.url = normalizeDeliveryUrl(f.url); saveCfg(f); console.info('[ELAB delivery]',{page:'teacher',source_key:fallbackKeys[i],url:f.url,default_url:DEFAULT_DELIVERY_URL}); return f; }
+    }
+    return c || { url: '', token: '' };
   }
   function saveCfg(c) { localStorage.setItem('hub.delivery', JSON.stringify(c)); }
 
@@ -161,20 +191,17 @@
   }
 
   var currentStudent = null;
+  var startDateInput = document.getElementById('newStartDate');
+  function syncStartDateColor() {
+    startDateInput.classList.toggle('has-value', Boolean(startDateInput.value));
+  }
+  startDateInput.addEventListener('input', syncStartDateColor);
+  startDateInput.addEventListener('change', syncStartDateColor);
+  syncStartDateColor();
 
   // student/index.html은 이 페이지의 형제 폴더(../student/)에 있음 -- hook(웹훅 URL) 없이
   // 열면 "잘못된 링크예요(hook 누락)"가 뜨므로 항상 이 함수로 링크를 만들어야 함.
   // extra: {name, pin}을 주면 로그인까지 자동으로 되는 링크(개별 학생용)가 됨.
-  function studentPortalUrl(extra) {
-    var c = cfg();
-    if (!c.url) return '';
-    var base = new URL('../student/index.html', location.href);
-    base.searchParams.set('hook', c.url);
-    if (extra && extra.name) base.searchParams.set('name', extra.name);
-    if (extra && extra.pin) base.searchParams.set('pin', extra.pin);
-    return base.href;
-  }
-
   function copyToClipboard(text) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(text).catch(function () {});
@@ -187,34 +214,6 @@
       document.body.removeChild(ta);
     }
   }
-
-  function refreshPortalLinkBox() {
-    var link = studentPortalUrl();
-    var box = document.getElementById('portalLinkBox');
-    if (!link) { box.classList.add('hidden'); return; }
-    box.classList.remove('hidden');
-    document.getElementById('portalLinkInput').value = link;
-  }
-  document.getElementById('portalLinkCopy').addEventListener('click', function () {
-    var link = document.getElementById('portalLinkInput').value;
-    if (!link) return;
-    copyToClipboard(link);
-    var btn = document.getElementById('portalLinkCopy');
-    var orig = btn.textContent;
-    btn.textContent = '복사됨!';
-    setTimeout(function () { btn.textContent = orig; }, 1500);
-  });
-
-  document.getElementById('cfgUrl').value = cfg().url || '';
-  document.getElementById('cfgToken').value = cfg().token || '';
-  refreshPortalLinkBox();
-  document.getElementById('cfgSave').addEventListener('click', function () {
-    saveCfg({ url: document.getElementById('cfgUrl').value.trim(), token: document.getElementById('cfgToken').value.trim() });
-    var s = document.getElementById('cfgStatus');
-    s.textContent = '저장했어요';
-    setTimeout(function () { s.textContent = ''; }, 2000);
-    refreshPortalLinkBox();
-  });
 
   function populateExamSelect() {
     var sel = document.getElementById('a-exam-select');
@@ -241,7 +240,9 @@
     document.getElementById('a-exam-label').value = title + (nums ? ' · ' + nums + '번' : '');
   });
 
-  async function loadRoster() {
+  var rosterResponse = null;
+  try { rosterResponse = JSON.parse(localStorage.getItem('elab.roster.cache.v1') || 'null'); } catch (e) {}
+  async function loadRoster(forceRefresh) {
     var c = cfg();
     var statusEl = document.getElementById('rosterStatus');
     var listEl = document.getElementById('rosterList');
@@ -250,62 +251,136 @@
       listEl.innerHTML = '';
       return;
     }
-    statusEl.textContent = '불러오는 중...';
-    var r = await jsonpFetch(c.url + '?action=listStudents&token=' + encodeURIComponent(c.token));
+    var r = !forceRefresh && rosterResponse;
+    if (!r) {
+      statusEl.textContent = '불러오는 중...';
+      r = await jsonpFetch(c.url + '?action=listStudents&token=' + encodeURIComponent(c.token), 20000);
+      if (!r || r.error === 'unknown action') {
+        statusEl.textContent = '현재 학생 서버로 다시 연결하는 중...';
+        var fallback = await jsonpFetch(DEFAULT_DELIVERY_URL + '?action=listStudents&token=' + encodeURIComponent(c.token), 30000);
+        if (fallback && !fallback.error) {
+          c.url = DEFAULT_DELIVERY_URL;
+          saveCfg(c);
+          r = fallback;
+        } else if (fallback && fallback.error === 'no token') {
+          r = fallback;
+        }
+      }
+      if (r && !r.error) {
+        rosterResponse = r;
+        try { localStorage.setItem('elab.roster.cache.v1', JSON.stringify(r)); } catch (e) {}
+      }
+    }
     if (!r || r.error) {
-      statusEl.textContent = '학생 목록을 못 불러왔어요.';
+      statusEl.textContent = !r ? '학생 서버에 연결할 수 없습니다. 환경설정의 웹앱 주소와 배포 권한을 확인해주세요.' : r.error === 'no token' ? '교사용 토큰이 Apps Script의 TOKEN 값과 일치하지 않습니다.' : '학생 목록을 불러오지 못했습니다: ' + r.error;
       return;
     }
     statusEl.textContent = '';
-    var students = r.students || [];
+    var students = r.students || [], rosterMode = document.getElementById('rosterFilter').value;
+    students = students.filter(function(s){ return rosterMode === 'all' || (rosterMode === 'inactive' ? s.active === false : s.active !== false); });
     if (students.length === 0) {
       listEl.innerHTML = '<div class="text-xs text-slate-600">아직 등록된 학생이 없어요.</div>';
       return;
     }
     listEl.innerHTML = students.map(function (s) {
-      return '<div class="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2">' +
+      var inactive = s.active === false;
+      return '<div class="flex items-center justify-between rounded-xl border border-slate-100 px-3 py-2' + (inactive ? ' opacity-60' : '') + '" data-student-id="' + esc(s.student_id || '') + '">' +
         '<div><span class="text-sm font-bold text-slate-700">' + esc(s.name) + '</span>' +
-        '<span class="ml-2 text-xs text-slate-600">PIN ' + esc(s.pin) + '</span></div>' +
+        (s.school ? '<span class="ml-2 text-xs text-slate-500">' + esc(s.school) + '</span>' : '') +
+        (s.grade ? '<span class="ml-2 text-xs text-slate-500">' + esc(s.grade) + '</span>' : '') +
+        (s.enrollment_start_date ? '<span class="ml-2 text-xs text-slate-500">수강 시작 ' + esc(s.enrollment_start_date) + '</span>' : '') +
+        '<span class="ml-2 text-xs font-bold text-brand-600">미완료 ' + Number(s.unfinished_assignment_count || 0) + '</span>' +
+        '<span class="ml-2 text-xs text-slate-600">PIN ' + esc(s.pin) + '</span>' +
+        (inactive ? '<span class="ml-2 text-xs font-bold text-red-500">수강종료</span>' : '<span class="ml-2 text-xs font-bold text-teal-600">수강중</span>') +
+        '<details class="mt-1 text-xs text-slate-500"><summary class="cursor-pointer">관리 정보</summary><div class="mt-1 break-all">' +
+        (s.contact ? '<div>연락처 ' + esc(s.contact) + '</div>' : '') + (s.email ? '<div>이메일 ' + esc(s.email) + '</div>' : '') +
+        '<div>학생 ID <code>' + esc(s.student_id || '') + '</code> <button type="button" data-copy-id="' + esc(s.student_id || '') + '" class="rounded bg-slate-100 px-2 py-1 font-bold">복사</button></div></div></details></div>' +
         '<div class="flex gap-2">' +
-        '<button data-portal="' + esc(s.name) + '" data-pin="' + esc(s.pin) + '" class="rounded-lg bg-brand-50 px-3 py-1 text-xs font-bold text-brand-600">🔗 포털 링크</button>' +
-        '<button data-manage="' + esc(s.name) + '" class="rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">배정</button>' +
-        '<button data-del="' + esc(s.name) + '" class="rounded-lg bg-red-50 px-3 py-1 text-xs font-bold text-red-500">삭제</button>' +
+        '<button data-edit-id="' + esc(s.student_id || '') + '" data-edit-name="' + esc(s.name) + '" data-edit-school="' + esc(s.school || '') + '" data-edit-grade="' + esc(s.grade || '') + '" data-edit-contact="' + esc(s.contact || '') + '" data-edit-email="' + esc(s.email || '') + '" data-edit-start-date="' + esc(s.enrollment_start_date || '') + '" data-edit-active="' + (inactive ? 'false' : 'true') + '" class="rounded-lg bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">수정</button>' +
+        '<button data-del-id="' + esc(s.student_id || '') + '" data-del-name="' + esc(s.name) + '" data-del-grade="' + esc(s.grade || '') + '" data-inactive="' + (inactive ? 'true' : 'false') + '" class="rounded-lg bg-red-50 px-3 py-1 text-xs font-bold text-red-500">' + (inactive ? '수강 재개' : '수강 종료') + '</button>' +
         '</div></div>';
     }).join('');
     Array.prototype.forEach.call(listEl.querySelectorAll('[data-manage]'), function (b) {
       b.addEventListener('click', function () { openAssign(b.getAttribute('data-manage')); });
     });
-    Array.prototype.forEach.call(listEl.querySelectorAll('[data-portal]'), function (b) {
-      b.addEventListener('click', function () {
-        var link = studentPortalUrl({ name: b.getAttribute('data-portal'), pin: b.getAttribute('data-pin') });
-        if (!link) { alert('설정에 웹훅 URL을 먼저 저장하세요.'); return; }
-        copyToClipboard(link);
-        var orig = b.textContent;
-        b.textContent = '복사됨!';
-        setTimeout(function () { b.textContent = orig; }, 1500);
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-edit-id]'), function (b) {
+      b.addEventListener('click', async function () {
+        var nextName = prompt('학생 표시 이름', b.getAttribute('data-edit-name') || '');
+        if (!nextName || !nextName.trim()) return;
+        var nextSchool = prompt('학교(선택)', b.getAttribute('data-edit-school') || '');
+        if (nextSchool == null) return;
+        var nextGrade = prompt('학년(선택)', b.getAttribute('data-edit-grade') || '');
+        if (nextGrade == null) return;
+        var nextContact = prompt('연락처(선택)', b.getAttribute('data-edit-contact') || '');
+        if (nextContact == null) return;
+        var nextEmail = prompt('이메일(선택)', b.getAttribute('data-edit-email') || '');
+        if (nextEmail == null) return;
+        var nextStartDate = prompt('수강 시작일(선택, YYYY-MM-DD)', b.getAttribute('data-edit-start-date') || '');
+        if (nextStartDate == null) return;
+        await hookPost(cfg().url, {
+          action: 'saveStudent', token: cfg().token, student_id: b.getAttribute('data-edit-id'),
+          request_id: uid(24), name: nextName.trim(), school: nextSchool.trim(), grade: nextGrade.trim(),
+          contact: nextContact.trim(), email: nextEmail.trim(), enrollment_start_date: nextStartDate.trim(),
+          active: b.getAttribute('data-edit-active') !== 'false'
+        });
+        await sleep(800);
+        loadRoster(true);
       });
     });
-    Array.prototype.forEach.call(listEl.querySelectorAll('[data-del]'), function (b) {
-      b.addEventListener('click', async function () {
-        if (!confirm(b.getAttribute('data-del') + ' 학생을 삭제할까요?')) return;
-        await hookPost(cfg().url, { action: 'deleteStudent', token: cfg().token, name: b.getAttribute('data-del') });
-        await sleep(800);
-        loadRoster();
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-copy-id]'), function (b) { b.addEventListener('click', function(e){ e.preventDefault(); copyToClipboard(b.getAttribute('data-copy-id')); b.textContent='복사됨'; }); });
+    Array.prototype.forEach.call(listEl.querySelectorAll('[data-del-id]'), function (b) {
+      b.addEventListener('click', function () {
+        var studentId = b.getAttribute('data-del-id');
+        if (b.getAttribute('data-inactive') === 'true') {
+          setStudentActiveImmediately(studentId, true);
+          hookPost(cfg().url, {
+            action: 'saveStudent', token: cfg().token, student_id: studentId,
+            request_id: uid(24), name: b.getAttribute('data-del-name'),
+            grade: b.getAttribute('data-del-grade'), active: true
+          }).then(function () { setTimeout(function () { loadRoster(true); }, 500); });
+          return;
+        }
+        if (!confirm(b.getAttribute('data-del-name') + ' 학생을 비활성화할까요? 기존 데이터는 삭제되지 않습니다.')) return;
+        setStudentActiveImmediately(studentId, false);
+        hookPost(cfg().url, { action: 'deleteStudent', token: cfg().token, student_id: studentId })
+          .then(function () { setTimeout(function () { loadRoster(true); }, 500); });
       });
     });
   }
+
+  function setStudentActiveImmediately(studentId, active) {
+    if (!rosterResponse || !Array.isArray(rosterResponse.students)) return;
+    var student = rosterResponse.students.find(function (s) { return String(s.student_id) === String(studentId); });
+    if (!student) return;
+    student.active = active;
+    try { localStorage.setItem('elab.roster.cache.v1', JSON.stringify(rosterResponse)); } catch (e) {}
+    loadRoster(false);
+  }
+
+  document.getElementById('rosterFilter').addEventListener('change', loadRoster);
 
   document.getElementById('addStudent').addEventListener('click', async function () {
     var c = cfg();
     if (!c.url || !c.token) { alert('설정에 웹훅 URL/토큰을 먼저 저장하세요.'); return; }
     var name = document.getElementById('newName').value.trim();
+    var school = document.getElementById('newSchool').value.trim();
+    var grade = document.getElementById('newGrade').value.trim();
+    var contact = document.getElementById('newContact').value.trim();
+    var email = document.getElementById('newEmail').value.trim();
+    var startDate = document.getElementById('newStartDate').value;
     var pin = document.getElementById('newPin').value.trim();
     if (!name || !pin) { alert('이름과 PIN을 모두 입력하세요.'); return; }
-    await hookPost(c.url, { action: 'saveStudent', token: c.token, name: name, pin: pin });
+    await hookPost(c.url, { action: 'saveStudent', token: c.token, request_id: uid(24), name: name, pin: pin, school: school, grade: grade, contact: contact, email: email, enrollment_start_date: startDate, active: true });
     document.getElementById('newName').value = '';
+    document.getElementById('newSchool').value = '';
+    document.getElementById('newGrade').value = '';
+    document.getElementById('newContact').value = '';
+    document.getElementById('newEmail').value = '';
+    document.getElementById('newStartDate').value = '';
+    syncStartDateColor();
     document.getElementById('newPin').value = '';
     await sleep(800);
-    loadRoster();
+    loadRoster(true);
   });
 
   async function openAssign(name) {
@@ -363,7 +438,9 @@
     statusEl.textContent = '저장했어요.';
   });
 
+  var hadRosterCache = !!rosterResponse;
   loadRoster();
+  if (hadRosterCache) setTimeout(function () { loadRoster(true); }, 800);
 })();
 </script>
 </body>

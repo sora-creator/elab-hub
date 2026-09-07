@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ELAB · 수업 운영</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css">
+<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1">
+<script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
+<style>
+*{box-sizing:border-box}body{margin:0;overflow-x:hidden;background:#fff;color:#101828;font-family:"Pretendard",sans-serif}.shell{width:calc(100% - 80px);max-width:1280px;margin:auto;padding:22px 0 34px}.top{display:flex;height:54px;align-items:center;justify-content:space-between}.logo{width:118px}.top-right{display:flex;align-items:center;gap:18px}.settings{color:#455268;font-size:13px;font-weight:700;text-decoration:none}.status{display:flex;align-items:center;gap:8px;color:#607089;font-size:12px}.dot{width:7px;height:7px;border-radius:50%;background:#d28a21}.status.ready .dot{background:#31835b}
+.hero{position:relative;display:flex;min-height:218px;align-items:center;justify-content:center;overflow:hidden;margin-top:10px;padding:34px;border-radius:20px;background:linear-gradient(125deg,#edf4ff 0%,#e5efff 48%,#f4f7ff 100%);text-align:center}.hero::before,.hero::after{content:"";position:absolute;border-radius:50%;background:rgba(255,255,255,.62)}.hero::before{width:220px;height:220px;left:-66px;bottom:-112px;box-shadow:146px -120px 0 -76px rgba(255,255,255,.72),980px 6px 0 -70px rgba(255,255,255,.62)}.hero::after{width:120px;height:120px;right:-24px;top:-48px;box-shadow:-94px 128px 0 -38px rgba(255,255,255,.72)}.dot-pattern{position:absolute;width:150px;height:90px;opacity:.3;background-image:radial-gradient(#7da7ef 1.5px,transparent 1.5px);background-size:10px 10px}.dots-left{left:17%;top:-10px}.dots-right{right:5%;bottom:-12px}.hero-content{position:relative;z-index:1}.eyebrow{margin:0 0 8px;color:#3768bd;font-size:12px;font-weight:800;letter-spacing:.12em}.hero h1{margin:0;font-size:34px;line-height:1.3;letter-spacing:-.045em}.hero p{margin:9px 0 20px;color:#52627a;font-size:15px}.primary{display:inline-flex;min-height:48px;align-items:center;padding:0 24px;border-radius:10px;background:#3576f6;color:#fff;font-size:15px;font-weight:800;text-decoration:none;box-shadow:0 8px 20px rgba(53,118,246,.16)}
+.section{margin-top:27px}.section-head{display:flex;align-items:end;justify-content:space-between;margin-bottom:13px}.section-title{display:flex;align-items:center;gap:10px}.section-title i{display:grid;width:31px;height:31px;place-items:center;border-radius:8px;background:#101828;color:#fff;font-style:normal;font-size:15px}.section h2{margin:0;font-size:22px;letter-spacing:-.03em}.section-head p{margin:0;color:#7a879b;font-size:12px}.cards{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}.card{position:relative;min-height:134px;padding:20px;border:1px solid #d7dfeb;border-radius:18px;background:#fff;color:inherit;text-decoration:none;transition:transform .15s,border-color .15s}.card:hover{transform:translateY(-2px);border-color:#9eb5d8}.card b{display:block;padding-right:38px;font-size:17px}.card ul{margin:13px 0 0;padding:0;list-style:none;color:#667389;font-size:13px;line-height:1.75}.card li::before{content:'–';margin-right:7px}.arrow{position:absolute;right:18px;top:18px;display:grid;width:29px;height:29px;place-items:center;border-radius:50%;background:#17212b;color:#fff;font-size:16px}.tools{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}.tool{display:flex;min-height:72px;align-items:center;gap:12px;padding:14px 16px;border:1px solid #d7dfeb;border-radius:14px;background:#fff;color:inherit;text-decoration:none}.tool:hover{border-color:#9eb5d8;background:#f8fbff}.tool-icon{display:grid;width:34px;height:34px;flex:0 0 34px;place-items:center;border-radius:9px;background:#eef4ff;color:#315fba;font-size:15px;font-weight:850}.tool b{font-size:14px}.connection{margin-top:18px;padding:10px 13px;border-radius:8px;background:#fff8ec;color:#8b611d;font-size:12px}.connection.ready{background:#f0f8f3;color:#287a51}.connection a{color:inherit;font-weight:800}
+/* ELAB learning-tool icons: one restrained line-icon family replaces temporary letters and symbols. */
+.section-title i,.tool-icon{color:transparent;font-size:0}
+.section-title i::before,.tool-icon::before{content:"";display:block;width:20px;height:20px;background:currentColor;mask:var(--menu-icon) center/contain no-repeat;-webkit-mask:var(--menu-icon) center/contain no-repeat}
+.section-title i::before{color:#fff}
+.section:nth-of-type(2) .section-title i{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8.5 10l1.7 1.7 3.2-3.4M8.5 16l1.7 1.7 3.2-3.4M15.5 10H17M15.5 16H17'/%3E%3C/g%3E%3C/svg%3E")}
+.section:nth-of-type(3) .section-title i{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 3.5h10l4 4V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z'/%3E%3Cpath d='M15 3.5V8h4M8 16.5l5.8-5.8 1.5 1.5-5.8 5.8-2 .5.5-2Z'/%3E%3C/g%3E%3C/svg%3E")}
+.tool-icon::before{color:#315fba}
+.tool-vocab{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='5' width='18' height='14' rx='2'/%3E%3Cpath d='M7 9h4M7 13h6M17 9v6M15 12h4'/%3E%3C/g%3E%3C/svg%3E")}
+.tool-grammar{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 5H5v14h3M16 5h3v14h-3M10 9h4M9 13h6M11 17h2'/%3E%3C/g%3E%3C/svg%3E")}
+.tool-exam{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 3.5h9l4 4V21H6a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1Z'/%3E%3Cpath d='M15 3.5V8h4M9 12h6M9 16h3'/%3E%3C/g%3E%3C/svg%3E")}
+.tool-practice{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='13' r='8'/%3E%3Cpath d='M12 13l3-2M9 3h6M12 5V3M18 7l1.5-1.5'/%3E%3C/g%3E%3C/svg%3E")}
+.tool-assignment{--menu-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cg fill='none' stroke='black' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='5' y='4' width='14' height='17' rx='2'/%3E%3Cpath d='M9 4V3h6v1M8.5 10l1.7 1.7 3.2-3.4M8.5 16l1.7 1.7 3.2-3.4M15.5 10H17M15.5 16H17'/%3E%3C/g%3E%3C/svg%3E")}
+@media(max-width:980px){.shell{width:calc(100% - 48px)}.cards{grid-template-columns:repeat(2,1fr)}.tools{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:768px){.shell{width:calc(100% - 32px);padding-top:14px}.top{padding-left:48px}.hero{min-height:230px}.hero h1{font-size:29px}.section-head{align-items:flex-start;flex-direction:column;gap:4px}.cards{grid-template-columns:1fr 1fr}.tools{grid-template-columns:1fr 1fr}}
+@media(max-width:480px){.shell{width:calc(100% - 24px)}.logo{width:102px}.top-right{gap:10px}.settings{display:none}.status span{display:none}.hero{min-height:245px;padding:28px 20px;border-radius:16px}.hero h1{font-size:26px}.hero p{font-size:14px;line-height:1.6}.primary{width:100%;justify-content:center}.section{margin-top:24px}.section h2{font-size:20px}.cards{grid-template-columns:1fr}.card{min-height:122px}.tools{grid-template-columns:1fr 1fr}.tool{min-height:68px;padding:12px}.tool-icon{display:none}}
+/* Readability and depth */
+body{background:radial-gradient(circle at 88% 4%,#e5eeff 0,transparent 26%),#f2f5fa;color:#0b1830}
+.hero{border:1px solid #cfddf5;background:linear-gradient(125deg,#dce8ff 0%,#e7efff 50%,#f4f7ff 100%);box-shadow:0 14px 35px rgba(44,78,132,.09)}
+.hero{min-height:192px}.hero h1{font-size:36px;font-weight:850}.hero p{margin-bottom:0;color:#40536f;font-size:16px;font-weight:500}.eyebrow{color:#285aaf;font-size:13px}.section h2{font-size:24px;font-weight:850}.section-head p{color:#5c6c83;font-size:14px}.card{border-color:#c9d4e4;background:rgba(255,255,255,.92)}.card b{font-size:19px;font-weight:800}.card ul{color:#4c5d76;font-size:14px;font-weight:500}.tool{border-color:#c9d4e4;background:rgba(255,255,255,.9)}.tool b{font-size:16px;font-weight:750}
+@media(max-width:768px){.hero h1{font-size:30px}.hero p{font-size:15px}.section h2{font-size:22px}}
+@media(max-width:480px){.hero h1{font-size:27px}.card b{font-size:18px}.card ul{font-size:14px}.tool b{font-size:15px}}
+@media(min-width:981px){.tools{grid-template-columns:repeat(7,minmax(0,1fr))}}
+.tool-sentence .tool-icon{color:#315fba;font-size:12px}.tool-sentence .tool-icon::before{display:none}
+</style>
+</head>
+<body>
+<div data-elab-nav="home"></div>
+<main class="shell">
+  <section class="hero"><span class="dot-pattern dots-left"></span><span class="dot-pattern dots-right"></span><div class="hero-content"><p class="eyebrow">TODAY'S CLASS</p><h1>오늘 수업과 과제를 한곳에서 준비하세요</h1><p>아래 수업 운영과 학습자료 메뉴에서 필요한 업무를 선택하세요.</p></div></section>
+  <section class="section" aria-labelledby="flowTitle"><div class="section-head"><div class="section-title"><i>✓</i><h2 id="flowTitle">수업 운영</h2></div><p>필요한 업무로 바로 이동하세요.</p></div><div class="cards">
+    <a class="card" href="./students.html?v=student-server-cors-20260830-7"><b>학생관리</b><span class="arrow">→</span><ul><li>학생과 PIN 등록</li><li>수강 상태 확인</li></ul></a>
+    <a class="card" href="./classes.html"><b>Class</b><span class="arrow">→</span><ul><li>반과 학생 구성</li><li>반복 수업시간 관리</li></ul></a>
+    <a class="card" href="./dashboard.html"><b>결과확인</b><span class="arrow">→</span><ul><li>제출 현황 확인</li><li>학생별 오답 점검</li></ul></a>
+    <a class="card" href="../wrongnote/index.html"><b>오답노트</b><span class="arrow">→</span><ul><li>학생별 오답 확인</li><li>반복 오답 점검</li></ul></a>
+    <a class="card" href="../wrongnote/index.html?view=lesson"><b>수업활용</b><span class="arrow">→</span><ul><li>오답 중심 수업</li><li>보충 학습 준비</li></ul></a>
+  </div></section>
+  <section class="section" aria-labelledby="toolsTitle"><div class="section-head"><div class="section-title"><i>＋</i><h2 id="toolsTitle">학습자료 만들기</h2></div><p>필요한 제작 도구를 선택하세요.</p></div><div class="tools">
+    <a class="tool tool-pdf" href="../pdf/index.html?v=answer-filename-23"><span class="tool-icon">PDF</span><b>PDF 자료관리</b></a>
+    <a class="tool tool-vocab" href="../vocab/index.html"><span class="tool-icon">A</span><b>단어암기</b></a>
+    <a class="tool tool-sentence" href="../exam/index.html?tool=sentence-structure"><span class="tool-icon">S·V</span><b>문장구조 연습</b></a>
+    <a class="tool tool-grammar" href="../grammar/index.html"><span class="tool-icon">文</span><b>문법학습</b></a>
+    <a class="tool tool-exam" href="../exam/index.html"><span class="tool-icon">Q</span><b>개별문제</b></a>
+    <a class="tool tool-practice" href="../practice/index.html"><span class="tool-icon">T</span><b>실전연습</b></a>
+    <a class="tool tool-assignment" href="./assignments.html"><span class="tool-icon">✓</span><b>과제배정</b></a>
+  </div></section>
+</main>
+</body>
+</html>
