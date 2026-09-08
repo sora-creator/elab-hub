@@ -977,6 +977,322 @@ function handleListDueVocabReviewsV1_(e){
   out.sort(function(a,b){return new Date(a.recommended_at)-new Date(b.recommended_at);});var page=out.slice(cursor,cursor+limit);return{items:page,total:out.length,next_cursor:cursor+page.length<out.length?cursor+page.length:null};
 }
 
+// First-import extension. No setup/getOrCreate, legacy commit, or student runtime calls.
+// Pin the approved immutable manifest: client-supplied hashes alone are not trusted.
+function vocabularyFirstImportSpecV1_() {
+  return {
+    batch_id: 'vocab-first-3244-4321164ed090220d', request_id: 'vocab-first-3244-4321164ed090220d',
+    manifest_sha256: 'PUBLIC_IDENTIFIER_REMOVED',
+    preimport_sha256: 'PUBLIC_IDENTIFIER_REMOVED',
+    schema_version: 'ELAB_VOCAB_FIRST_IMPORT_MANIFEST_V1', expected_total: 3244,
+    expected_unique_sense_ids: 3244, expected_levels: {V1:800,V2:822,V3:818,V4:604,V5:200}, chunk_count: 7,
+    rows_hash: 'PUBLIC_IDENTIFIER_REMOVED',
+    headers_hash: 'PUBLIC_IDENTIFIER_REMOVED',
+    spreadsheet_id: 'PUBLIC_IDENTIFIER_REMOVED', sheet_id: 286442264,
+    chunk_hashes: [
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED',
+      'PUBLIC_IDENTIFIER_REMOVED'
+    ]
+  };
+}
+function vocabularyFirstImportAssertV1_(condition, code, reason) {
+  if (!condition) { var error = new Error(code); error.firstImportCode = code; error.firstImportReason = reason; throw error; }
+}
+function vocabularyFirstImportHashV1_(value) {
+  return Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, JSON.stringify(value), Utilities.Charset.UTF_8)
+    .map(function(b) { return ('0' + ((b + 256) % 256).toString(16)).slice(-2); }).join('');
+}
+function vocabularyFirstImportMetadataV1_(d, spec) {
+  ['batch_id','request_id','manifest_sha256','preimport_sha256','schema_version','expected_total','expected_unique_sense_ids','chunk_count'].forEach(function(key) {
+    vocabularyFirstImportAssertV1_(d[key] === spec[key], 'METADATA_MISMATCH_' + key.toUpperCase());
+  });
+  vocabularyFirstImportAssertV1_(d.expected_levels && Object.keys(d.expected_levels).length === 5 &&
+    Object.keys(spec.expected_levels).every(function(k) { return d.expected_levels[k] === spec.expected_levels[k]; }), 'LEVEL_METADATA_MISMATCH');
+}
+function vocabularyFirstImportReadV1_(ss, name, headers, code, minimumRows) {
+  var sheet = ss.getSheetByName(name);
+  vocabularyFirstImportAssertV1_(sheet, code);
+  if (minimumRows) vocabularyFirstImportAssertV1_(sheet.getMaxRows() >= minimumRows && sheet.getMaxColumns() >= headers.length,
+    code, 'INSUFFICIENT_SHEET_CAPACITY');
+  var range = sheet.getDataRange(), values = range.getValues(), formulas = range.getFormulas();
+  vocabularyFirstImportAssertV1_(headers.every(function(h, i) { return values[0][i] === h && !formulas[0][i]; }), code);
+  vocabularyFirstImportAssertV1_(values.every(function(row, r) {
+    return row.slice(headers.length).every(function(v) { return v === ''; }) && formulas[r].slice(headers.length).every(function(v) { return v === ''; });
+  }), code);
+  return { sheet: sheet, values: values, formulas: formulas };
+}
+function vocabularyFirstImportAuditV1_(imports, spec) {
+  var matches = [];
+  imports.values.forEach(function(row, i) { if (i && row[0] === spec.batch_id) matches.push(i); });
+  vocabularyFirstImportAssertV1_(matches.length <= 1, 'AUDIT_DUPLICATE');
+  if (!matches.length) return null;
+  var index = matches[0], row = imports.values[index], prefix = 'VOCAB_FIRST_IMPORT_V1:';
+  vocabularyFirstImportAssertV1_(!imports.formulas[index].some(Boolean) && String(row[12]).indexOf(prefix) === 0, 'AUDIT_CONFLICT');
+  var audit;
+  try { audit = JSON.parse(String(row[12]).slice(prefix.length)); } catch (e) { vocabularyFirstImportAssertV1_(false, 'AUDIT_INVALID'); }
+  vocabularyFirstImportMetadataV1_(audit, spec);
+  vocabularyFirstImportAssertV1_(audit.status === row[3] && Array.isArray(audit.chunks) && audit.chunks.length === 7, 'AUDIT_INVALID');
+  return { row: index + 1, audit: audit };
+}
+function vocabularyFirstImportSaveAuditV1_(imports, record, audit) {
+  var row = record ? imports.values[record.row - 1].slice(0, 26) : Array(26).fill('');
+  row[0] = audit.batch_id; row[2] = 'PUBLIC_IDENTIFIER_REMOVED.xlsx';
+  row[3] = audit.status; row[4] = audit.expected_total; row[5] = audit.actual_rows || 0;
+  row[8] = audit.error_code ? 1 : 0; row[9] = audit.created_at;
+  if (audit.status === 'COMPLETED') row[11] = audit.finished_at;
+  row[12] = 'VOCAB_FIRST_IMPORT_V1:' + JSON.stringify(audit);
+  var sheetRow = record ? record.row : imports.sheet.getLastRow() + 1;
+  imports.sheet.getRange(sheetRow, 1, 1, 26).setValues([row]);
+  imports.values[sheetRow - 1] = row;
+  return { row: sheetRow, audit: audit };
+}
+function vocabularyFirstImportStagedV1_(staging, spec) {
+  var out = [], seen = {};
+  staging.values.forEach(function(row, i) {
+    if (!i || row[1] !== spec.batch_id) return;
+    var source = row[2];
+    vocabularyFirstImportAssertV1_(Number.isInteger(source) && source >= 2 && source <= 3245 && !seen[source] &&
+      row[0] === spec.batch_id + ':' + source && !staging.formulas[i].some(Boolean), 'STAGING_ROW_CONFLICT');
+    seen[source] = true;
+    // Staging has no level_review_status; the pinned PREIMPORT has blank values there.
+    out.push({ sheet_row: i + 1, source_row: source,
+      values: [row[7],row[6],row[4],row[5],row[3],row[8],row[9],row[10],row[11],row[12],'','',row[19],'',row[14],row[15],row[16],row[17],row[18],row[20],row[21]] });
+  });
+  return out.sort(function(a,b) { return a.source_row - b.source_row; });
+}
+function vocabularyFirstImportRowsCheckV1_(rows, spec) {
+  vocabularyFirstImportAssertV1_(rows.length === spec.expected_total, 'STAGING_TOTAL_MISMATCH');
+  var ids = Object.create(null), levels = {V1:0,V2:0,V3:0,V4:0,V5:0};
+  rows.forEach(function(row, i) {
+    vocabularyFirstImportAssertV1_(Array.isArray(row) && row.length === 21, 'ROW_WIDTH_MISMATCH');
+    var raw = {}; VOCABULARY_DB_HEADERS.forEach(function(h,j) { raw[h] = row[j]; });
+    vocabularyFirstImportAssertV1_(!normalizeVocabularyImportRowV1_(raw,i+2).errors.length, 'ROW_VALIDATION_FAILED');
+    vocabularyFirstImportAssertV1_(!ids[row[0]], 'DUPLICATE_SENSE_ID'); ids[row[0]] = true;
+    vocabularyFirstImportAssertV1_(row[4] === row[19] && row[15] === row[19] && /^V[1-5]$/.test(row[19]), 'LEVEL_MISMATCH');
+    levels[row[19]]++;
+    vocabularyFirstImportAssertV1_(row[9] === true && row[14] === true && row[16] === false, 'FLAG_MISMATCH');
+    vocabularyFirstImportAssertV1_(row[10] === '' && row[11] === '', 'SOURCE_TIMESTAMP_MISMATCH');
+  });
+  vocabularyFirstImportAssertV1_(Object.keys(levels).every(function(k) { return levels[k] === spec.expected_levels[k]; }), 'LEVEL_COUNTS_MISMATCH');
+  vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows) === spec.rows_hash, 'ROW_FINGERPRINT_MISMATCH');
+  return { total: rows.length, unique_sense_ids: Object.keys(ids).length, levels: levels, row_fingerprints: 'PASS' };
+}
+function vocabularyFirstImportCompleteV1_(staged, audit, spec) {
+  vocabularyFirstImportAssertV1_(audit && audit.chunks.every(function(h,i) { return h === spec.chunk_hashes[i]; }), 'CHUNKS_INCOMPLETE');
+  vocabularyFirstImportAssertV1_(staged.length === 3244, 'STAGING_TOTAL_MISMATCH');
+  vocabularyFirstImportAssertV1_(staged.every(function(row,i) { return row.source_row === i + 2; }), 'SOURCE_ROW_MISMATCH');
+  var rows = staged.map(function(row) { return row.values; });
+  var summary = vocabularyFirstImportRowsCheckV1_(rows,spec);
+  spec.chunk_hashes.forEach(function(h,i) {
+    vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows.slice(i*500,(i+1)*500)) === h, 'CHUNK_FINGERPRINT_MISMATCH');
+  });
+  return { rows: rows, summary: summary };
+}
+function vocabularyFirstImportOtherMarkerV1_(imports, spec) {
+  return imports.values.some(function(row,i) {
+    if (!i || row[0] === spec.batch_id) return false;
+    return /^(COMMITTING|COMMITTED|COMPLETED|ROLLING_BACK|ROLLED_BACK)$/.test(String(row[3])) ||
+      (String(row[12]).indexOf('VOCAB_FIRST_IMPORT_V1:') === 0 && String(row[3]) === 'FAILED');
+  });
+}
+function vocabularyFirstImportPhysicalV1_(ss, imports, spec, empty) {
+  var code = 'FIRST_IMPORT_PRECONDITION_FAILED';
+  vocabularyFirstImportAssertV1_(ss.getId() === spec.spreadsheet_id && !vocabularyFirstImportOtherMarkerV1_(imports,spec), code);
+  vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(VOCABULARY_DB_HEADERS) === spec.headers_hash, code);
+  var db = vocabularyFirstImportReadV1_(ss,VOCABULARY_DB_SHEET,VOCABULARY_DB_HEADERS,code,3245);
+  vocabularyFirstImportAssertV1_(db.sheet.getSheetId() === spec.sheet_id, code);
+  vocabularyFirstImportAssertV1_(!db.formulas.some(function(row) { return row.some(Boolean); }), code);
+  vocabularyFirstImportAssertV1_(db.sheet.getRange(2,1,3244,21).getMergedRanges().length === 0, code);
+  var occupied = db.values.slice(1).filter(function(row) { return row.some(function(v) { return v !== ''; }); });
+  if (empty) vocabularyFirstImportAssertV1_(occupied.length === 0, code);
+  db.actual_rows = occupied.length;
+  return db;
+}
+function vocabularyFirstImportPostV1_(ss, imports, spec, audit) {
+  var db = vocabularyFirstImportPhysicalV1_(ss,imports,spec,false);
+  vocabularyFirstImportAssertV1_(audit.write_range === 'A2:U3245' && audit.target_id === spec.spreadsheet_id && audit.target_gid === spec.sheet_id, 'AUDIT_TARGET_MISMATCH');
+  vocabularyFirstImportAssertV1_(db.actual_rows === 3244, 'PARTIAL_IMPORT_DETECTED');
+  var rows = db.values.slice(1,3245).map(function(row) { return row.slice(0,21); });
+  var fullHash = vocabularyFirstImportHashV1_(rows);
+  rows.forEach(function(row) {
+    [10,11].forEach(function(i) {
+      vocabularyFirstImportAssertV1_(row[i] instanceof Date && row[i].toISOString() === audit.batch_timestamp, 'POST_TIMESTAMP_MISMATCH');
+      row[i] = '';
+    });
+  });
+  var summary = vocabularyFirstImportRowsCheckV1_(rows,spec);
+  if (audit.post_hash) vocabularyFirstImportAssertV1_(audit.post_hash === fullHash, 'POST_FINGERPRINT_MISMATCH');
+  return { summary: summary, post_hash: fullHash, db: db };
+}
+function handleVocabularyFirstImportV1_(d) {
+  var lock, spec = vocabularyFirstImportSpecV1_();
+  try {
+    vocabularyFirstImportAssertV1_(!!getToken_() && d.token === getToken_(), 'UNAUTHORIZED');
+    vocabularyFirstImportMetadataV1_(d,spec);
+    var operation = String(d.action).replace('VocabularyFirstImportV1','');
+    vocabularyFirstImportAssertV1_(['stage','validate','commit','rollback','discard'].indexOf(operation) !== -1, 'INVALID_ACTION');
+    vocabularyFirstImportAssertV1_(d.dry_run === undefined || typeof d.dry_run === 'boolean', 'INVALID_DRY_RUN');
+    var dry = d.dry_run === true;
+    lock = LockService.getScriptLock(); vocabularyFirstImportAssertV1_(lock.tryLock(30000), 'LOCK_BUSY');
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    vocabularyFirstImportAssertV1_(ss && ss.getId() === spec.spreadsheet_id, 'TARGET_MISMATCH');
+    var imports = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORTS_V2_SHEET,VOCABULARY_IMPORTS_V2_HEADERS,'IMPORT_SCHEMA_MISMATCH');
+    var record = vocabularyFirstImportAuditV1_(imports,spec), audit = record && record.audit;
+    if (operation === 'rollback') {
+      vocabularyFirstImportAssertV1_(audit && audit.status === 'COMPLETED', 'ROLLBACK_BLOCKED');
+      var rollbackState;
+      try { rollbackState = vocabularyFirstImportPostV1_(ss,imports,spec,audit); }
+      catch (rollbackError) { return {ok:false,code:'ROLLBACK_BLOCKED',reason:rollbackError.firstImportCode || 'READ_FAILED'}; }
+      var plan = {ok:true,code:'ROLLBACK_PLAN_PASS',dry_run:dry,batch_id:spec.batch_id,range:'VocabularyDB!A2:U3245',row_count:3244};
+      if (dry) return plan;
+      vocabularyFirstImportAssertV1_(d.approval === 'ROLLBACK_FIRST_IMPORT', 'EXPLICIT_APPROVAL_REQUIRED');
+      audit.status = 'ROLLING_BACK'; audit.operation = 'ROLLBACK'; audit.rollback_started_at = new Date().toISOString();
+      vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+      SpreadsheetApp.flush();
+      try {
+        // Clear cells owned by this verified batch only; never delete sheet rows or headers.
+        rollbackState.db.sheet.getRange(2,1,3244,21).clearContent();
+        SpreadsheetApp.flush();
+        vocabularyFirstImportPhysicalV1_(ss,imports,spec,true);
+        audit.status = 'ROLLED_BACK'; audit.actual_rows = 0; audit.finished_at = new Date().toISOString();
+        vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+        plan.code = 'ROLLED_BACK'; return plan;
+      } catch (rollbackWriteError) {
+        audit.status = 'FAILED'; audit.error_code = 'ROLLBACK_INCOMPLETE'; audit.finished_at = new Date().toISOString();
+        try { audit.actual_rows = rollbackState.db.sheet.getDataRange().getValues().slice(1).filter(function(row) { return row.some(function(v) { return v !== ''; }); }).length; }
+        catch (rollbackReadError) { audit.actual_rows = null; }
+        var rollbackRecorded = true;
+        try { vocabularyFirstImportSaveAuditV1_(imports,record,audit); } catch (rollbackAuditError) { rollbackRecorded = false; }
+        return {ok:false,code:'ROLLBACK_INCOMPLETE',actual_rows:audit.actual_rows,audit_recorded:rollbackRecorded};
+      }
+    }
+    // Completed retries do not depend on retained staging and never append again.
+    if (operation === 'commit' && audit && /^(COMPLETED|COMMITTING|FAILED)$/.test(audit.status)) {
+      vocabularyFirstImportAssertV1_(d.approval === 'COMMIT_FIRST_IMPORT', 'EXPLICIT_APPROVAL_REQUIRED');
+      vocabularyFirstImportAssertV1_(audit.operation !== 'ROLLBACK', 'STATE_MISMATCH', 'ROLLBACK_RECOVERY_REQUIRED');
+      var recovered;
+      try { recovered = vocabularyFirstImportPostV1_(ss,imports,spec,audit); }
+      catch (retryError) { return {ok:false,code:audit.status === 'COMPLETED'?'STATE_MISMATCH':'PARTIAL_IMPORT_DETECTED',reason:retryError.firstImportCode || 'READ_FAILED'}; }
+      if (audit.status !== 'COMPLETED' && !dry) {
+        audit.status = 'COMPLETED'; audit.actual_rows = 3244; audit.error_code = '';
+        audit.post_hash = recovered.post_hash; audit.finished_at = new Date().toISOString();
+        vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+      }
+      return {ok:true,code:'ALREADY_COMMITTED',dry_run:dry,summary:recovered.summary};
+    }
+    var staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
+    var staged = vocabularyFirstImportStagedV1_(staging,spec);
+    if (operation === 'stage') {
+      vocabularyFirstImportAssertV1_(!audit || /^(STAGING|STAGED|VALIDATED|COMPLETED)$/.test(audit.status), 'BATCH_CLOSED');
+      var index = d.chunk_index, count = index === 6 ? 244 : 500;
+      vocabularyFirstImportAssertV1_(Number.isInteger(index) && index >= 0 && index < 7, 'INVALID_CHUNK');
+      vocabularyFirstImportAssertV1_(d.payload_hash === spec.chunk_hashes[index], 'CHUNK_CONFLICT');
+      vocabularyFirstImportAssertV1_(d.row_count === count && Array.isArray(d.rows) && d.rows.length === count &&
+        d.rows.every(function(row) { return Array.isArray(row) && row.length === 21; }), 'CHUNK_SIZE_MISMATCH');
+      vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(d.rows) === d.payload_hash, 'CHUNK_CONFLICT');
+      var present = staged.filter(function(row) { return Math.floor((row.source_row-2)/500) === index; });
+      if (present.length) {
+        vocabularyFirstImportAssertV1_(present.length === count && vocabularyFirstImportHashV1_(present.map(function(row) { return row.values; })) === d.payload_hash, 'CHUNK_CONFLICT');
+      }
+      vocabularyFirstImportAssertV1_(!audit || !audit.chunks[index] || (audit.chunks[index] === d.payload_hash && present.length === count), 'CHUNK_CONFLICT');
+      vocabularyFirstImportAssertV1_(audit || !staged.length, 'ORPHAN_STAGING');
+      if (present.length && audit.chunks[index]) return {ok:true,code:'ALREADY_ACCEPTED',dry_run:dry,row_count:count};
+      vocabularyFirstImportAssertV1_(!audit || /^(STAGING|STAGED)$/.test(audit.status), 'BATCH_CLOSED');
+      if (dry) return {ok:true,code:present.length?'ALREADY_ACCEPTED':'WOULD_STAGE',dry_run:true,row_count:count};
+      if (!audit) {
+        audit = {};
+        ['batch_id','request_id','manifest_sha256','preimport_sha256','schema_version','expected_total','expected_unique_sense_ids','expected_levels','chunk_count'].forEach(function(k) { audit[k] = spec[k]; });
+        audit.created_at = new Date().toISOString(); audit.status = 'STAGING'; audit.actual_rows = 0;
+        audit.chunks = Array(7).fill(null); audit.error_code = '';
+        record = vocabularyFirstImportSaveAuditV1_(imports,null,audit);
+        SpreadsheetApp.flush();
+      }
+      if (!present.length) {
+        var now = new Date();
+        var output = d.rows.map(function(row,i) {
+          var source = index * 500 + i + 2;
+          return [spec.batch_id+':'+source,spec.batch_id,source,row[4],row[2],row[3],row[1],row[0],row[5],row[6],row[7],row[8],row[9],now,row[14],row[15],row[16],row[17],row[18],row[12],row[19],row[20]];
+        });
+        staging.sheet.getRange(staging.sheet.getLastRow()+1,1,count,22).setValues(output);
+        SpreadsheetApp.flush();
+      }
+      // Re-read before acknowledging: a setter may have only partially persisted.
+      staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
+      staged = vocabularyFirstImportStagedV1_(staging,spec);
+      present = staged.filter(function(row) { return Math.floor((row.source_row-2)/500) === index; });
+      vocabularyFirstImportAssertV1_(present.length === count && vocabularyFirstImportHashV1_(present.map(function(row) { return row.values; })) === d.payload_hash, 'CHUNK_CONFLICT');
+      audit.chunks[index] = d.payload_hash; audit.actual_rows = staged.length;
+      audit.status = audit.chunks.every(Boolean) ? 'STAGED' : 'STAGING';
+      vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+      return {ok:true,code:'ACCEPTED',staging_rows:staged.length,chunk_index:index};
+    }
+    vocabularyFirstImportAssertV1_(audit && /^(STAGING|STAGED|VALIDATED)$/.test(audit.status), 'BATCH_NOT_READY');
+    if (operation === 'discard') {
+      var ranges = [];
+      staged.map(function(row) { return row.sheet_row; }).sort(function(a,b) { return a-b; }).forEach(function(row) {
+        var last = ranges[ranges.length-1];
+        if (last && last.last + 1 === row) last.last = row; else ranges.push({first:row,last:row});
+      });
+      if (!dry) {
+        vocabularyFirstImportAssertV1_(d.approval === 'DISCARD_FIRST_IMPORT_STAGING', 'EXPLICIT_APPROVAL_REQUIRED');
+        ranges.forEach(function(r) { staging.sheet.getRange(r.first,1,r.last-r.first+1,22).clearContent(); });
+        SpreadsheetApp.flush();
+        var remaining = vocabularyFirstImportStagedV1_(vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH'),spec);
+        vocabularyFirstImportAssertV1_(!remaining.length, 'DISCARD_INCOMPLETE');
+        audit.status = 'DISCARDED'; audit.actual_rows = 0; audit.finished_at = new Date().toISOString();
+        vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+      }
+      return {ok:true,code:dry?'DISCARD_PLAN_PASS':'DISCARDED',ranges:ranges,row_count:staged.length,dry_run:dry};
+    }
+    var validated = vocabularyFirstImportCompleteV1_(staged,audit,spec);
+    if (operation === 'validate') {
+      if (!dry) { audit.status = 'VALIDATED'; vocabularyFirstImportSaveAuditV1_(imports,record,audit); }
+      return {ok:true,code:'VALIDATED',summary:validated.summary,dry_run:dry};
+    }
+    vocabularyFirstImportAssertV1_(audit.status === 'VALIDATED', 'VALIDATION_REQUIRED');
+    vocabularyFirstImportAssertV1_(d.approval === 'COMMIT_FIRST_IMPORT', 'EXPLICIT_APPROVAL_REQUIRED');
+    // This gate precedes EVERY write, including the COMMITTING audit marker.
+    var db = vocabularyFirstImportPhysicalV1_(ss,imports,spec,true);
+    if (dry) return {ok:true,code:'COMMIT_ELIGIBLE',dry_run:true,staging_rows:staged.length,chunk_status:'7/7 PASS',manifest_validation:'PASS',precondition:'PASS',would_write_range:'VocabularyDB!A2:U3245',expected_post_state:validated.summary,rollback_candidate:'exact completed batch A2:U3245'};
+    audit.status = 'COMMITTING'; audit.started_at = new Date().toISOString(); audit.batch_timestamp = audit.started_at;
+    audit.write_range = 'A2:U3245'; audit.target_id = spec.spreadsheet_id; audit.target_gid = spec.sheet_id;
+    audit.before_data_rows = db.actual_rows; audit.actual_rows = 0; audit.error_code = '';
+    vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+    SpreadsheetApp.flush(); // Persist ownership/range evidence before writing VocabularyDB.
+    try {
+      var timestamp = new Date(audit.batch_timestamp);
+      var committedRows = validated.rows.map(function(row) { var copy = row.slice(); copy[10] = timestamp; copy[11] = timestamp; return copy; });
+      db.sheet.getRange(2,1,3244,21).setValues(committedRows);
+      SpreadsheetApp.flush();
+      var post = vocabularyFirstImportPostV1_(ss,imports,spec,audit);
+      audit.status = 'COMPLETED'; audit.actual_rows = post.summary.total; audit.post_hash = post.post_hash;
+      audit.finished_at = new Date().toISOString(); vocabularyFirstImportSaveAuditV1_(imports,record,audit);
+      return {ok:true,code:'COMPLETED',batch_id:spec.batch_id,summary:post.summary};
+    } catch (writeError) {
+      audit.status = 'FAILED'; audit.error_code = 'PARTIAL_IMPORT_DETECTED'; audit.finished_at = new Date().toISOString();
+      try { audit.actual_rows = db.sheet.getDataRange().getValues().slice(1).filter(function(row) { return row.some(function(v) { return v !== ''; }); }).length; }
+      catch (readError) { audit.actual_rows = null; }
+      var recorded = true;
+      try { vocabularyFirstImportSaveAuditV1_(imports,record,audit); } catch (auditError) { recorded = false; }
+      return {ok:false,code:'PARTIAL_IMPORT_DETECTED',expected_rows:3244,actual_rows:audit.actual_rows,audit_recorded:recorded};
+    }
+  } catch (error) {
+    // Never echo payloads, tokens, row contents, or arbitrary service error messages.
+    return {ok:false,code:error.firstImportCode || 'FIRST_IMPORT_OPERATION_FAILED',reason:error.firstImportReason};
+  } finally {
+    if (lock && lock.hasLock()) {
+      // Apps Script buffers Sheet writes. Publish the final audit before another request enters.
+      try { SpreadsheetApp.flush(); }
+      catch (finalFlushError) { return {ok:false,code:'FIRST_IMPORT_FLUSH_FAILED'}; }
+      finally { lock.releaseLock(); }
+    }
+  }
+}
 function vocabularyImportBoolV1_(value){var v=String(value==null?'':value).trim().toLowerCase();return value===true||value===1||v==='1'||v==='true'||v==='yes'||v==='y';}
 function toImportTextV1_(value){if(value===null||value===undefined)return'';if(value===true)return'true';if(value===false)return'false';return String(value).trim();}
 function normalizeVocabularyImportRowV1_(raw,sourceRow){
@@ -1776,7 +2092,9 @@ function doPost(e) {
   } catch (err) {
     return textOut_('bad json');
   }
-  resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
+  var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard)VocabularyFirstImportV1$/.test(d.action || '');
+  // Do not log arbitrary caller-supplied trace_id on these administrative write actions.
+  if (!isVocabularyFirstImport) resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
 
   if (d.action === 'redeemInviteCode') return textOut_(JSON.stringify(redeemTeacherInvite_(d.inviteCode)));
   if (d.action === 'validateTeacherCredential') return textOut_(JSON.stringify(validateTeacherCredential_(d.credential, d.teacher_id)));
@@ -1804,6 +2122,7 @@ function doPost(e) {
   if (d.action === 'createAssignmentsBatchV2') return handleCreateAssignmentsBatchV2_(d);
   if (d.action === 'postponeVocabReviewV1') return handlePostponeVocabReviewV1_(d);
   if (d.action === 'assignVocabReviewV1') return handleAssignVocabReviewV1_(d);
+  if (isVocabularyFirstImport) return textOut_(JSON.stringify(handleVocabularyFirstImportV1_(d)));
   if (d.action === 'stageVocabularyImportV1') return handleStageVocabularyImportV1_(d);
   if (d.action === 'previewVocabularyImportV1') return handlePreviewVocabularyImportV1_(d);
   if (d.action === 'commitVocabularyImportV1') return handleCommitVocabularyImportV1_(d);
