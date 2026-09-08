@@ -7,7 +7,7 @@ function createFirstImportMock(snapshot) {
   const track = (method, sheet, extra = {}) => operations.push({ method, sheet, ...extra });
   let locked = false;
   class Sheet {
-    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = PUBLIC_SHEET_ID_REMOVED; this.merged = []; }
+    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
     getSheetId() { track('getSheetId', this.name); return this.gid; }
     getMaxRows() { track('getMaxRows', this.name); return this.maxRows; }
     getMaxColumns() { track('getMaxColumns', this.name); return this.maxColumns; }
@@ -32,8 +32,13 @@ function createFirstImportMock(snapshot) {
         getValues: () => { track('getValues', sheet.name, { cells: nr * nc }); return read(false); },
         getFormulas: () => { track('getFormulas', sheet.name, { cells: nr * nc }); return read(true); },
         getMergedRanges: () => { track('getMergedRanges', sheet.name); return sheet.merged; },
+        setNumberFormat(format) {
+          writes.push({sheet:sheet.name,method:'setNumberFormat',row:r,column:c,rows:nr,columns:nc,format});
+          track('setNumberFormat',sheet.name);
+        },
         setValues(values) {
           if (values.length !== nr || values.some(row => row.length !== nc)) throw new Error('mock setValues dimensions');
+          if (values.some(row=>row.some(v=>v !== null && typeof v === 'object' && !(v instanceof Date)))) throw new Error('unsupported scalar object');
           writes.push({ sheet: sheet.name, method: 'setValues', row: r, column: c, rows: nr, columns: nc });
           track('setValues', sheet.name, { row: r, column: c, rows: nr, columns: nc });
           const failAfter = sheet.failAfter;
@@ -41,10 +46,29 @@ function createFirstImportMock(snapshot) {
           values.forEach((row, i) => {
             if (failAfter !== undefined && i >= failAfter) return;
             while (sheet.rows.length < r + i) sheet.rows.push([]);
-            row.forEach((value, j) => { sheet.rows[r + i - 1][c + j - 1] = value instanceof Date ? new Date(value) : value; });
+            row.forEach((value, j) => {
+              if (hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
+              sheet.rows[r + i - 1][c + j - 1] = value instanceof Date ? new Date(value) : value;
+            });
           });
           if (failAfter !== undefined) throw new Error('mock interrupted setValues');
           if (hooks.afterWrite) hooks.afterWrite(sheet.name);
+        },
+        setRichTextValues(values) {
+          if (values.length !== nr || values.some(row => row.length !== nc)) throw new Error('mock rich text dimensions');
+          const valuesText = values.map(row => row.map(v => {
+            if (!v || typeof v.getText !== 'function' || typeof v.getText() !== 'string') throw new Error('mock rich text type');
+            return v.getText();
+          }));
+          writes.push({sheet:sheet.name,method:'setRichTextValues',row:r,column:c,rows:nr,columns:nc});
+          track('setRichTextValues',sheet.name,{row:r,column:c,rows:nr,columns:nc});
+          if (hooks.beforeRichWrite) hooks.beforeRichWrite(sheet.name,r,c);
+          valuesText.forEach((row,i) => row.forEach((value,j) => {
+            while (sheet.rows.length < r+i) sheet.rows.push([]);
+            sheet.rows[r+i-1][c+j-1] = value;
+            delete sheet.formulas[`${r+i},${c+j}`];
+          }));
+          if (hooks.afterRichWrite) hooks.afterRichWrite(sheet.name,r,c);
         },
         clearContent() {
           writes.push({ sheet: sheet.name, method: 'clearContent', row: r, column: c, rows: nr, columns: nc });
@@ -64,7 +88,9 @@ function createFirstImportMock(snapshot) {
   const ctx = {
     Date, console: { log: (...args) => logs.push(args) },
     PropertiesService: { getScriptProperties: () => ({ getProperty: key => key === 'TOKEN' ? 'local-test-token' : '' }) },
-    SpreadsheetApp: { getActiveSpreadsheet: () => ss, flush() { track('flush'); if (hooks.flush) hooks.flush(); } },
+    SpreadsheetApp: { getActiveSpreadsheet: () => ss,
+      newRichTextValue: () => { let text; return {setText(v) { if (typeof v !== 'string') throw new Error('mock text must be string'); text=v; return this; },build() { const value=text; return {getText:()=>value}; }}; },
+      flush() { track('flush'); if (hooks.flush) hooks.flush(); } },
     LockService: { getScriptLock: () => {
       let owns = false;
       return { tryLock() { track('tryLock'); if (locked) return false; owns = true; locked = true; return true; }, hasLock: () => owns,

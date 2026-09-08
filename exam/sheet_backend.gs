@@ -1058,6 +1058,9 @@ function vocabularyFirstImportStagedV1_(staging, spec) {
     var source = row[2];
     vocabularyFirstImportAssertV1_(Number.isInteger(source) && source >= 2 && source <= 3245 && !seen[source] &&
       row[0] === spec.batch_id + ':' + source && !staging.formulas[i].some(Boolean), 'STAGING_ROW_CONFLICT');
+    // Timestamps are omitted from canonical hashes, so validate their type on EVERY read,
+    // including retries/validation. A failed write must not become accepted on replay.
+    vocabularyFirstImportAssertV1_(row[13] instanceof Date && isFinite(row[13].getTime()), 'TYPE_COERCION_DETECTED');
     seen[source] = true;
     // Staging has no level_review_status; the pinned PREIMPORT has blank values there.
     out.push({ sheet_row: i + 1, source_row: source,
@@ -1129,13 +1132,102 @@ function vocabularyFirstImportPostV1_(ss, imports, spec, audit) {
   if (audit.post_hash) vocabularyFirstImportAssertV1_(audit.post_hash === fullHash, 'POST_FINGERPRINT_MISMATCH');
   return { summary: summary, post_hash: fullHash, db: db };
 }
+// Staging-only type contract: text, number, boolean and Date retain their types.
+function vocabularyFirstImportStagingWriteV1_(sheet, firstRow, rows) {
+  var text = [0,1,3,4,5,6,7,8,15,18,19,20,21], numbers = [2,9,10,11,17], flags = [12,14,16];
+  var spec = vocabularyFirstImportSpecV1_();
+  vocabularyFirstImportAssertV1_(rows.length > 0 && rows.length <= 500 && Number.isInteger(firstRow) && firstRow >= 2, 'STAGING_TYPE_CONTRACT_FAILED');
+  rows.forEach(function(row) {
+    vocabularyFirstImportAssertV1_(row.length === 22 && text.every(function(i) { return typeof row[i] === 'string'; }) &&
+      numbers.every(function(i) { return typeof row[i] === 'number' && isFinite(row[i]); }) &&
+      flags.every(function(i) { return typeof row[i] === 'boolean'; }) && row[13] instanceof Date && isFinite(row[13].getTime()) &&
+      row[1] === spec.batch_id && Number.isInteger(row[2]) && row[2] >= 2 && row[2] <= 3245 &&
+      row[0] === spec.batch_id + ':' + row[2], 'STAGING_TYPE_CONTRACT_FAILED');
+  });
+  // Keep the pinned, non-interpretable ownership IDs even if the first write is interrupted.
+  // Other text NEVER reaches setValues (including formula-looking text).
+  var scalar = rows.map(function(row) { return row.map(function(value,i) { return i > 1 && text.indexOf(i) !== -1 ? '' : value; }); });
+  sheet.getRange(firstRow,1,rows.length,22).setValues(scalar);
+  [[0,2],[3,6],[15,1],[18,4]].forEach(function(block) {
+    vocabularyFirstImportTextWriteV1_(sheet.getRange(firstRow,block[0]+1,rows.length,block[1]),
+      rows.map(function(row) { return row.slice(block[0],block[0]+block[1]); }));
+  });
+}
+function vocabularyFirstImportTextWriteV1_(range, rows) {
+  var rich = rows.map(function(row) { return row.map(function(value) {
+    vocabularyFirstImportAssertV1_(typeof value === 'string', 'STAGING_TYPE_CONTRACT_FAILED');
+    return SpreadsheetApp.newRichTextValue().setText(value).build();
+  }); });
+  range.setRichTextValues(rich);
+}
+function vocabularyFirstImportRepairV1_(d, ss, imports, record, staging, staged, spec, dry) {
+  var code = 'REPAIR_STATE_CONFLICT', audit = record && record.audit;
+  vocabularyFirstImportAssertV1_(d.approval === 'REPAIR_FIRST_IMPORT_WORD_FALSE', 'EXPLICIT_REPAIR_APPROVAL_REQUIRED');
+  vocabularyFirstImportAssertV1_(d.chunk_index === 3 && d.source_row === 1560 && d.sense_id === 'SEN_A587053E40B9' &&
+    d.field === 'word' && d.before_type === 'boolean' && d.before_value === false &&
+    d.after_type === 'string' && d.after_value === 'false' &&
+    ['sheet','sheet_name','sheet_id','cell','range','row','column','value','new_value'].every(function(k) { return d[k] === undefined; }),
+    'REPAIR_TARGET_MISMATCH');
+  vocabularyFirstImportPhysicalV1_(ss,imports,spec,true);
+  vocabularyFirstImportAssertV1_(audit && audit.status === 'STAGING' && staged.length === 2000 &&
+    staged.every(function(row,i) { return row.source_row === i+2; }) &&
+    audit.chunks.slice(0,3).every(function(h,i) { return h === spec.chunk_hashes[i]; }) &&
+    audit.chunks.slice(4).every(function(h) { return h === null; }), code);
+  var rows = staged.map(function(row) { return row.values; }), target = staged[1558], chunk = rows.slice(1500);
+  vocabularyFirstImportAssertV1_(target.sheet_row === 1560 && target.values[0] === d.sense_id &&
+    staging.sheet.getSheetId() === 1121844961 && staging.sheet.getRange(1560,5).getMergedRanges().length === 0, code);
+  [0,1,2].forEach(function(i) { vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows.slice(i*500,(i+1)*500)) === spec.chunk_hashes[i], code); });
+  var value = target.values[2], already = value === 'false';
+  vocabularyFirstImportAssertV1_(value === false || already, code);
+  var counted = imports.values[record.row-1][5];
+  var pending = audit.actual_rows === 1500 && counted === 1500 && audit.chunks[3] === null;
+  var accepted = audit.actual_rows === 2000 && counted === 2000 && audit.chunks[3] === spec.chunk_hashes[3];
+  vocabularyFirstImportAssertV1_(pending || (already && accepted), code);
+  var currentHash = vocabularyFirstImportHashV1_(chunk);
+  vocabularyFirstImportAssertV1_(currentHash === (already ? spec.chunk_hashes[3] : 'PUBLIC_IDENTIFIER_REMOVED'), code);
+  var repairedRows = rows.map(function(row) { return row.slice(); }); repairedRows[1558][2] = 'false';
+  vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(repairedRows.slice(1500)) === spec.chunk_hashes[3], code);
+  var allHash = vocabularyFirstImportHashV1_(repairedRows);
+  var result = {ok:true,code:already?'ALREADY_REPAIRED':'WOULD_REPAIR',dry_run:dry,cell:'E1560',chunk_index:3,
+    expected_chunk_hash:spec.chunk_hashes[3],audit_recovered:false,
+    source_row:1560,sense_id:'SEN_A587053E40B9',field:'word',
+    before:{value:value,type:typeof value},after:{value:'false',type:'string'},current_chunk_hash:currentHash,
+    history_recorded:!!(audit.type_repair && audit.type_repair.status === 'REPAIRED')};
+  if (already || dry) return result;
+  var event = {batch_id:spec.batch_id,chunk_index:3,sense_id:d.sense_id,field:'word',before_type:'boolean',after_type:'string',
+    status:'REPAIRED',timestamp:new Date().toISOString(),error_code:''};
+  try {
+    vocabularyFirstImportTextWriteV1_(staging.sheet.getRange(1560,5,1,1), [['false']]);
+    SpreadsheetApp.flush();
+    var fresh = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,code);
+    var after = vocabularyFirstImportStagedV1_(fresh,spec), afterRows = after.map(function(row) { return row.values; });
+    vocabularyFirstImportAssertV1_(after.length === 2000 && after[1558].sheet_row === 1560 && after[1558].values[2] === 'false' &&
+      vocabularyFirstImportHashV1_(afterRows.slice(1500)) === spec.chunk_hashes[3] && vocabularyFirstImportHashV1_(afterRows) === allHash,
+      'REPAIR_POSTCHECK_FAILED');
+    vocabularyFirstImportPhysicalV1_(ss,imports,spec,true);
+    result.code = 'REPAIRED';
+  } catch (repairError) {
+    event.status = 'REPAIR_POSTCHECK_FAILED'; event.error_code = 'REPAIR_POSTCHECK_FAILED';
+    event.after_type = after && after[1558] ? typeof after[1558].values[2] : 'UNKNOWN';
+    result = {ok:false,code:'REPAIR_POSTCHECK_FAILED',audit_recovered:false};
+  }
+  // History only: never advance chunks[3], actual_rows, new_count or status here.
+  audit.type_repair = event;
+  try {
+    imports.sheet.getRange(record.row,13,1,1).setValues([['VOCAB_FIRST_IMPORT_V1:' + JSON.stringify(audit)]]);
+    result.history_recorded = true;
+  } catch (historyError) {
+    result = {ok:false,code:'REPAIR_HISTORY_FAILED',history_recorded:false,audit_recovered:false};
+  }
+  return result;
+}
 function handleVocabularyFirstImportV1_(d) {
   var lock, spec = vocabularyFirstImportSpecV1_();
   try {
     vocabularyFirstImportAssertV1_(!!getToken_() && d.token === getToken_(), 'UNAUTHORIZED');
     vocabularyFirstImportMetadataV1_(d,spec);
     var operation = String(d.action).replace('VocabularyFirstImportV1','');
-    vocabularyFirstImportAssertV1_(['stage','validate','commit','rollback','discard'].indexOf(operation) !== -1, 'INVALID_ACTION');
+    vocabularyFirstImportAssertV1_(['stage','validate','commit','rollback','discard','repair'].indexOf(operation) !== -1, 'INVALID_ACTION');
     vocabularyFirstImportAssertV1_(d.dry_run === undefined || typeof d.dry_run === 'boolean', 'INVALID_DRY_RUN');
     var dry = d.dry_run === true;
     lock = LockService.getScriptLock(); vocabularyFirstImportAssertV1_(lock.tryLock(30000), 'LOCK_BUSY');
@@ -1187,6 +1279,7 @@ function handleVocabularyFirstImportV1_(d) {
     }
     var staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
     var staged = vocabularyFirstImportStagedV1_(staging,spec);
+    if (operation === 'repair') return vocabularyFirstImportRepairV1_(d,ss,imports,record,staging,staged,spec,dry);
     if (operation === 'stage') {
       vocabularyFirstImportAssertV1_(!audit || /^(STAGING|STAGED|VALIDATED|COMPLETED)$/.test(audit.status), 'BATCH_CLOSED');
       var index = d.chunk_index, count = index === 6 ? 244 : 500;
@@ -1218,13 +1311,18 @@ function handleVocabularyFirstImportV1_(d) {
           var source = index * 500 + i + 2;
           return [spec.batch_id+':'+source,spec.batch_id,source,row[4],row[2],row[3],row[1],row[0],row[5],row[6],row[7],row[8],row[9],now,row[14],row[15],row[16],row[17],row[18],row[12],row[19],row[20]];
         });
-        staging.sheet.getRange(staging.sheet.getLastRow()+1,1,count,22).setValues(output);
+        vocabularyFirstImportStagingWriteV1_(staging.sheet,staging.sheet.getLastRow()+1,output);
         SpreadsheetApp.flush();
       }
       // Re-read before acknowledging: a setter may have only partially persisted.
       staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
       staged = vocabularyFirstImportStagedV1_(staging,spec);
       present = staged.filter(function(row) { return Math.floor((row.source_row-2)/500) === index; });
+      vocabularyFirstImportAssertV1_(present.every(function(row,i) {
+        var storedDate = staging.values[row.sheet_row-1][13];
+        return (!output || (storedDate instanceof Date && storedDate.getTime() === output[i][13].getTime())) &&
+          d.rows[i] && row.values.every(function(value,j) { return typeof value === typeof d.rows[i][j]; });
+      }), 'TYPE_COERCION_DETECTED');
       vocabularyFirstImportAssertV1_(present.length === count && vocabularyFirstImportHashV1_(present.map(function(row) { return row.values; })) === d.payload_hash, 'CHUNK_CONFLICT');
       audit.chunks[index] = d.payload_hash; audit.actual_rows = staged.length;
       audit.status = audit.chunks.every(Boolean) ? 'STAGED' : 'STAGING';
@@ -2092,7 +2190,7 @@ function doPost(e) {
   } catch (err) {
     return textOut_('bad json');
   }
-  var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard)VocabularyFirstImportV1$/.test(d.action || '');
+  var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard|repair)VocabularyFirstImportV1$/.test(d.action || '');
   // Do not log arbitrary caller-supplied trace_id on these administrative write actions.
   if (!isVocabularyFirstImport) resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
 
