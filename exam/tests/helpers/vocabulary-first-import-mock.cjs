@@ -62,10 +62,10 @@ function createFirstImportMock(snapshot) {
               // VOCAB-5C2 observation: a leading U+0027 disappeared despite '@'.
               // One-prefix consumption is an explicit simulation hypothesis, not
               // evidence that Apps Script universally parses either setter this way.
-              if (sheet.name === 'VocabularyImportStagingV2' && typeof value === 'string' && value.startsWith("'") && hooks.apostropheSemantics !== 'literal') value = value.slice(1);
+              if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && typeof value === 'string' && value.startsWith("'") && hooks.apostropheSemantics !== 'literal') value = value.slice(1);
               if (!plain && hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
               // Adversarial General-format fixture; not a universal Sheets parser simulation.
-              if (sheet.name === 'VocabularyImportStagingV2' && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
+              if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
               sheet.rows[r + i - 1][c + j - 1] = value instanceof Date ? new Date(value) : value;
             });
           });
@@ -84,8 +84,8 @@ function createFirstImportMock(snapshot) {
           valuesText.forEach((row,i) => row.forEach((value,j) => {
             while (sheet.rows.length < r+i) sheet.rows.push([]);
             // Model the observed General-format false incident unless the text format is set.
-            let stored = sheet.name === 'VocabularyImportStagingV2' && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
-            if (sheet.name === 'VocabularyImportStagingV2' && typeof stored === 'string' && stored.startsWith("'") && hooks.apostropheSemantics !== 'literal') stored = stored.slice(1);
+            let stored = ['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
+            if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && typeof stored === 'string' && stored.startsWith("'") && hooks.apostropheSemantics !== 'literal') stored = stored.slice(1);
             sheet.rows[r+i-1][c+j-1] = stored;
             delete sheet.formulas[`${r+i},${c+j}`];
           }));

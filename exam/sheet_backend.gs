@@ -1153,6 +1153,25 @@ function vocabularyFirstImportStagingWriteV1_(sheet, firstRow, rows) {
       rows.map(function(row) { return row.slice(block[0],block[0]+block[1]); }));
   });
 }
+// First-import DB mapping only; canonical values are never escaped in memory.
+// Reuse the staging round-trip primitive for STRING_REQUIRED columns alone.
+function vocabularyFirstImportDbWriteV1_(sheet, rows) {
+  var text = [0,1,2,3,4,5,12,13,15,18,19,20], numbers = [6,7,8,17], flags = [9,14,16];
+  vocabularyFirstImportAssertV1_(rows.length === 3244 && rows.every(function(row) {
+    return row.length === 21 && text.every(function(i) { return typeof row[i] === 'string'; }) &&
+      numbers.every(function(i) { return typeof row[i] === 'number' && isFinite(row[i]); }) &&
+      flags.every(function(i) { return typeof row[i] === 'boolean'; }) &&
+      [10,11].every(function(i) { return row[i] instanceof Date && isFinite(row[i].getTime()); });
+  }), 'DB_TYPE_CONTRACT_FAILED');
+  // Do not pass interpretable strings to a General-format scalar write.
+  sheet.getRange(2,1,3244,21).setValues(rows.map(function(row) {
+    return row.map(function(value,i) { return text.indexOf(i) === -1 ? value : ''; });
+  }));
+  [[0,6],[12,2],[15,1],[18,3]].forEach(function(block) {
+    vocabularyFirstImportTextWriteV1_(sheet.getRange(2,block[0]+1,3244,block[1]),
+      rows.map(function(row) { return row.slice(block[0],block[0]+block[1]); }));
+  });
+}
 function vocabularyFirstImportTextWriteV1_(range, rows) {
   var rich = rows.map(function(row) { return row.map(function(value) {
     vocabularyFirstImportAssertV1_(typeof value === 'string', 'STAGING_TYPE_CONTRACT_FAILED');
@@ -1473,7 +1492,7 @@ function handleVocabularyFirstImportV1_(d) {
     try {
       var timestamp = new Date(audit.batch_timestamp);
       var committedRows = validated.rows.map(function(row) { var copy = row.slice(); copy[10] = timestamp; copy[11] = timestamp; return copy; });
-      db.sheet.getRange(2,1,3244,21).setValues(committedRows);
+      vocabularyFirstImportDbWriteV1_(db.sheet, committedRows);
       SpreadsheetApp.flush();
       var post = vocabularyFirstImportPostV1_(ss,imports,spec,audit);
       audit.status = 'COMPLETED'; audit.actual_rows = post.summary.total; audit.post_hash = post.post_hash;
