@@ -1575,6 +1575,114 @@ function handleInspectVocabularyStagingStateV1_(e){
   var out=Object.keys(requests).map(function(id){var group=requests[id],expected=group._expected_total,sourceCount=Object.keys(group._source_rows).length;group.expected_total=expected||null;group.is_contiguous=group.row_count>0&&group.duplicate_source_rows===0&&sourceCount===group.row_count&&group.source_row_min===2&&group.source_row_max===group.row_count+1;group.is_complete=!!expected&&group.row_count===expected&&group.duplicate_sense_ids===0&&group.is_contiguous;delete group._sense_ids;delete group._source_rows;delete group._expected_total;return group;});
   out.sort(function(a,b){return new Date(b.created_at).getTime()-new Date(a.created_at).getTime();});return{ok:true,total_staging_rows:total,requests:out};
 }
+// Incremental teacher operations use VocabularyDB only, never import history/staging.
+function vocabularyDbCheckV1_(condition, code) {
+  if (!condition) { var error = new Error(code); error.vocabularyCode = code; throw error; }
+}
+function vocabularyDbReadV1_() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(VOCABULARY_DB_SHEET);
+  vocabularyDbCheckV1_(!!sheet, 'SCHEMA_MISMATCH');
+  var range = sheet.getDataRange(), rows = range.getValues(), formulas = range.getFormulas();
+  vocabularyDbCheckV1_(JSON.stringify(rows[0]) === JSON.stringify(VOCABULARY_DB_HEADERS), 'SCHEMA_MISMATCH');
+  var byId = Object.create(null);
+  for (var i=1;i<rows.length;i++) {
+    if (rows[i].every(function(v) { return v === ''; }) && formulas[i].every(function(v) { return v === ''; })) continue;
+    vocabularyDbCheckV1_(rows[i].length === 21 && typeof rows[i][0] === 'string' && rows[i][0] && !byId[rows[i][0]] &&
+      formulas[i].every(function(v) { return v === ''; }), 'DB_INTEGRITY_ERROR');
+    byId[rows[i][0]] = i;
+  }
+  return {sheet:sheet,rows:rows,byId:byId};
+}
+function handleGetVocabularyDbItemV1_(e) {
+  if (!e.parameter.token || e.parameter.token !== getToken_()) return {ok:false,code:'UNAUTHORIZED'};
+  try {
+    var db = vocabularyDbReadV1_(), index = db.byId[String(e.parameter.sense_id || '')];
+    if (!index) return {ok:false,code:'NOT_FOUND'};
+    return {ok:true,item:vocabularyDbRowObjectV1_(db.rows[index]),fingerprint:vocabularyFirstImportHashV1_(db.rows[index])};
+  } catch (err) { return {ok:false,code:err.vocabularyCode || 'READ_FAILED'}; }
+}
+function vocabularyDbRowCheckV1_(row) {
+  var text = [0,1,2,3,4,5,12,13,15,18,19,20];
+  vocabularyDbCheckV1_(text.every(function(i) { return typeof row[i] === 'string' && row[i].length <= 10000; }) &&
+    [0,1,2,3,5].every(function(i) { return !!row[i].trim(); }) &&
+    [0,1].every(function(i) { return /^[A-Za-z0-9_-]{1,128}$/.test(row[i]); }) &&
+    /^V[1-5]$/.test(row[19]) && row[4] === row[19] && row[15] === row[19] &&
+    (row[12] === '' || /^V[1-5]$/.test(row[12])) &&
+    [6,7,8,17].every(function(i) { return typeof row[i] === 'number' && isFinite(row[i]) && row[i] >= 0; }) &&
+    Number.isInteger(row[6]) && row[6] >= 1 && Number.isInteger(row[8]) &&
+    typeof row[9] === 'boolean' && row[14] === true && row[16] === false &&
+    [10,11].every(function(i) { return row[i] instanceof Date && isFinite(row[i].getTime()); }), 'VALIDATION_ERROR');
+}
+function vocabularyDbWriteItemV1_(sheet, sheetRow, row) {
+  var text = [0,1,2,3,4,5,12,13,15,18,19,20];
+  sheet.getRange(sheetRow,1,1,21).setValues([row.map(function(value,i) { return text.indexOf(i) === -1 ? value : ''; })]);
+  [[0,6],[12,2],[15,1],[18,3]].forEach(function(block) {
+    vocabularyFirstImportTextWriteV1_(sheet.getRange(sheetRow,block[0]+1,1,block[1]),[row.slice(block[0],block[0]+block[1])]);
+  });
+}
+function handleVocabularyDbMutationV1_(d) {
+  var lock, started = false;
+  try {
+    vocabularyDbCheckV1_(!!d.token && d.token === getToken_(), 'UNAUTHORIZED');
+    var create = d.action === 'createVocabularyDbItemV1';
+    vocabularyDbCheckV1_(create || d.action === 'updateVocabularyDbItemV1', 'VALIDATION_ERROR');
+    vocabularyDbCheckV1_(Object.keys(d).every(function(k) { return ['action','token','request_id','sense_id','item','changes','expected_current_fingerprint'].indexOf(k) !== -1; }), 'VALIDATION_ERROR');
+    var requestId = d.request_id;
+    vocabularyDbCheckV1_(typeof requestId === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(requestId) && !/^vocab-first-/.test(requestId), 'VALIDATION_ERROR');
+    var fields = create ? d.item : d.changes;
+    vocabularyDbCheckV1_(fields && typeof fields === 'object' && !Array.isArray(fields) && Object.keys(fields).length > 0 &&
+      (create ? !d.changes && !d.sense_id && !d.expected_current_fingerprint : !d.item && typeof d.sense_id === 'string' && /^[a-f0-9]{64}$/.test(d.expected_current_fingerprint || '')), 'VALIDATION_ERROR');
+    var allowed = ['word','meaning','confirmed_level','item_type','sense_order','importance_score','active','selection_score','selection_reason','recommended_level','level_review_status','semantic_review_status'];
+    if (create) allowed = allowed.concat(['sense_id','vocab_id','occurrence_count']);
+    vocabularyDbCheckV1_(Object.keys(fields).every(function(k) { return allowed.indexOf(k) !== -1; }), 'VALIDATION_ERROR');
+    var id = create ? fields.sense_id : d.sense_id;
+    vocabularyDbCheckV1_(typeof id === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(id), 'VALIDATION_ERROR');
+    // Sorted field names make equivalent JSON object key order idempotent.
+    var payloadHash = vocabularyFirstImportHashV1_([d.action,id,d.expected_current_fingerprint || '',Object.keys(fields).sort().map(function(k) { return [k,fields[k]]; })]);
+    lock = LockService.getScriptLock(); vocabularyDbCheckV1_(lock.tryLock(5000), 'LOCK_BUSY');
+    var props = PropertiesService.getScriptProperties(), key = 'VOCAB_DB_REQUEST_V1_' + vocabularyFirstImportHashV1_(requestId);
+    var previous = props.getProperty(key), pendingKey = 'VOCAB_DB_PENDING_V1';
+    if (previous) {
+      var receipt = JSON.parse(previous);
+      vocabularyDbCheckV1_(receipt.payload_hash === payloadHash, 'REQUEST_CONFLICT');
+      vocabularyDbCheckV1_(!props.getProperty(pendingKey) && receipt.status === 'COMPLETED', 'PARTIAL_WRITE_DETECTED');
+      return {ok:true,code:create?'ALREADY_CREATED':'ALREADY_UPDATED',sense_id:receipt.sense_id,fingerprint:receipt.fingerprint};
+    }
+    // Durable fail-closed guard: an uncertain write requires separate diagnosis.
+    // Never expire/evict receipts or automatically repair/delete partially written rows.
+    vocabularyDbCheckV1_(!props.getProperty(pendingKey), 'PARTIAL_WRITE_DETECTED');
+    var db = vocabularyDbReadV1_(), index = db.byId[id], now = new Date(), row;
+    if (create) {
+      vocabularyDbCheckV1_(!index, 'DUPLICATE_SENSE_ID');
+      row = [id,fields.vocab_id,fields.word,fields.meaning,fields.confirmed_level,'WORD',1,0,0,true,now,now,'','',true,fields.confirmed_level,false,0,'',fields.confirmed_level,''];
+      index = db.rows.length;
+    } else {
+      vocabularyDbCheckV1_(!!index, 'NOT_FOUND');
+      vocabularyDbCheckV1_(vocabularyFirstImportHashV1_(db.rows[index]) === d.expected_current_fingerprint, 'STALE_UPDATE');
+      row = db.rows[index].slice(); row[11] = now;
+    }
+    Object.keys(fields).forEach(function(k) { row[VOCABULARY_DB_HEADERS.indexOf(k)] = fields[k]; });
+    if (Object.prototype.hasOwnProperty.call(fields,'confirmed_level')) row[4] = row[15] = fields.confirmed_level;
+    vocabularyDbRowCheckV1_(row);
+    vocabularyDbCheckV1_(index+1 <= db.sheet.getMaxRows() && db.sheet.getMaxColumns() >= 21 &&
+      !db.sheet.getRange(index+1,1,1,21).getMergedRanges().length, 'CAPACITY_OR_RANGE_ERROR');
+    var fingerprint = vocabularyFirstImportHashV1_(row);
+    // Reserve before any DB write; failures of PropertiesService also fail closed.
+    started = true;
+    props.setProperty(pendingKey, JSON.stringify({request_key:key,sense_id:id,row:index+1}));
+    props.setProperty(key, JSON.stringify({status:'PENDING',payload_hash:payloadHash,sense_id:id}));
+    vocabularyDbWriteItemV1_(db.sheet,index+1,row); SpreadsheetApp.flush();
+    var range = db.sheet.getRange(index+1,1,1,21), stored = range.getValues()[0];
+    vocabularyDbRowCheckV1_(stored);
+    vocabularyDbCheckV1_(range.getFormulas()[0].every(function(v) { return v === ''; }) &&
+      vocabularyFirstImportHashV1_(stored) === fingerprint, 'PARTIAL_WRITE_DETECTED');
+    props.setProperty(key, JSON.stringify({status:'COMPLETED',payload_hash:payloadHash,sense_id:id,fingerprint:fingerprint}));
+    props.deleteProperty(pendingKey);
+    return {ok:true,code:create?'CREATED':'UPDATED',sense_id:id,fingerprint:fingerprint};
+  } catch (err) {
+    return {ok:false,code:started?'PARTIAL_WRITE_DETECTED':(err.vocabularyCode || 'OPERATION_FAILED')};
+  } finally { if (lock && lock.hasLock()) lock.releaseLock(); }
+}
 function handleListVocabularyDbV1_(e){
   if(e.parameter.token!==getToken_())return{error:'no token'};
   var p=e.parameter;
@@ -2319,7 +2427,8 @@ function doPost(e) {
   }
   var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard|repair|repairApostrophe)VocabularyFirstImportV1$/.test(d.action || '');
   // Do not log arbitrary caller-supplied trace_id on these administrative write actions.
-  if (!isVocabularyFirstImport) resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
+  var isVocabularyIncremental = /^(create|update)VocabularyDbItemV1$/.test(d.action || '');
+  if (!isVocabularyFirstImport && !isVocabularyIncremental) resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
 
   if (d.action === 'redeemInviteCode') return textOut_(JSON.stringify(redeemTeacherInvite_(d.inviteCode)));
   if (d.action === 'validateTeacherCredential') return textOut_(JSON.stringify(validateTeacherCredential_(d.credential, d.teacher_id)));
@@ -2348,6 +2457,7 @@ function doPost(e) {
   if (d.action === 'postponeVocabReviewV1') return handlePostponeVocabReviewV1_(d);
   if (d.action === 'assignVocabReviewV1') return handleAssignVocabReviewV1_(d);
   if (isVocabularyFirstImport) return textOut_(JSON.stringify(handleVocabularyFirstImportV1_(d)));
+  if (isVocabularyIncremental) return textOut_(JSON.stringify(handleVocabularyDbMutationV1_(d)));
   if (d.action === 'stageVocabularyImportV1') return handleStageVocabularyImportV1_(d);
   if (d.action === 'previewVocabularyImportV1') return handlePreviewVocabularyImportV1_(d);
   if (d.action === 'commitVocabularyImportV1') return handleCommitVocabularyImportV1_(d);
@@ -3085,6 +3195,7 @@ function doGet(e) {
   if (action === 'getVocabularyImportStatusV1') return jsonpOut_(cb, handleGetVocabularyImportStatusV1_(e));
   if (action === 'inspectVocabularyStagingStateV1') return jsonpOut_(cb, handleInspectVocabularyStagingStateV1_(e));
   if (action === 'listVocabularyDbV1') return jsonpOut_(cb, handleListVocabularyDbV1_(e));
+  if (action === 'getVocabularyDbItemV1') return jsonpOut_(cb, handleGetVocabularyDbItemV1_(e));
   if (action === 'listVocabularySensesV1') return jsonpOut_(cb, handleListVocabularySensesV1_(e));
   if (action === 'previewVocabularySetV1') return jsonpOut_(cb, handlePreviewVocabularySetV1_(e));
   if (action === 'fetchVocabularySetV1') return jsonpOut_(cb, handleFetchVocabularySetV1_(e));

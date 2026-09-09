@@ -4,11 +4,13 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = r
 const backend = fs.readFileSync(path.resolve(__dirname, '../../sheet_backend.gs'), 'utf8');
 function createFirstImportMock(snapshot) {
   const sheets = {}, writes = [], logs = [], operations = [], hooks = {};
+  const properties = { TOKEN: 'local-test-token' }, propertyWrites = [];
   const track = (method, sheet, extra = {}) => operations.push({ method, sheet, ...extra });
   let locked = false;
   class Sheet {
     constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.formats = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
     getSheetId() { track('getSheetId', this.name); return this.gid; }
+    appendRow(row) { this.getRange(this.getLastRow()+1,1,1,row.length).setValues([row]); }
     getMaxRows() { track('getMaxRows', this.name); return this.maxRows; }
     getMaxColumns() { track('getMaxColumns', this.name); return this.maxColumns; }
     getLastRow() {
@@ -108,7 +110,11 @@ function createFirstImportMock(snapshot) {
   const ss = { getId: () => 'PUBLIC_IDENTIFIER_REMOVED', getSheetByName: name => sheets[name] || null };
   const ctx = {
     Date, console: { log: (...args) => logs.push(args) },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: key => key === 'TOKEN' ? 'local-test-token' : '' }) },
+    PropertiesService: { getScriptProperties: () => ({
+      getProperty: key => properties[key] || '',
+      setProperty(key,value) { if (hooks.propertyWrite) hooks.propertyWrite(key,value); properties[key]=value; propertyWrites.push({key,method:'set'}); },
+      deleteProperty(key) { if (hooks.propertyDelete) hooks.propertyDelete(key); delete properties[key]; propertyWrites.push({key,method:'delete'}); }
+    }) },
     SpreadsheetApp: { getActiveSpreadsheet: () => ss,
       newRichTextValue: () => { let text; return {setText(v) { if (typeof v !== 'string') throw new Error('mock text must be string'); text=v; return this; },build() { const value=text; return {getText:()=>value}; }}; },
       flush() { track('flush'); if (hooks.flush) hooks.flush(); } },
@@ -126,7 +132,8 @@ function createFirstImportMock(snapshot) {
   sheets.VocabularyImportStagingV2 = new Sheet('VocabularyImportStagingV2', ctx.VOCABULARY_IMPORT_STAGING_V2_HEADERS);
   if (snapshot) for (const [name, rows] of Object.entries(snapshot)) sheets[name].rows = structuredClone(rows);
   return {
-    ctx, ss, sheets, writes, logs, operations, hooks,
+    ctx, ss, sheets, writes, logs, operations, hooks, properties, propertyWrites,
+    addSheet: (name,headers) => (sheets[name] = new Sheet(name,headers)),
     call: payload => ctx.handleVocabularyFirstImportV1_({ token: 'local-test-token', ...payload }),
     snapshot: () => Object.fromEntries(Object.entries(sheets).map(([name, sheet]) => [name, structuredClone(sheet.rows)])),
     audit: () => JSON.parse(sheets.VocabularyImportsV2.rows.find(row => String(row[12]).startsWith('VOCAB_FIRST_IMPORT_V1:'))[12].slice('VOCAB_FIRST_IMPORT_V1:'.length)),
