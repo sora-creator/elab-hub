@@ -1166,6 +1166,106 @@ function vocabularyFirstImportTextWriteV1_(range, rows) {
     return /^[=+\-@]/.test(value) ? '' : value;
   }); }));
   range.setRichTextValues(rich);
+  // Literal U+0027 is canonical content, not an input escape marker. Keep the
+  // normal/false/formula-like path unchanged. Only these STRING_REQUIRED cells
+  // receive one extra input apostrophe, AFTER RichText, followed by exact readback.
+  // The local incident model consumes one prefix. Do not infer a live Sheets
+  // round-trip guarantee from that model: reject any different stored semantics.
+  rows.forEach(function(row,i) { row.forEach(function(value,j) {
+    if (value.charAt(0) !== "'") return;
+    var cell = range.getCell(i+1,j+1);
+    cell.setValues([["'" + value]]);
+    SpreadsheetApp.flush();
+    var stored = cell.getValues()[0][0];
+    vocabularyFirstImportAssertV1_(typeof stored === 'string' && stored === value && !cell.getFormulas()[0][0],
+      'LEADING_APOSTROPHE_POSTCHECK_FAILED');
+  }); });
+}
+// Incident-specific, no client-selected destinations or replacement values.
+// Exact strings are pinned from the SHA-verified PREIMPORT, not report excerpts.
+function PUBLIC_IDENTIFIER_REMOVED() {
+  return [
+    {cell:'S3204',source_row:3204,sense_id:'SEN_543D1DA76B91',field:'selection_reason',
+      before:"자신감 있는'과 구별되는 문맥적 의미로 학습 가치가 있음.",
+      after:"'자신감 있는'과 구별되는 문맥적 의미로 학습 가치가 있음."},
+    {cell:'S3228',source_row:3228,sense_id:'SEN_10DD210DC5B5',field:'selection_reason',
+      before:"A를 ~로 여기다'의 중요한 다의어 용법으로 별도 학습 가치가 큼.",
+      after:"'A를 ~로 여기다'의 중요한 다의어 용법으로 별도 학습 가치가 큼."}
+  ];
+}
+function PUBLIC_IDENTIFIER_REMOVED(d, ss, imports, record, staging, staged, spec, dry) {
+  var code = 'APOSTROPHE_REPAIR_STATE_CONFLICT', audit = record && record.audit;
+  vocabularyFirstImportAssertV1_(d.approval === 'REPAIR_FIRST_IMPORT_LEADING_APOSTROPHE', 'EXPLICIT_REPAIR_APPROVAL_REQUIRED');
+  var keys = ['action','token','approval','dry_run','batch_id','request_id','manifest_sha256','preimport_sha256',
+    'schema_version','expected_total','expected_unique_sense_ids','expected_levels','chunk_count'];
+  vocabularyFirstImportAssertV1_(Object.keys(d).every(function(k) { return keys.indexOf(k) !== -1; }), 'REPAIR_TARGET_MISMATCH');
+  // Unlike legacy actions, actual execution must explicitly specify false.
+  vocabularyFirstImportAssertV1_(typeof d.dry_run === 'boolean', 'INVALID_DRY_RUN');
+  vocabularyFirstImportPhysicalV1_(ss,imports,spec,true);
+  vocabularyFirstImportAssertV1_(audit && audit.status === 'STAGING' && audit.actual_rows === 3000 &&
+    imports.values[record.row-1][5] === 3000 && !audit.error_code &&
+    audit.chunks.slice(0,6).every(function(h,i) { return h === spec.chunk_hashes[i]; }) && audit.chunks[6] === null,
+    code);
+  vocabularyFirstImportAssertV1_(staging.sheet.getSheetId() === 1121844961 && staged.length === 3244 &&
+    !staging.formulas.some(function(row) { return row.some(Boolean); }) &&
+    staged.every(function(row,i) { return row.source_row === i+2 && row.sheet_row === i+2; }) &&
+    staging.values.slice(1).every(function(row) { return !row.some(function(v) { return v !== ''; }) || row[1] === spec.batch_id; }), code);
+  var rows = staged.map(function(row) { return row.values; }), seen = Object.create(null);
+  rows.forEach(function(row) { vocabularyFirstImportAssertV1_(!seen[row[0]], 'DUPLICATE_SENSE_ID'); seen[row[0]] = true; });
+  for (var i=0;i<6;i++) vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows.slice(i*500,(i+1)*500)) === spec.chunk_hashes[i], code);
+  var targets = PUBLIC_IDENTIFIER_REMOVED(), afterCount = 0;
+  targets.forEach(function(t) {
+    var row = staged[t.source_row-2], value = row.values[18];
+    vocabularyFirstImportAssertV1_(row.values[0] === t.sense_id &&
+      staging.sheet.getRange(t.source_row,19,1,1).getMergedRanges().length === 0 &&
+      typeof value === 'string' && (value === t.before || value === t.after), code);
+    if (value === t.after) afterCount++;
+  });
+  vocabularyFirstImportAssertV1_(afterCount !== 1, 'PARTIAL_REPAIR_STATE');
+  var currentHash = vocabularyFirstImportHashV1_(rows.slice(3000));
+  vocabularyFirstImportAssertV1_(currentHash === (afterCount === 2 ? spec.chunk_hashes[6] :
+    'PUBLIC_IDENTIFIER_REMOVED'), code);
+  var repaired = rows.map(function(row) { return row.slice(); });
+  targets.forEach(function(t) { repaired[t.source_row-2][18] = t.after; });
+  vocabularyFirstImportRowsCheckV1_(repaired,spec);
+  vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(repaired.slice(3000)) === spec.chunk_hashes[6], code);
+  var result = {ok:true,code:afterCount === 2?'ALREADY_REPAIRED':'WOULD_REPAIR',dry_run:dry,target_count:2,
+    sheet:VOCABULARY_IMPORT_STAGING_V2_SHEET,chunk_index:6,current_chunk_hash:currentHash,
+    expected_repaired_chunk_hash:spec.chunk_hashes[6],audit_recovered:false,history_write:false,
+    targets:targets.map(function(t) { return {cell:t.cell,source_row:t.source_row,sense_id:t.sense_id,field:t.field,
+      before:{value:rows[t.source_row-2][18],type:'string'},after:{value:t.after,type:'string'}}; })};
+  if (dry || afterCount === 2) return result;
+  // Non-contiguous Range writes are NOT atomic. Never retry or roll back here.
+  // No history write: a failure is returned explicitly, not marked REPAIRED.
+  var expectedPhysical = staging.values.map(function(row) { return row.slice(); });
+  targets.forEach(function(t) { expectedPhysical[t.source_row-1][18] = t.after; });
+  var writeFailed = false;
+  try {
+    targets.forEach(function(t) {
+      vocabularyFirstImportTextWriteV1_(staging.sheet.getRange(t.source_row,19,1,1),[[t.after]]);
+    });
+    SpreadsheetApp.flush();
+  } catch (writeError) { writeFailed = true; }
+  try {
+    var fresh = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,code);
+    var matched = targets.filter(function(t) { return fresh.values[t.source_row-1][18] === t.after &&
+      !fresh.formulas[t.source_row-1][18]; }).length;
+    if (matched === 1) return {ok:false,code:'PARTIAL_REPAIR_DETECTED',repaired_target_count:1,automatic_retry:false,audit_recovered:false};
+    vocabularyFirstImportAssertV1_(!writeFailed && matched === 2 &&
+      vocabularyFirstImportHashV1_(fresh.values) === vocabularyFirstImportHashV1_(expectedPhysical) &&
+      vocabularyFirstImportHashV1_(fresh.formulas) === vocabularyFirstImportHashV1_(staging.formulas), 'REPAIR_POSTCHECK_FAILED');
+    var afterRows = vocabularyFirstImportStagedV1_(fresh,spec).map(function(row) { return row.values; });
+    vocabularyFirstImportRowsCheckV1_(afterRows,spec);
+    vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(afterRows.slice(3000)) === spec.chunk_hashes[6], 'REPAIR_POSTCHECK_FAILED');
+    var freshImports = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORTS_V2_SHEET,VOCABULARY_IMPORTS_V2_HEADERS,code);
+    vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(freshImports.values) === vocabularyFirstImportHashV1_(imports.values) &&
+      vocabularyFirstImportHashV1_(freshImports.formulas) === vocabularyFirstImportHashV1_(imports.formulas), 'REPAIR_POSTCHECK_FAILED');
+    vocabularyFirstImportPhysicalV1_(ss,freshImports,spec,true);
+    result.code = 'REPAIRED'; result.repaired_chunk_hash = spec.chunk_hashes[6]; result.full_rows_exact = true;
+    return result;
+  } catch (postError) {
+    return {ok:false,code:'REPAIR_POSTCHECK_FAILED',automatic_retry:false,audit_recovered:false};
+  }
 }
 function vocabularyFirstImportRepairV1_(d, ss, imports, record, staging, staged, spec, dry) {
   var code = 'REPAIR_STATE_CONFLICT', audit = record && record.audit;
@@ -1234,7 +1334,7 @@ function handleVocabularyFirstImportV1_(d) {
     vocabularyFirstImportAssertV1_(!!getToken_() && d.token === getToken_(), 'UNAUTHORIZED');
     vocabularyFirstImportMetadataV1_(d,spec);
     var operation = String(d.action).replace('VocabularyFirstImportV1','');
-    vocabularyFirstImportAssertV1_(['stage','validate','commit','rollback','discard','repair'].indexOf(operation) !== -1, 'INVALID_ACTION');
+    vocabularyFirstImportAssertV1_(['stage','validate','commit','rollback','discard','repair','repairApostrophe'].indexOf(operation) !== -1, 'INVALID_ACTION');
     vocabularyFirstImportAssertV1_(d.dry_run === undefined || typeof d.dry_run === 'boolean', 'INVALID_DRY_RUN');
     var dry = d.dry_run === true;
     lock = LockService.getScriptLock(); vocabularyFirstImportAssertV1_(lock.tryLock(30000), 'LOCK_BUSY');
@@ -1287,6 +1387,7 @@ function handleVocabularyFirstImportV1_(d) {
     var staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
     var staged = vocabularyFirstImportStagedV1_(staging,spec);
     if (operation === 'repair') return vocabularyFirstImportRepairV1_(d,ss,imports,record,staging,staged,spec,dry);
+    if (operation === 'repairApostrophe') return PUBLIC_IDENTIFIER_REMOVED(d,ss,imports,record,staging,staged,spec,dry);
     if (operation === 'stage') {
       vocabularyFirstImportAssertV1_(!audit || /^(STAGING|STAGED|VALIDATED|COMPLETED)$/.test(audit.status), 'BATCH_CLOSED');
       var index = d.chunk_index, count = index === 6 ? 244 : 500;
@@ -2197,7 +2298,7 @@ function doPost(e) {
   } catch (err) {
     return textOut_('bad json');
   }
-  var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard|repair)VocabularyFirstImportV1$/.test(d.action || '');
+  var isVocabularyFirstImport = /^(stage|validate|commit|rollback|discard|repair|repairApostrophe)VocabularyFirstImportV1$/.test(d.action || '');
   // Do not log arbitrary caller-supplied trace_id on these administrative write actions.
   if (!isVocabularyFirstImport) resultTraceLog_(d.trace_id,'STEP_A doPost entry',{action:d.action||''});
 

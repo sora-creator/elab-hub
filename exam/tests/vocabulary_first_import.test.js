@@ -383,17 +383,20 @@ test('partial rollback cannot leave COMPLETED or be recovered as successful comm
   zeroWriteFailure(env,commit(),'STATE_MISMATCH'); zeroWriteFailure(env,request('rollback',{dry_run:true}),'ROLLBACK_BLOCKED');
 });
 const measuredOperations = {};
-test('bulk operation counts: no per-row writes and 14 staging scans across 7 chunks', () => {
+test('bulk operation counts: 14 staging scans plus exactly two literal-apostrophe cells', () => {
   function measure(env,key) {
     const methods = ['getDataRange','getRange','getValues','getFormulas','setValues','clearContent','flush'];
     measuredOperations[key] = Object.fromEntries(methods.map(m=>[m,env.operations.filter(op=>op.method===m).length]));
   }
   const env = createFirstImportMock(); input.chunks.forEach(chunk=>expectCode(env.call(chunk),'ACCEPTED')); measure(env,'stage_7_chunks');
-  assert.strictEqual(env.operations.filter(op=>op.sheet==='VocabularyImportStagingV2'&&op.method==='getValues').length,14);
-  // One mixed scalar block plus four (format + scalar + literal) blocks per chunk.
-  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setValues').length,35);
+  assert.strictEqual(env.operations.filter(op=>op.sheet==='VocabularyImportStagingV2'&&op.method==='getDataRange').length,14);
+  assert.strictEqual(env.operations.filter(op=>op.sheet==='VocabularyImportStagingV2'&&op.method==='getValues'&&op.cells===1).length,2);
+  // Existing bulk path plus two narrowly scoped apostrophe serialization writes/readbacks.
+  assert.deepStrictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setValues'&&w.rows===1)
+    .map(w=>[w.row,w.column,w.columns]),[[3204,19,1],[3228,19,1]]);
+  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setValues').length,37);
   assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setRichTextValues').length,28);
-  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2').length,91);
+  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2').length,93);
   assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setNumberFormat').length,28);
   env.operations.length=0; expectCode(env.call(request('validate')),'VALIDATED'); measure(env,'validate');
   env.operations.length=0; expectCode(env.call(commit()),'COMPLETED'); measure(env,'commit');

@@ -29,6 +29,10 @@ function createFirstImportMock(snapshot) {
       if (r < 1 || c < 1 || r + nr - 1 > this.maxRows || c + nc - 1 > this.maxColumns) throw new Error('mock range exceeds capacity');
       function read(formulas) { return Array.from({ length: nr }, (_, i) => Array.from({ length: nc }, (_, j) => formulas ? (sheet.formulas[`${r + i},${c + j}`] || '') : (sheet.rows[r + i - 1]?.[c + j - 1] ?? ''))); }
       return {
+        getCell: (i,j) => {
+          if (i<1 || j<1 || i>nr || j>nc) throw new Error('mock cell outside parent range');
+          return sheet.getRange(r+i-1,c+j-1,1,1);
+        },
         getValues: () => { track('getValues', sheet.name, { cells: nr * nc }); return read(false); },
         getFormulas: () => { track('getFormulas', sheet.name, { cells: nr * nc }); return read(true); },
         getNumberFormats: () => Array.from({length:nr},(_,i)=>Array.from({length:nc},(_,j)=>sheet.formats[`${r+i},${c+j}`] || 'General')),
@@ -45,6 +49,7 @@ function createFirstImportMock(snapshot) {
           if (values.some(row=>row.some(v=>v !== null && typeof v === 'object' && !(v instanceof Date)))) throw new Error('unsupported scalar object');
           writes.push({ sheet: sheet.name, method: 'setValues', row: r, column: c, rows: nr, columns: nc });
           track('setValues', sheet.name, { row: r, column: c, rows: nr, columns: nc });
+          if (hooks.beforeScalarWrite) hooks.beforeScalarWrite(sheet.name,r,c,values);
           const failAfter = sheet.failAfter;
           delete sheet.failAfter;
           values.forEach((row, i) => {
@@ -54,6 +59,10 @@ function createFirstImportMock(snapshot) {
               const key = `${r+i},${c+j}`, plain = sheet.formats[key] === '@';
               delete sheet.formulas[key];
               if (typeof value === 'string' && value.startsWith('=')) sheet.formulas[key] = value;
+              // VOCAB-5C2 observation: a leading U+0027 disappeared despite '@'.
+              // One-prefix consumption is an explicit simulation hypothesis, not
+              // evidence that Apps Script universally parses either setter this way.
+              if (sheet.name === 'VocabularyImportStagingV2' && typeof value === 'string' && value.startsWith("'") && hooks.apostropheSemantics !== 'literal') value = value.slice(1);
               if (!plain && hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
               // Adversarial General-format fixture; not a universal Sheets parser simulation.
               if (sheet.name === 'VocabularyImportStagingV2' && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
@@ -75,7 +84,9 @@ function createFirstImportMock(snapshot) {
           valuesText.forEach((row,i) => row.forEach((value,j) => {
             while (sheet.rows.length < r+i) sheet.rows.push([]);
             // Model the observed General-format false incident unless the text format is set.
-            sheet.rows[r+i-1][c+j-1] = sheet.name === 'VocabularyImportStagingV2' && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
+            let stored = sheet.name === 'VocabularyImportStagingV2' && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
+            if (sheet.name === 'VocabularyImportStagingV2' && typeof stored === 'string' && stored.startsWith("'") && hooks.apostropheSemantics !== 'literal') stored = stored.slice(1);
+            sheet.rows[r+i-1][c+j-1] = stored;
             delete sheet.formulas[`${r+i},${c+j}`];
           }));
           if (hooks.afterRichWrite) hooks.afterRichWrite(sheet.name,r,c);
