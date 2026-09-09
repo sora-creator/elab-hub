@@ -390,10 +390,11 @@ test('bulk operation counts: no per-row writes and 14 staging scans across 7 chu
   }
   const env = createFirstImportMock(); input.chunks.forEach(chunk=>expectCode(env.call(chunk),'ACCEPTED')); measure(env,'stage_7_chunks');
   assert.strictEqual(env.operations.filter(op=>op.sheet==='VocabularyImportStagingV2'&&op.method==='getValues').length,14);
-  // One scalar block plus four literal-text blocks per chunk, never per-row writes.
-  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setValues').length,7);
+  // One mixed scalar block plus four (format + scalar + literal) blocks per chunk.
+  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setValues').length,35);
   assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setRichTextValues').length,28);
-  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2').length,35);
+  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2').length,91);
+  assert.strictEqual(env.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'&&w.method==='setNumberFormat').length,28);
   env.operations.length=0; expectCode(env.call(request('validate')),'VALIDATED'); measure(env,'validate');
   env.operations.length=0; expectCode(env.call(commit()),'COMPLETED'); measure(env,'commit');
   assert.strictEqual(measuredOperations.commit.setValues,3); assert.strictEqual(measuredOperations.commit.getValues,4);

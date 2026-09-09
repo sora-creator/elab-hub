@@ -1145,7 +1145,7 @@ function vocabularyFirstImportStagingWriteV1_(sheet, firstRow, rows) {
       row[0] === spec.batch_id + ':' + row[2], 'STAGING_TYPE_CONTRACT_FAILED');
   });
   // Keep the pinned, non-interpretable ownership IDs even if the first write is interrupted.
-  // Other text NEVER reaches setValues (including formula-looking text).
+  // Other text is written separately, only after its bounded range is plain text.
   var scalar = rows.map(function(row) { return row.map(function(value,i) { return i > 1 && text.indexOf(i) !== -1 ? '' : value; }); });
   sheet.getRange(firstRow,1,rows.length,22).setValues(scalar);
   [[0,2],[3,6],[15,1],[18,4]].forEach(function(block) {
@@ -1158,6 +1158,13 @@ function vocabularyFirstImportTextWriteV1_(range, rows) {
     vocabularyFirstImportAssertV1_(typeof value === 'string', 'STAGING_TYPE_CONTRACT_FAILED');
     return SpreadsheetApp.newRichTextValue().setText(value).build();
   }); });
+  // '@' is Sheets' text format token. Formatting alone does not replace a boolean.
+  // Explicitly replace scalar values too: RichText alone left E1560 boolean in production.
+  range.setNumberFormat('@');
+  // Never submit formula-like input to setValues, even on a plain-text range.
+  range.setValues(rows.map(function(row) { return row.map(function(value) {
+    return /^[=+\-@]/.test(value) ? '' : value;
+  }); }));
   range.setRichTextValues(rich);
 }
 function vocabularyFirstImportRepairV1_(d, ss, imports, record, staging, staged, spec, dry) {

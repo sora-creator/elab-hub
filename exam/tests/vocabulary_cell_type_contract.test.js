@@ -113,7 +113,7 @@ test('PUBLIC_IDENTIFIER_REMOVED', () => {
   assert(actual.every(r => typeof r[4]==='string' && r[13] instanceof Date && typeof r[12]==='boolean' && typeof r[9]==='number'));
   assert(e.sheets.VocabularyImportStagingV2.getRange(2,1,words.length,22).getFormulas().every(r=>r.every(v=>v==='')));
   assert(e.writes.every(w=>w.sheet==='VocabularyImportStagingV2'&&w.row===2&&w.rows===words.length));
-  assert.equal(e.writes.length,5);
+  assert.equal(e.writes.length,13);
 });
 
 test('PUBLIC_IDENTIFIER_REMOVED', () => {
@@ -136,7 +136,7 @@ test('PUBLIC_IDENTIFIER_REMOVED', () => {
   const e=createFirstImportMock(firstThree);
   e.hooks.afterRichWrite=(name,row,column)=>{if(name==='VocabularyImportStagingV2'&&column===19)e.sheets[name].rows[1501][13]='not a Date';};
   assert.equal(e.call(input.chunks[3]).code,'TYPE_COERCION_DETECTED');assert.equal(e.audit().chunks[3],null);
-  assert.equal(e.writes.filter(w=>w.method==='setNumberFormat').length,0);
+  assert.equal(e.writes.filter(w=>w.method==='setNumberFormat').length,4);
   e.hooks.afterRichWrite=null;e.writes.length=0;
   assert.equal(e.call(input.chunks[3]).code,'TYPE_COERCION_DETECTED');assert.equal(e.writes.length,0);
   assert.equal(e.audit().actual_rows,1500);assert.equal(e.audit().chunks[3],null);
@@ -155,7 +155,7 @@ test('PUBLIC_IDENTIFIER_REMOVED', () => {
   e.ctx.vocabularyFirstImportStagingWriteV1_(e.sheets.VocabularyImportStagingV2,2,values);
   const range=e.sheets.VocabularyImportStagingV2.getRange(2,1,values.length,22);
   assert.equal(hash(range.getValues()),hash(values));assert(range.getFormulas().every(r=>r.every(v=>v==='')));
-  assert.equal(e.writes.length,5);
+  assert.equal(e.writes.length,13);
   for(const column of [0,1]){
     const invalid=structuredClone(values.slice(0,1));invalid[0][column]='=SUM(1,2)';e.writes.length=0;
     assert.throws(()=>e.ctx.vocabularyFirstImportStagingWriteV1_(e.sheets.VocabularyImportStagingV2,2,invalid));assert.equal(e.writes.length,0);
@@ -166,6 +166,28 @@ test('PUBLIC_IDENTIFIER_REMOVED', () => {
   const e=createFirstImportMock(),r=e.ctx.SpreadsheetApp.newRichTextValue().setText('false').build();
   assert.throws(()=>e.sheets.VocabularyImportStagingV2.getRange(2,5).setValues([[r]]),/unsupported scalar object/);
   assert.equal(e.writes.length,0);
+});
+
+test('PUBLIC_IDENTIFIER_REMOVED', () => {
+  const e=createFirstImportMock(),sh=e.sheets.VocabularyImportStagingV2;
+  sh.formats['1,5']='header-format';sh.formats['502,5']='other-batch-format';
+  assert.equal(e.call(input.chunks[0]).code,'ACCEPTED');
+  const text=[0,1,3,4,5,6,7,8,15,18,19,20,21];
+  for(let row=2;row<=501;row++)for(let col=0;col<22;col++){
+    assert.equal(sh.formats[`${row},${col+1}`],text.includes(col)?'@':undefined);
+  }
+  assert.equal(sh.formats['1,5'],'header-format');assert.equal(sh.formats['502,5'],'other-batch-format');
+  assert.equal(e.writes.filter(w=>w.method==='setNumberFormat').length,4);
+  assert(e.writes.every(w=>w.sheet!=='VocabularyDB'));
+});
+
+test('PUBLIC_IDENTIFIER_REMOVED', () => {
+  const e=createFirstImportMock(),sh=e.sheets.VocabularyImportStagingV2;
+  sh.rows[1]=Array(22).fill('');sh.rows[1][4]=false;
+  e.hooks.beforeFormat=()=>{throw Error('format unavailable');};
+  assert.throws(()=>e.ctx.vocabularyFirstImportTextWriteV1_(sh.getRange(2,5),[['false']]));
+  assert.equal(sh.rows[1][4],false);
+  assert.deepEqual(e.writes.map(w=>w.method),['setNumberFormat']);
 });
 
 console.log(`${tests}/${tests} cell type contract tests PASS; operating writes = 0`);

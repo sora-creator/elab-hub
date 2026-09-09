@@ -7,7 +7,7 @@ function createFirstImportMock(snapshot) {
   const track = (method, sheet, extra = {}) => operations.push({ method, sheet, ...extra });
   let locked = false;
   class Sheet {
-    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
+    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.formats = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
     getSheetId() { track('getSheetId', this.name); return this.gid; }
     getMaxRows() { track('getMaxRows', this.name); return this.maxRows; }
     getMaxColumns() { track('getMaxColumns', this.name); return this.maxColumns; }
@@ -31,10 +31,14 @@ function createFirstImportMock(snapshot) {
       return {
         getValues: () => { track('getValues', sheet.name, { cells: nr * nc }); return read(false); },
         getFormulas: () => { track('getFormulas', sheet.name, { cells: nr * nc }); return read(true); },
+        getNumberFormats: () => Array.from({length:nr},(_,i)=>Array.from({length:nc},(_,j)=>sheet.formats[`${r+i},${c+j}`] || 'General')),
         getMergedRanges: () => { track('getMergedRanges', sheet.name); return sheet.merged; },
         setNumberFormat(format) {
           writes.push({sheet:sheet.name,method:'setNumberFormat',row:r,column:c,rows:nr,columns:nc,format});
           track('setNumberFormat',sheet.name);
+          if (hooks.beforeFormat) hooks.beforeFormat(sheet.name,r,c);
+          for(let i=0;i<nr;i++)for(let j=0;j<nc;j++)sheet.formats[`${r+i},${c+j}`]=format;
+          if (hooks.afterFormat) hooks.afterFormat(sheet.name,r,c);
         },
         setValues(values) {
           if (values.length !== nr || values.some(row => row.length !== nc)) throw new Error('mock setValues dimensions');
@@ -47,7 +51,12 @@ function createFirstImportMock(snapshot) {
             if (failAfter !== undefined && i >= failAfter) return;
             while (sheet.rows.length < r + i) sheet.rows.push([]);
             row.forEach((value, j) => {
-              if (hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
+              const key = `${r+i},${c+j}`, plain = sheet.formats[key] === '@';
+              delete sheet.formulas[key];
+              if (typeof value === 'string' && value.startsWith('=')) sheet.formulas[key] = value;
+              if (!plain && hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
+              // Adversarial General-format fixture; not a universal Sheets parser simulation.
+              if (sheet.name === 'VocabularyImportStagingV2' && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
               sheet.rows[r + i - 1][c + j - 1] = value instanceof Date ? new Date(value) : value;
             });
           });
@@ -65,7 +74,8 @@ function createFirstImportMock(snapshot) {
           if (hooks.beforeRichWrite) hooks.beforeRichWrite(sheet.name,r,c);
           valuesText.forEach((row,i) => row.forEach((value,j) => {
             while (sheet.rows.length < r+i) sheet.rows.push([]);
-            sheet.rows[r+i-1][c+j-1] = value;
+            // Model the observed General-format false incident unless the text format is set.
+            sheet.rows[r+i-1][c+j-1] = sheet.name === 'VocabularyImportStagingV2' && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
             delete sheet.formulas[`${r+i},${c+j}`];
           }));
           if (hooks.afterRichWrite) hooks.afterRichWrite(sheet.name,r,c);

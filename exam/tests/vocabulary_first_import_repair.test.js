@@ -79,10 +79,37 @@ for(const [name,change] of [
   ['PUBLIC_IDENTIFIER_REMOVED',a=>a.chunks[3]=input.chunks[3].payload_hash],
   ['AUDIT_LATER_CHUNK_PRESENT',a=>a.chunks[4]=input.chunks[4].payload_hash]
 ])test(name,()=>{const e=createFirstImportMock(snapshot),a=e.audit();change(a);e.sheets.VocabularyImportsV2.rows[1][3]=a.status;e.sheets.VocabularyImportsV2.rows[1][12]='VOCAB_FIRST_IMPORT_V1:'+JSON.stringify(a);noWrite(e,payload);});
+test('PUBLIC_IDENTIFIER_REMOVED',()=>{
+  const e=createFirstImportMock(snapshot),sh=e.sheets.VocabularyImportStagingV2;
+  assert.equal(sh.getRange(1560,5).getNumberFormats()[0][0],'General');
+  const newWrite=e.ctx.vocabularyFirstImportTextWriteV1_;
+  e.ctx.vocabularyFirstImportTextWriteV1_=(range,rows)=>range.setRichTextValues(rows.map(row=>row.map(value=>e.ctx.SpreadsheetApp.newRichTextValue().setText(value).build())));
+  assert.equal(e.call(payload).code,'REPAIR_POSTCHECK_FAILED');assert.equal(sh.rows[1559][4],false);
+  assert.equal(e.audit().type_repair.after_type,'boolean');
+  e.ctx.vocabularyFirstImportTextWriteV1_=newWrite;e.writes.length=0;
+  assert.equal(e.call(payload).code,'REPAIRED');assert.equal(sh.rows[1559][4],'false');
+  assert.equal(sh.getRange(1560,5).getNumberFormats()[0][0],'@');
+  assert.equal(sh.getRange(1560,5).getFormulas()[0][0],'');
+  assert.equal(hash(staged(e).slice(1500)),input.chunks[3].payload_hash);
+});
+test('PUBLIC_IDENTIFIER_REMOVED',()=>{
+  const e=createFirstImportMock(snapshot),sh=e.sheets.VocabularyImportStagingV2;
+  sh.formats['1560,4']='neighbor';sh.formats['1561,5']='other';
+  const formats=hash(sh.formats);assert.equal(e.call({...payload,dry_run:true}).code,'WOULD_REPAIR');
+  assert.equal(hash(sh.formats),formats);assert.equal(e.writes.length,0);
+  assert.equal(e.call(payload).code,'REPAIRED');
+  assert.deepEqual(sh.formats,{'1560,4':'neighbor','1561,5':'other','1560,5':'@'});
+  e.writes.length=0;const after=hash(sh.formats);assert.equal(e.call(payload).code,'ALREADY_REPAIRED');
+  assert.equal(e.writes.length,0);assert.equal(hash(sh.formats),after);
+});
+test('PUBLIC_IDENTIFIER_REMOVED',()=>{
+  const e=createFirstImportMock(snapshot);e.hooks.afterRichWrite=()=>{e.sheets.VocabularyImportStagingV2.formulas['1560,5']='="false"';};
+  assert.equal(e.call(payload).code,'REPAIR_POSTCHECK_FAILED');assert.equal(e.audit().chunks[3],null);
+});
 const repaired=createFirstImportMock(snapshot);
 test('PUBLIC_IDENTIFIER_REMOVED',()=>{
   const before=structuredClone(repaired.sheets.VocabularyImportStagingV2.rows),r=repaired.call(payload);assert.equal(r.code,'REPAIRED');assert.equal(r.history_recorded,true);
-  assert.deepEqual(repaired.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'),[{sheet:'VocabularyImportStagingV2',method:'setRichTextValues',row:1560,column:5,rows:1,columns:1}]);
+  assert.deepEqual(repaired.writes.filter(w=>w.sheet==='VocabularyImportStagingV2'),[{sheet:'VocabularyImportStagingV2',method:'setNumberFormat',row:1560,column:5,rows:1,columns:1,format:'@'},...['setValues','setRichTextValues'].map(method=>({sheet:'VocabularyImportStagingV2',method,row:1560,column:5,rows:1,columns:1}))]);
   const after=repaired.sheets.VocabularyImportStagingV2.rows;let changes=0;before.forEach((row,i)=>row.forEach((v,j)=>{if(hash(v)!==hash(after[i][j])){changes++;assert.equal(i,1559);assert.equal(j,4);}}));assert.equal(changes,1);
   assert.equal(after[1559][4],'false');assert.equal(hash(staged(repaired)),hash(input.rows.slice(0,2000)));
   assert.equal(hash(staged(repaired).slice(1500)),input.chunks[3].payload_hash);
