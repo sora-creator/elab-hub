@@ -1716,9 +1716,120 @@ function handleListVocabularySensesV1_(e){if(e.parameter.token!==getToken_())ret
 function vocabularySelectionContextV1_(studentId){var learned={},wrong={},attemptRows=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS).getDataRange().getValues(),owned={};for(var a=1;a<attemptRows.length;a++)if(String(attemptRows[a][2])===String(studentId)&&String(attemptRows[a][4])==='VOCAB')owned[String(attemptRows[a][0])]=true;var rows=getOrCreateSheet_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues();for(var i=1;i<rows.length;i++)if(owned[String(rows[i][1])]){var id=String(rows[i][2]);if(rows[i][5]===true)learned[id]=true;wrong[id]=Math.max(wrong[id]||0,Number(rows[i][4])||0);}return{learned:learned,wrong:wrong};}
 function selectVocabularyItemsV1_(options){var rows=getOrCreateSheet_(VOCABULARY_DB_SHEET,VOCABULARY_DB_HEADERS).getDataRange().getValues(),items=[],level=String(options.level||'').toUpperCase(),context=vocabularySelectionContextV1_(options.student_id||'');for(var i=1;i<rows.length;i++){var item=vocabularyDbRowObjectV1_(rows[i]);if(!item.active||!item.curriculum_active||item.archive_only||item.confirmed_level!==level||options.exclude_learned&&context.learned[item.sense_id])continue;item.learned=!!context.learned[item.sense_id];item.wrong_count=context.wrong[item.sense_id]||0;items.push(item);}var type=String(options.selection_type||'importance');if(type==='random')for(var j=items.length-1;j>0;j--){var k=Math.floor(Math.random()*(j+1)),tmp=items[j];items[j]=items[k];items[k]=tmp;}else if(type==='unlearned')items.sort(function(a,b){return Number(a.learned)-Number(b.learned)||b.selection_score-a.selection_score;});else if(type==='wrong')items.sort(function(a,b){return b.wrong_count-a.wrong_count||b.selection_score-a.selection_score;});else items.sort(function(a,b){return b.selection_score-a.selection_score||b.importance_score-a.importance_score||b.occurrence_count-a.occurrence_count;});return items.slice(0,Math.min(500,Math.max(1,Number(options.item_count)||50)));}
 function handlePreviewVocabularySetV1_(e){if(e.parameter.token!==getToken_())return{error:'no token'};var items=selectVocabularyItemsV1_({level:e.parameter.level,selection_type:e.parameter.selection_type,item_count:e.parameter.item_count,student_id:e.parameter.student_id,exclude_learned:String(e.parameter.exclude_learned)==='1'});return{items:items,total:items.length};}
+// Read-only schema preflight: administrative setup is never part of set creation.
+function vocabularySetReadV1_(name, headers) {
+  var sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  vocabularyDbCheckV1_(!!sheet,'SET_SCHEMA_NOT_READY');
+  var range=sheet.getDataRange(),rows=range.getValues(),formulas=range.getFormulas();
+  vocabularyDbCheckV1_(JSON.stringify(rows[0])===JSON.stringify(headers),'SET_SCHEMA_NOT_READY');
+  vocabularyDbCheckV1_(formulas.every(function(row){return row.every(function(v){return v==='';});}),'SET_DATA_NOT_READY');
+  while(rows.length>1&&rows[rows.length-1].every(function(v){return v==='';}))rows.pop();
+  return {sheet:sheet,rows:rows,headers:headers};
+}
+// Include runtime types: JSON alone cannot distinguish a Date from an ISO string.
+function vocabularySetStateV1_(rows) {
+  return vocabularyFirstImportHashV1_(rows.map(function(row){return row.map(function(v){
+    return [v instanceof Date?'date':typeof v,v];
+  });}));
+}
+function vocabularySetVerifyV1_(table, added) {
+  var actual=vocabularySetReadV1_(table.sheet.getName(),table.headers);
+  vocabularyDbCheckV1_(vocabularySetStateV1_(actual.rows)===vocabularySetStateV1_(table.rows.concat(added)),'PARTIAL_SET_CREATE');
+}
+function vocabularySetCapacityV1_(table, count) {
+  if(!count)return;
+  var start=table.rows.length+1;
+  vocabularyDbCheckV1_(start+count-1<=table.sheet.getMaxRows()&&table.headers.length<=table.sheet.getMaxColumns(),'SET_CAPACITY_NOT_READY');
+  vocabularyDbCheckV1_(!table.sheet.getRange(start,1,count,table.headers.length).getMergedRanges().length,'SET_CAPACITY_NOT_READY');
+}
+function vocabularySetAppendV1_(table, rows, textBlocks) {
+  if(!rows.length)return;
+  var start=table.rows.length+1,textCols={};
+  textBlocks.forEach(function(block){for(var i=block[0];i<block[0]+block[1];i++)textCols[i]=true;});
+  table.sheet.getRange(start,1,rows.length,table.headers.length).setValues(rows.map(function(row){
+    return row.map(function(v,i){return textCols[i]?'':v;});
+  }));
+  textBlocks.forEach(function(block){vocabularyFirstImportTextWriteV1_(
+    table.sheet.getRange(start,block[0]+1,rows.length,block[1]),
+    rows.map(function(row){return row.slice(block[0],block[0]+block[1]);})
+  );});
+  SpreadsheetApp.flush();
+  vocabularySetVerifyV1_(table,rows);
+}
 function handleCreateVocabularySetV1_(d){
-  setupAssignmentsV2_();setupVocabularyDbV1_();var teacherId=getOrCreateDefaultTeacher_(),ids=(d.sense_ids||[]).map(String),seen={};ids=ids.filter(function(id){if(seen[id])return false;seen[id]=true;return true;});if(!ids.length||ids.length>500)return textOut_('bad selection');var db=getOrCreateSheet_(VOCABULARY_DB_SHEET,VOCABULARY_DB_HEADERS).getDataRange().getValues(),byId={};for(var i=1;i<db.length;i++)byId[String(db[i][0])]=vocabularyDbRowObjectV1_(db[i]);var items=ids.map(function(id){return byId[id];}),manual=String(d.selection_type||'')==='manual';if(items.some(function(item){return!item||!item.active||(!manual&&(!item.curriculum_active||item.archive_only));}))return textOut_('invalid sense');var now=new Date(),setId=Utilities.getUuid(),sessionKey=String(d.session_key||Utilities.getUuid().replace(/-/g,'').slice(0,20)),title=String(d.title||((d.level||'')+' 어휘 '+items.length+'개')).trim(),hook=String(d.hook||''),link='../vocab/index.html?session='+encodeURIComponent(sessionKey)+'&server_set=1'+(hook?'&hook='+encodeURIComponent(hook):''),level=String(d.level||items[0].confirmed_level),type=String(d.selection_type||'manual'),setSh=getOrCreateSheet_(VOCAB_SETS_V2_SHEET,VOCAB_SETS_V2_HEADERS),itemSh=getOrCreateSheet_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS),wordSh=getOrCreateSheet_(WORDS_V2_SHEET,WORDS_V2_HEADERS);
-  var setRow=[setId,teacherId,sessionKey,title,'VocabularyDB '+level,link,true,now,now,level,'','','',title,'DB',items.length,'',0,'',level,type,items.length,teacherId];setSh.appendRow(setRow);var setRows=[],wordRows=wordSh.getDataRange().getValues(),wordById={};for(var w=1;w<wordRows.length;w++)wordById[String(wordRows[w][0])]=w;items.forEach(function(item,index){setRows.push([Utilities.getUuid(),setId,item.sense_id,index+1,now,item.sense_id,item.word,item.meaning,item.level]);var word=[item.sense_id,setId,item.word,item.meaning,true,now,now];if(wordById[item.sense_id]!=null)wordRows[wordById[item.sense_id]]=word;else{wordById[item.sense_id]=wordRows.length;wordRows.push(word);}});appendRowsV2_(itemSh,setRows,VOCAB_SET_ITEMS_V2_HEADERS.length);wordSh.getRange(1,1,wordRows.length,WORDS_V2_HEADERS.length).setValues(wordRows.map(function(row){var out=row.slice(0,WORDS_V2_HEADERS.length);while(out.length<WORDS_V2_HEADERS.length)out.push('');return out;}));vocabSetLookupV2Cache_=null;SpreadsheetApp.flush();return textOut_('ok:'+setId+':'+sessionKey);
+  var lock,started=false;
+  try {
+    vocabularyDbCheckV1_(!!d.token&&d.token===getToken_(),'UNAUTHORIZED');
+    vocabularyDbCheckV1_(typeof d.request_id==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(d.request_id),'INVALID_REQUEST_ID');
+    vocabularyDbCheckV1_(Object.keys(d).every(function(k){return ['action','token','request_id','sense_ids','title','level','selection_type','session_key','hook'].indexOf(k)!==-1;}),'SET_VALIDATION_ERROR');
+    vocabularyDbCheckV1_(Array.isArray(d.sense_ids)&&d.sense_ids.every(function(id){return typeof id==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(id); }),'bad selection');
+    var seen=Object.create(null),ids=d.sense_ids.filter(function(id){if(seen[id])return false;seen[id]=true;return true;});
+    vocabularyDbCheckV1_(ids.length>0&&ids.length<=500,'bad selection');
+    var title=d.title,level=d.level||'',type=d.selection_type||'manual',session=d.session_key||'',hook=d.hook||'';
+    vocabularyDbCheckV1_(typeof title==='string'&&!!title.trim()&&title.length<=200,'INVALID_SET_NAME');
+    vocabularyDbCheckV1_(typeof level==='string'&&(!level||/^V[1-5]$/.test(level))&&
+      ['manual','importance','random','unlearned','wrong'].indexOf(type)!==-1&&
+      typeof session==='string'&&(!session||/^[A-Za-z0-9_-]{10,80}$/.test(session))&&
+      typeof hook==='string'&&hook.length<=2000&&(!hook||/^https:\/\/[^\s]+$/.test(hook)),'SET_VALIDATION_ERROR');
+    title=title.trim();
+    var props=PropertiesService.getScriptProperties(),teacherId=props.getProperty('DEFAULT_TEACHER_ID');
+    var teachers=vocabularySetReadV1_(TEACHERS_V2_SHEET,TEACHERS_V2_HEADERS);
+    vocabularyDbCheckV1_(!!teacherId&&teachers.rows.slice(1).filter(function(row){return row[0]===teacherId&&row[3]===true;}).length===1,'SET_TEACHER_NOT_READY');
+    var payloadHash=vocabularyFirstImportHashV1_([teacherId,ids,title,level,type,session,hook]);
+    var key='VOCAB_SET_REQUEST_V1_'+vocabularyFirstImportHashV1_(d.request_id),pendingKey='VOCAB_SET_CREATE_PENDING_V1';
+    lock=LockService.getScriptLock();vocabularyDbCheckV1_(lock.tryLock(5000),'LOCK_BUSY');
+    var previous=props.getProperty(key);
+    if(previous){
+      var receipt=JSON.parse(previous);
+      vocabularyDbCheckV1_(receipt.payload_hash===payloadHash,'REQUEST_CONFLICT');
+      vocabularyDbCheckV1_(receipt.state==='COMPLETED'&&!props.getProperty(pendingKey),'PARTIAL_SET_CREATE');
+      return textOut_(receipt.result);
+    }
+    vocabularyDbCheckV1_(!props.getProperty(pendingKey),'PARTIAL_SET_CREATE');
+    var db=vocabularySetReadV1_(VOCABULARY_DB_SHEET,VOCABULARY_DB_HEADERS),sets=vocabularySetReadV1_(VOCAB_SETS_V2_SHEET,VOCAB_SETS_V2_HEADERS),
+      snapshots=vocabularySetReadV1_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS),words=vocabularySetReadV1_(WORDS_V2_SHEET,WORDS_V2_HEADERS);
+    var byId=Object.create(null),byWord=Object.create(null);
+    db.rows.slice(1).forEach(function(row){if(row.every(function(v){return v==='';}))return;
+      vocabularyDbCheckV1_(typeof row[0]==='string'&&!!row[0]&&!byId[row[0]],'SET_DATA_NOT_READY');byId[row[0]]=row;
+    });
+    words.rows.slice(1).forEach(function(row){if(row.every(function(v){return v==='';}))return;
+      vocabularyDbCheckV1_(typeof row[0]==='string'&&!!row[0]&&!byWord[row[0]],'WORD_COMPAT_CONFLICT');byWord[row[0]]=row;
+    });
+    var items=ids.map(function(id){
+      var row=byId[id];vocabularyDbCheckV1_(!!row,'VOCAB_SENSE_NOT_FOUND');
+      vocabularyDbCheckV1_(row[9]===true&&(type==='manual'||row[14]===true&&row[16]===false),'invalid sense');
+      vocabularyDbCheckV1_([0,2,3,19].every(function(i){return typeof row[i]==='string'&&!!row[i].trim()&&row[i].length<=10000;})&&/^V[1-5]$/.test(row[19]),'SET_VALIDATION_ERROR');
+      var old=byWord[id];
+      // A WordsV2 row can belong to an earlier set. Preserve its link and timestamps.
+      if(old)vocabularyDbCheckV1_(old[2]===row[2]&&old[3]===row[3]&&old[4]===true&&typeof old[1]==='string'&&
+        [5,6].every(function(i){return old[i] instanceof Date&&isFinite(old[i].getTime());}),'WORD_COMPAT_CONFLICT');
+      return {id:id,word:row[2],meaning:row[3],level:row[19],missing:!old};
+    });
+    level=level||items[0].level;
+    var setId=Utilities.getUuid(),sessionKey=session||Utilities.getUuid().replace(/-/g,'').slice(0,20),now=new Date();
+    vocabularyDbCheckV1_(!sets.rows.slice(1).some(function(row){return row[0]===setId||row[2]===sessionKey;})&&
+      !snapshots.rows.slice(1).some(function(row){return row[1]===setId;}),'SET_ID_CONFLICT');
+    var link='../vocab/index.html?session='+encodeURIComponent(sessionKey)+'&server_set=1'+(hook?'&hook='+encodeURIComponent(hook):'');
+    var setRows=[[setId,teacherId,sessionKey,title,'VocabularyDB '+level,link,true,now,now,level,'','','',title,'DB',items.length,'',0,'',level,type,items.length,teacherId]];
+    var itemRows=items.map(function(item,i){return [Utilities.getUuid(),setId,item.id,i+1,now,item.id,item.word,item.meaning,item.level];});
+    var wordRows=items.filter(function(item){return item.missing;}).map(function(item){return [item.id,setId,item.word,item.meaning,true,now,now];});
+    vocabularySetCapacityV1_(words,wordRows.length);vocabularySetCapacityV1_(sets,1);vocabularySetCapacityV1_(snapshots,itemRows.length);
+    // No automatic rollback/retry. Durable pending guard also blocks a new request ID
+    // after an uncertain write, until separately authorized manual diagnosis.
+    var pending={state:'PENDING',payload_hash:payloadHash,set_id:setId,session_key:sessionKey,result:''};
+    started=true;
+    props.setProperty(pendingKey,JSON.stringify({request_key:key,set_id:setId}));
+    props.setProperty(key,JSON.stringify(pending));
+    vocabularySetAppendV1_(words,wordRows,[[0,4]]);
+    vocabularySetAppendV1_(sets,setRows,[[0,6],[9,6],[16,1],[18,3],[22,1]]);
+    vocabularySetAppendV1_(snapshots,itemRows,[[0,3],[5,4]]);
+    vocabularySetVerifyV1_(words,wordRows);vocabularySetVerifyV1_(sets,setRows);vocabularySetVerifyV1_(snapshots,itemRows);vocabularySetVerifyV1_(db,[]);
+    pending.state='COMPLETED';pending.result='ok:'+setId+':'+sessionKey;
+    props.setProperty(key,JSON.stringify(pending));props.deleteProperty(pendingKey);
+    vocabSetLookupV2Cache_=null;
+    return textOut_(pending.result);
+  } catch(err) {return textOut_(started?'PARTIAL_SET_CREATE':err.vocabularyCode||'SET_CREATE_FAILED');}
+  finally {if(lock&&lock.hasLock())lock.releaseLock();}
 }
 function handleFetchVocabularySetV1_(e){
   var set=findVocabSetByIdOrSessionV2_(e.parameter.key),targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');if(!set||!targetId||!validateAssignmentLaunchV2_(e,'VOCAB',String(set[0])))return{found:false,error:'forbidden'};var ctx=attemptContextForFetchV2_(e,false),rows=getOrCreateSheet_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS).getDataRange().getValues(),items=[];for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(set[0]))items.push({order:Number(rows[i][3])||0,id:String(rows[i][5]||rows[i][2]),e:String(rows[i][6]||''),k:String(rows[i][7]||'')});items.sort(function(a,b){return a.order-b.order;});return Object.assign({found:items.length>0,payload:{v:1,s:String(set[2]),n:String(set[3]),sn:'',mode:'mixed',sec:4,goal:0,exp:0,dm:'hook',dv:String(e.parameter.hook||''),rng:String(set[13]||set[3]),cnt:items.length+'개',w:items}},ctx);

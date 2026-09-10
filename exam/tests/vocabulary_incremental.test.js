@@ -104,10 +104,11 @@ test('router authenticated JSON response; no trace/secret logging',()=>{
   const e=make();const result=JSON.parse(e.ctx.doPost({postData:{contents:JSON.stringify(add())}}).body);assert.strictEqual(result.code,'CREATED');assert.strictEqual(e.logs.length,0);
 });
 test('actual set builder/fetch use snapshots across incremental DB update',()=>{
-  const e=make(),ctx=e.ctx;let seq=0;ctx.Utilities.getUuid=()=>`fixture-${++seq}`;ctx.setupAssignmentsV2_=()=>{};ctx.setupVocabularyDbV1_=()=>{};ctx.getOrCreateDefaultTeacher_=()=>'fixture-teacher';
+  const e=make(),ctx=e.ctx;let seq=0;ctx.Utilities.getUuid=()=>`fixture-${++seq}`;
+  e.properties.DEFAULT_TEACHER_ID='fixture-teacher';e.addSheet(ctx.TEACHERS_V2_SHEET,ctx.TEACHERS_V2_HEADERS).rows.push(['fixture-teacher','fixture','fixture',true,new Date(),new Date()]);
   for(const [name,headers] of [[ctx.VOCAB_SETS_V2_SHEET,ctx.VOCAB_SETS_V2_HEADERS],[ctx.VOCAB_SET_ITEMS_V2_SHEET,ctx.VOCAB_SET_ITEMS_V2_HEADERS],[ctx.WORDS_V2_SHEET,ctx.WORDS_V2_HEADERS]])e.addSheet(name,headers);
   ctx.getOrCreateSheet_=(name)=>{assert(e.sheets[name]);return e.sheets[name];};
-  const original=baseline[0];assert(ctx.handleCreateVocabularySetV1_({sense_ids:[original[0]],selection_type:'manual',session_key:'fixture-session',title:'fixture'}).body.startsWith('ok:'));
+  const original=baseline[0];assert(ctx.handleCreateVocabularySetV1_({token:'local-test-token',request_id:'fixture-set',sense_ids:[original[0]],selection_type:'manual',session_key:'fixture-session',title:'fixture'}).body.startsWith('ok:'));
   const snap=hash(e.sheets.VocabSetItemsV2.rows);ctx.validateAssignmentLaunchV2_=()=>true;ctx.attemptContextForFetchV2_=()=>({});
   const fetch=()=>ctx.handleFetchVocabularySetV1_({parameter:{key:'fixture-session',assignment_target_id:'fixture-target'}});
   const before=hash(fetch());

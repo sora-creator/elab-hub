@@ -7,8 +7,10 @@ function createFirstImportMock(snapshot) {
   const properties = { TOKEN: 'local-test-token' }, propertyWrites = [];
   const track = (method, sheet, extra = {}) => operations.push({ method, sheet, ...extra });
   let locked = false;
+  const textSheets = ['VocabularyImportStagingV2', 'VocabularyDB', 'WordsV2', 'VocabSetsV2', 'VocabSetItemsV2'];
   class Sheet {
     constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.formats = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
+    getName() { return this.name; }
     getSheetId() { track('getSheetId', this.name); return this.gid; }
     appendRow(row) { this.getRange(this.getLastRow()+1,1,1,row.length).setValues([row]); }
     getMaxRows() { track('getMaxRows', this.name); return this.maxRows; }
@@ -64,10 +66,10 @@ function createFirstImportMock(snapshot) {
               // VOCAB-5C2 observation: a leading U+0027 disappeared despite '@'.
               // One-prefix consumption is an explicit simulation hypothesis, not
               // evidence that Apps Script universally parses either setter this way.
-              if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && typeof value === 'string' && value.startsWith("'") && hooks.apostropheSemantics !== 'literal') value = value.slice(1);
+              if (textSheets.includes(sheet.name) && typeof value === 'string' && value.startsWith("'") && hooks.apostropheSemantics !== 'literal') value = value.slice(1);
               if (!plain && hooks.scalarCoercion && typeof value === 'string') value = hooks.scalarCoercion(value);
               // Adversarial General-format fixture; not a universal Sheets parser simulation.
-              if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
+              if (textSheets.includes(sheet.name) && !plain && typeof value === 'string' && /^(true|false)$/i.test(value)) value = value.toLowerCase() === 'true';
               sheet.rows[r + i - 1][c + j - 1] = value instanceof Date ? new Date(value) : value;
             });
           });
@@ -86,8 +88,8 @@ function createFirstImportMock(snapshot) {
           valuesText.forEach((row,i) => row.forEach((value,j) => {
             while (sheet.rows.length < r+i) sheet.rows.push([]);
             // Model the observed General-format false incident unless the text format is set.
-            let stored = ['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
-            if (['VocabularyImportStagingV2', 'VocabularyDB'].includes(sheet.name) && typeof stored === 'string' && stored.startsWith("'") && hooks.apostropheSemantics !== 'literal') stored = stored.slice(1);
+            let stored = textSheets.includes(sheet.name) && sheet.formats[`${r+i},${c+j}`] !== '@' && /^(true|false)$/i.test(value) ? value.toLowerCase() === 'true' : value;
+            if (textSheets.includes(sheet.name) && typeof stored === 'string' && stored.startsWith("'") && hooks.apostropheSemantics !== 'literal') stored = stored.slice(1);
             sheet.rows[r+i-1][c+j-1] = stored;
             delete sheet.formulas[`${r+i},${c+j}`];
           }));

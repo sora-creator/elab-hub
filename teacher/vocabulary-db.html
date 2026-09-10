@@ -90,7 +90,28 @@ $('#localMode').onclick=()=>setMode(true);
 $('#serverMode').onclick=()=>setMode(false);
 async function previewSet(){if(localMode)return;const version=loadVersion;const checked=[...document.querySelectorAll('[data-sense]:checked')].map(x=>x.dataset.sense);if(checked.length){selectionRows=checked.map(id=>({sense_id:id}));$('#setMsg').textContent=`직접 선택 ${checked.length}개`;$('#createSet').disabled=false;return}const r=await read('previewVocabularySetV1',{level:$('#setLevel').value,item_count:$('#setCount').value,selection_type:$('#selection').value,student_id:$('#studentId').value,exclude_learned:$('#exclude').checked?'1':'0'});if(localMode||version!==loadVersion)return;selectionRows=r.items||[];$('#setMsg').textContent=`${selectionRows.length}개 선택됨: `+selectionRows.slice(0,8).map(x=>x.word).join(', ');$('#createSet').disabled=!selectionRows.length}
 $('#previewSet').onclick=()=>previewSet().catch(e=>$('#setMsg').textContent=e.message);
-$('#createSet').onclick=async()=>{if(localMode)return;try{await post('createVocabularySetV1',{sense_ids:selectionRows.map(x=>x.sense_id),level:$('#setLevel').value,selection_type:selectionRows.some(x=>!x.word)?'manual':$('#selection').value,title:$('#setTitle').value,hook:cfg().url});$('#setMsg').textContent='세트가 생성되었습니다. 기존 과제배정 화면에서 학생 또는 그룹에 배정하세요.';setTimeout(()=>location.href='./assignments.html',1000)}catch(e){$('#setMsg').textContent=e.message}};
+async function createSet(){
+  if(localMode)return;
+  const pendingKey='vocabulary.set-create.pending.v1';
+  try{
+    const pending=localStorage.getItem(pendingKey);
+    if(pending)throw new Error('이전 세트 요청 상태를 먼저 확인하세요. 요청 ID: '+pending);
+    const title=$('#setTitle').value.trim(),c=cfg();
+    if(!title||title.length>200)throw new Error('세트 제목을 1~200자로 입력하세요.');
+    if(!selectionRows.length||!c.url||!c.token)throw new Error('선택 단어와 서버 연결을 확인하세요.');
+    const request_id='vocab-set-'+crypto.randomUUID();
+    localStorage.setItem(pendingKey,request_id);
+    $('#createSet').disabled=true;
+    const payload={action:'createVocabularySetV1',token:c.token,request_id,sense_ids:selectionRows.map(x=>x.sense_id),level:$('#setLevel').value,selection_type:selectionRows.some(x=>!x.word)?'manual':$('#selection').value,title,hook:c.url};
+    const response=await fetch(c.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},credentials:'omit',referrerPolicy:'no-referrer',body:JSON.stringify(payload)});
+    const result=await response.text();
+    if(!response.ok||!/^ok:[A-Za-z0-9_-]+:[A-Za-z0-9_-]+$/.test(result))throw new Error('세트 생성 확인 실패: '+(response.ok?result:'HTTP '+response.status)+' · 요청 ID: '+request_id+' · 재전송하지 말고 상태를 확인하세요.');
+    localStorage.removeItem(pendingKey);
+    $('#setMsg').textContent='세트가 생성되었습니다. 기존 과제배정 화면에서 학생 또는 그룹에 배정하세요.';
+    setTimeout(()=>location.href='./assignments.html',1000);
+  }catch(e){$('#setMsg').textContent=(e.message||'응답 확인 실패')+' 자동 재시도하지 않습니다.';}
+}
+$('#createSet').onclick=createSet;
 setMode(true);
 })();
 </script></body></html>
