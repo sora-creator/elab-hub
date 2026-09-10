@@ -77,6 +77,7 @@ test('DB mutation during write detected',()=>{const e=make();e.hooks.afterRichWr
 for(const literal of ["'literal",'false','001','=1+1','+SUM(A1)','-1','@test'])test('text preservation '+literal,()=>{const e=make(),r=e.sheets.VocabularyDB.rows.find(r=>r[0]===id);r[2]=r[3]=literal;assert(call(e,request({title:literal})).startsWith('ok:'));assert.strictEqual(e.sheets.WordsV2.rows.at(-1)[2],literal);assert.strictEqual(e.sheets.VocabSetItemsV2.rows.at(-1)[7],literal);assert.strictEqual(e.sheets.VocabSetsV2.rows.at(-1)[3],literal);assert(Object.values(e.sheets).every(s=>!Object.keys(s.formulas).length));});
 test('snapshot independence and actual student fetch, review metadata consumer',()=>{
   const e=make(),out=call(e);assert(out.startsWith('ok:'));const snapshot=hash(e.sheets.VocabSetItemsV2.rows);
+  e.addSheet('AssignmentsV2',e.ctx.ASSIGNMENTS_V2_HEADERS);e.addSheet('AssignmentTargetsV2',e.ctx.ASSIGNMENT_TARGETS_V2_HEADERS);
   e.ctx.validateAssignmentLaunchV2_=()=>true;e.ctx.attemptContextForFetchV2_=()=>({});
   const fetch=()=>e.ctx.handleFetchVocabularySetV1_({parameter:{key:out.split(':')[2],assignment_target_id:'fixture-target'}});
   const before=hash(fetch());assert.strictEqual(fetch().payload.w[0].k,canonical[3]);

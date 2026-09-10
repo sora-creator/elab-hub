@@ -1756,6 +1756,77 @@ function vocabularySetAppendV1_(table, rows, textBlocks) {
   SpreadsheetApp.flush();
   vocabularySetVerifyV1_(table,rows);
 }
+// Explicit, header-only maintenance. Never invoked by normal set creation.
+function vocabularySetSchemaSpecV1_(name){
+  var items=name===VOCAB_SET_ITEMS_V2_SHEET,sets=name===VOCAB_SETS_V2_SHEET;
+  vocabularyDbCheckV1_(items||sets,'SCHEMA_CONFLICT');
+  var headers=items?VOCAB_SET_ITEMS_V2_HEADERS:VOCAB_SETS_V2_HEADERS,legacy=items?5:19;
+  var added=items?['sense_id','word_snapshot','meaning_snapshot','level_snapshot']:['level','selection_type','item_count','created_by'];
+  vocabularyDbCheckV1_(headers.length===legacy+4&&JSON.stringify(headers.slice(legacy))===JSON.stringify(added),'SCHEMA_CONFLICT');
+  return {name:name,headers:headers,legacy:legacy,range:items?'F1:I1':'T1:W1'};
+}
+// Pure planner shared with the offline tool; accepts complete value/formula evidence.
+function vocabularySetSchemaPlanV1_(snapshot){
+  var spec=vocabularySetSchemaSpecV1_(snapshot&&snapshot.sheet),values=snapshot.values,formulas=snapshot.formulas;
+  vocabularyDbCheckV1_(Array.isArray(values)&&values.length>0&&Array.isArray(formulas)&&formulas.length===values.length,'SCHEMA_CONFLICT');
+  var width=Array.isArray(values[0])?values[0].length:0;
+  vocabularyDbCheckV1_(width>=spec.headers.length&&values.every(function(row,i){
+    return Array.isArray(row)&&row.length===width&&Array.isArray(formulas[i])&&formulas[i].length===width&&
+      row.every(function(v){return typeof v==='string'||typeof v==='boolean'||typeof v==='number'&&isFinite(v)||v instanceof Date&&isFinite(v.getTime());})&&
+      formulas[i].every(function(v){return typeof v==='string';});
+  }),'SCHEMA_CONFLICT');
+  vocabularyDbCheckV1_(JSON.stringify(values[0].slice(0,spec.legacy))===JSON.stringify(spec.headers.slice(0,spec.legacy)),'SCHEMA_CONFLICT');
+  vocabularyDbCheckV1_(formulas[0].every(function(v){return v==='';})&&values.every(function(row,i){
+    return row.slice(spec.headers.length).every(function(v){return v==='';})&&formulas[i].slice(spec.headers.length).every(function(v){return v==='';});
+  }),'SCHEMA_CONFLICT');
+  var current=values[0].slice(spec.legacy,spec.headers.length),already=JSON.stringify(current)===JSON.stringify(spec.headers.slice(spec.legacy));
+  vocabularyDbCheckV1_(already||current.every(function(v){return v==='';}),'SCHEMA_CONFLICT');
+  vocabularyDbCheckV1_(values.slice(1).every(function(row,i){return row.slice(spec.legacy,spec.headers.length).every(function(v){return v==='';})&&formulas[i+1].slice(spec.legacy,spec.headers.length).every(function(v){return v==='';});}),'SCHEMA_CONFLICT');
+  return {sheet:spec.name,status:already?'ALREADY_UPGRADED':'PLAN_ONLY',current_headers:values[0].slice(0,spec.headers.length),
+    writes:already?[]:[{sheet:spec.name,range:spec.range,values:[spec.headers.slice(spec.legacy)]}],
+    planned_header_cells:already?0:4,data_row_writes:0,
+    data_rows:values.slice(1).filter(function(row,i){return row.some(function(v){return v!=='';})||formulas[i+1].some(function(v){return v!=='';});}).length,
+    pre_fingerprint:vocabularySetStateV1_(values.concat(formulas))};
+}
+function vocabularySetSchemaReadV1_(name){
+  var spec=vocabularySetSchemaSpecV1_(name),sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  vocabularyDbCheckV1_(!!sheet&&sheet.getMaxColumns()>=spec.headers.length,'SCHEMA_CONFLICT');
+  vocabularyDbCheckV1_(!sheet.getRange(1,spec.legacy+1,1,4).getMergedRanges().length,'SCHEMA_CONFLICT');
+  var range=sheet.getDataRange(),values=range.getValues(),formulas=range.getFormulas();
+  // getDataRange omits unused trailing columns; they are known empty, not new cells.
+  [values,formulas].forEach(function(rows){rows.forEach(function(row){while(row.length<spec.headers.length)row.push('');});});
+  var snapshot={sheet:name,values:values,formulas:formulas};
+  return {sheet:sheet,spec:spec,snapshot:snapshot,plan:vocabularySetSchemaPlanV1_(snapshot)};
+}
+function handleUpgradeVocabularySetSchemasV1_(d){
+  var lock,writeAttempted=false,written=[];
+  try{
+    vocabularyDbCheckV1_(!!d.token&&d.token===getToken_(),'UNAUTHORIZED');
+    vocabularyDbCheckV1_(d.action==='upgradeVocabularySetSchemasV1'&&typeof d.dry_run==='boolean'&&Object.keys(d).every(function(k){return ['action','token','dry_run','approval'].indexOf(k)!==-1;}),'SCHEMA_REQUEST_INVALID');
+    vocabularyDbCheckV1_(d.dry_run||d.approval==='UPGRADE_VOCAB_SET_HEADERS_ONLY_V1','SCHEMA_APPROVAL_REQUIRED');
+    lock=LockService.getScriptLock();vocabularyDbCheckV1_(lock.tryLock(5000),'LOCK_BUSY');
+    var tables=[VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SETS_V2_SHEET].map(vocabularySetSchemaReadV1_);
+    var plans=tables.map(function(t){return t.plan;}),cells=plans.reduce(function(n,p){return n+p.planned_header_cells;},0);
+    if(d.dry_run||!cells)return{ok:true,status:cells?'DRY_RUN':'ALREADY_UPGRADED',dry_run:d.dry_run,sheets:plans,planned_header_cells:cells,header_cells_written:0,data_row_writes:0};
+    // Recheck BOTH snapshots under the lock before the first write.
+    tables.forEach(function(t){vocabularyDbCheckV1_(vocabularySetSchemaReadV1_(t.spec.name).plan.pre_fingerprint===t.plan.pre_fingerprint,'SCHEMA_STATE_CHANGED');});
+    tables.forEach(function(t){if(t.plan.planned_header_cells){
+      writeAttempted=true;
+      t.sheet.getRange(1,t.spec.legacy+1,1,4).setValues([t.spec.headers.slice(t.spec.legacy)]);
+      written.push(t.spec.name);
+    }});
+    SpreadsheetApp.flush();
+    var verified=tables.map(function(t){
+      var actual=vocabularySetSchemaReadV1_(t.spec.name),expected=t.snapshot.values.map(function(row){return row.slice();});
+      for(var c=t.spec.legacy;c<t.spec.headers.length;c++)expected[0][c]=t.spec.headers[c];
+      vocabularyDbCheckV1_(actual.plan.status==='ALREADY_UPGRADED'&&actual.plan.data_rows===t.plan.data_rows&&
+        actual.plan.pre_fingerprint===vocabularySetStateV1_(expected.concat(t.snapshot.formulas)),'SCHEMA_POSTCHECK_FAILED');
+      return {sheet:t.spec.name,data_rows:actual.plan.data_rows,post_fingerprint:actual.plan.pre_fingerprint,data_unchanged:true,formulas_unchanged:true};
+    });
+    return{ok:true,status:'UPGRADED',sheets:plans,verification:verified,planned_header_cells:cells,header_cells_written:cells,data_row_writes:0};
+  }catch(err){return{ok:false,error:writeAttempted?'SCHEMA_UPGRADE_INCOMPLETE':err.vocabularyCode||'SCHEMA_UPGRADE_FAILED',write_attempted:writeAttempted,completed_header_sheets:written,automatic_rollback:false};}
+  finally{if(lock&&lock.hasLock())lock.releaseLock();}
+}
 function handleCreateVocabularySetV1_(d){
   var lock,started=false;
   try {
@@ -1831,8 +1902,56 @@ function handleCreateVocabularySetV1_(d){
   } catch(err) {return textOut_(started?'PARTIAL_SET_CREATE':err.vocabularyCode||'SET_CREATE_FAILED');}
   finally {if(lock&&lock.hasLock())lock.releaseLock();}
 }
+// Read-only item resolution: historical IDs are never converted or backfilled.
+function vocabularySetItemKindV1_(row){
+  var values=[row[5],row[6],row[7],row[8]];
+  if(values.every(function(v){return v===undefined||v===null||v==='';}))return 'LEGACY';
+  vocabularyDbCheckV1_(values.every(function(v){return typeof v==='string'&&v.trim()!=='';})&&/^V[1-5]$/.test(row[8]),'VOCAB_SET_ITEM_SNAPSHOT_INVALID');
+  vocabularyDbCheckV1_(typeof row[2]==='string'&&row[2].trim()!=='','VOCAB_SET_ITEM_SNAPSHOT_INVALID');
+  return 'SNAPSHOT';
+}
+function vocabularySetFetchItemsV1_(sheet,setId){
+  var rows=sheet.getDataRange().getValues(),selected=[],needsWords=false,byId=Object.create(null);
+  for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(setId)){
+    var kind=vocabularySetItemKindV1_(rows[i]);selected.push({row:rows[i],kind:kind});
+    if(kind==='LEGACY')needsWords=true;
+  }
+  if(needsWords){
+    var wordSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WORDS_V2_SHEET);
+    vocabularyDbCheckV1_(!!wordSheet,'LEGACY_WORD_METADATA_NOT_FOUND');
+    var words=wordSheet.getDataRange().getValues();
+    for(var j=1;j<words.length;j++){
+      var key=String(words[j][0]);
+      if(!byId[key])byId[key]=[];
+      byId[key].push(words[j]);
+    }
+  }
+  var items=selected.map(function(entry){
+    var row=entry.row,word=row[6],meaning=row[7];
+    if(entry.kind==='LEGACY'){
+      vocabularyDbCheckV1_(typeof row[2]==='string'&&row[2].trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
+      var matches=byId[row[2]]||[];
+      vocabularyDbCheckV1_(matches.length>0,'LEGACY_WORD_METADATA_NOT_FOUND');
+      vocabularyDbCheckV1_(matches.length===1&&matches[0][0]===row[2],'LEGACY_WORD_METADATA_CONFLICT');
+      word=matches[0][2];meaning=matches[0][3];
+      vocabularyDbCheckV1_(typeof word==='string'&&word.trim()!==''&&typeof meaning==='string'&&meaning.trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
+    }
+    return {order:Number(row[3])||0,id:row[2],e:word,k:meaning};
+  });
+  items.sort(function(a,b){return a.order-b.order;});return items;
+}
 function handleFetchVocabularySetV1_(e){
-  var set=findVocabSetByIdOrSessionV2_(e.parameter.key),targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');if(!set||!targetId||!validateAssignmentLaunchV2_(e,'VOCAB',String(set[0])))return{found:false,error:'forbidden'};var ctx=attemptContextForFetchV2_(e,false),rows=getOrCreateSheet_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS).getDataRange().getValues(),items=[];for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(set[0]))items.push({order:Number(rows[i][3])||0,id:String(rows[i][5]||rows[i][2]),e:String(rows[i][6]||''),k:String(rows[i][7]||'')});items.sort(function(a,b){return a.order-b.order;});return Object.assign({found:items.length>0,payload:{v:1,s:String(set[2]),n:String(set[3]),sn:'',mode:'mixed',sec:4,goal:0,exp:0,dm:'hook',dv:String(e.parameter.hook||''),rng:String(set[13]||set[3]),cnt:items.length+'개',w:items}},ctx);
+  var ss=SpreadsheetApp.getActiveSpreadsheet(),setSheet=ss.getSheetByName(VOCAB_SETS_V2_SHEET),itemSheet=ss.getSheetByName(VOCAB_SET_ITEMS_V2_SHEET);
+  if(!setSheet||!itemSheet||!ss.getSheetByName(ASSIGNMENTS_V2_SHEET)||!ss.getSheetByName(ASSIGNMENT_TARGETS_V2_SHEET))return{found:false,error:'VOCAB_SET_SCHEMA_NOT_READY'};
+  var set=findVocabSetByIdOrSessionV2_(e.parameter.key),targetId=String(e.parameter.assignment_target_id||'');
+  if(!set||!targetId||!validateAssignmentLaunchV2_(e,'VOCAB',String(set[0])))return{found:false,error:'forbidden'};
+  var items;
+  try{items=vocabularySetFetchItemsV1_(itemSheet,set[0]);}
+  catch(err){if(err.vocabularyCode)return{found:false,error:err.vocabularyCode};throw err;}
+  var ctx;
+  try{ctx=attemptContextForFetchV2_(e,false,true);}
+  catch(err){if(err.vocabularyCode)return{found:false,error:err.vocabularyCode};throw err;}
+  return Object.assign({found:items.length>0,payload:{v:1,s:String(set[2]),n:String(set[3]),sn:'',mode:'mixed',sec:4,goal:0,exp:0,dm:'hook',dv:String(e.parameter.hook||''),rng:String(set[13]||set[3]),cnt:items.length+'개',w:items}},ctx);
 }
 function handleSaveVocabSetV2_(d) {
   setupAssignmentsV2_();var teacherId=getOrCreateDefaultTeacher_(),sessionKey=String(d.session_key||'');
@@ -1881,8 +2000,19 @@ function attemptNoForTargetV2_(targetId) {
   for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(targetId))max=Math.max(max,Number(rows[i][10])||0);
   return max+1;
 }
-function getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry) {
-  setupAttemptsV2_();var target=targetByIdV2_(targetId),assignment=target&&assignmentByIdV2_(target[1]);
+function getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry,existingSchemaOnly) {
+  if(existingSchemaOnly){
+    // Fetch may start an attempt, but must never create or repair a schema.
+    var ss=SpreadsheetApp.getActiveSpreadsheet();
+    [[ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS],[QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS],
+     [SENTENCE_STRUCTURE_DETAILS_V2_SHEET,SENTENCE_STRUCTURE_DETAILS_V2_HEADERS],[WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS]].forEach(function(pair){
+      var sheet=ss.getSheetByName(pair[0]);
+      vocabularyDbCheckV1_(!!sheet,'VOCAB_SET_SCHEMA_NOT_READY');
+      var headers=sheet.getRange(1,1,1,pair[1].length).getValues()[0];
+      vocabularyDbCheckV1_(pair[1].every(function(h,i){return headers[i]===h;}),'VOCAB_SET_SCHEMA_NOT_READY');
+    });
+  }else setupAttemptsV2_();
+  var target=targetByIdV2_(targetId),assignment=target&&assignmentByIdV2_(target[1]);
   if(!target||!assignment||String(target[2])!==String(studentId)||!boolValue_(target[6],true)||!boolValue_(assignment[8],true))return null;
   var current=inProgressAttemptForTargetV2_(targetId);if(current)return current;
   var lock=LockService.getScriptLock();lock.waitLock(10000);
@@ -1895,10 +2025,10 @@ function getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry) {
     sh.appendRow(row);if(String(target[3])==='NOT_STARTED'){target[3]='IN_PROGRESS';target[4]=target[4]||now;target[8]=now;upsertRow_(getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),target[0],target);}SpreadsheetApp.flush();return row;
   }finally{lock.releaseLock();}
 }
-function attemptContextForFetchV2_(e,allowRetry) {
+function attemptContextForFetchV2_(e,allowRetry,existingSchemaOnly) {
   var targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');if(!targetId)return {};
   var requestId=allowRetry?'review:'+targetId+':'+String(e.parameter.review_request_id||Utilities.getUuid()):'launch:'+targetId;
-  var attempt=getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry===true);if(!attempt)return {};
+  var attempt=getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry===true,existingSchemaOnly===true);if(!attempt)return {};
   return {attempt_id:attempt[0],attempt_no:attempt[10],attempt_status:attempt[9],attemptCapability:createStudentCapability_('assignmentTarget',targetId,['submitAttemptQuestionV2','verifyVocabResultV2','verifyAttemptCompletionV2','completeGrammarActivityV1'],{student_id:studentId},0)};
 }
 function handleStartAttemptV2_(d) {
@@ -2574,6 +2704,7 @@ function doPost(e) {
   if (d.action === 'commitVocabularyImportV1') return handleCommitVocabularyImportV1_(d);
   if (d.action === 'updateVocabularySenseV1') return handleUpdateVocabularySenseV1_(d);
   if (d.action === 'createVocabularySetV1') return handleCreateVocabularySetV1_(d);
+  if (d.action === 'upgradeVocabularySetSchemasV1') return textOut_(JSON.stringify(handleUpgradeVocabularySetSchemasV1_(d)));
   if (d.action === 'saveVocabSetV2') return handleSaveVocabSetV2_(d);
   if (d.action === 'updateAssignmentV2') return handleUpdateAssignmentV2_(d);
   if (d.action === 'deleteAssignmentV2') return handleDeleteAssignmentV2_(d);
