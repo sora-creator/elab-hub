@@ -1910,6 +1910,22 @@ function vocabularySetItemKindV1_(row){
   vocabularyDbCheckV1_(typeof row[2]==='string'&&row[2].trim()!=='','VOCAB_SET_ITEM_SNAPSHOT_INVALID');
   return 'SNAPSHOT';
 }
+function vocabularySetWordMapV1_(rows){
+  var byId=Object.create(null);
+  for(var i=1;i<rows.length;i++){
+    var key=String(rows[i][0]);if(!byId[key])byId[key]=[];byId[key].push(rows[i]);
+  }
+  return byId;
+}
+function vocabularySetLegacyMetadataV1_(row,byId){
+  vocabularyDbCheckV1_(typeof row[2]==='string'&&row[2].trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
+  var matches=byId[row[2]]||[];
+  vocabularyDbCheckV1_(matches.length>0,'LEGACY_WORD_METADATA_NOT_FOUND');
+  vocabularyDbCheckV1_(matches.length===1&&matches[0][0]===row[2],'LEGACY_WORD_METADATA_CONFLICT');
+  var word=matches[0][2],meaning=matches[0][3];
+  vocabularyDbCheckV1_(typeof word==='string'&&word.trim()!==''&&typeof meaning==='string'&&meaning.trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
+  return {word:word,meaning:meaning};
+}
 function vocabularySetFetchItemsV1_(sheet,setId){
   var rows=sheet.getDataRange().getValues(),selected=[],needsWords=false,byId=Object.create(null);
   for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(setId)){
@@ -1919,26 +1935,104 @@ function vocabularySetFetchItemsV1_(sheet,setId){
   if(needsWords){
     var wordSheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WORDS_V2_SHEET);
     vocabularyDbCheckV1_(!!wordSheet,'LEGACY_WORD_METADATA_NOT_FOUND');
-    var words=wordSheet.getDataRange().getValues();
-    for(var j=1;j<words.length;j++){
-      var key=String(words[j][0]);
-      if(!byId[key])byId[key]=[];
-      byId[key].push(words[j]);
-    }
+    byId=vocabularySetWordMapV1_(wordSheet.getDataRange().getValues());
   }
   var items=selected.map(function(entry){
     var row=entry.row,word=row[6],meaning=row[7];
     if(entry.kind==='LEGACY'){
-      vocabularyDbCheckV1_(typeof row[2]==='string'&&row[2].trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
-      var matches=byId[row[2]]||[];
-      vocabularyDbCheckV1_(matches.length>0,'LEGACY_WORD_METADATA_NOT_FOUND');
-      vocabularyDbCheckV1_(matches.length===1&&matches[0][0]===row[2],'LEGACY_WORD_METADATA_CONFLICT');
-      word=matches[0][2];meaning=matches[0][3];
-      vocabularyDbCheckV1_(typeof word==='string'&&word.trim()!==''&&typeof meaning==='string'&&meaning.trim()!=='','LEGACY_WORD_METADATA_CONFLICT');
+      var metadata=vocabularySetLegacyMetadataV1_(row,byId);word=metadata.word;meaning=metadata.meaning;
     }
     return {order:Number(row[3])||0,id:row[2],e:word,k:meaning};
   });
   items.sort(function(a,b){return a.order-b.order;});return items;
+}
+// Independent evidence path: no setup, normal fetch, attempt or mutation handler.
+function vocabularySetSchemaDiagnosticV1_(name){
+  var spec=vocabularySetSchemaSpecV1_(name),sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  if(!sheet)return{report:{sheet_name:name,error:'SCHEMA_NOT_FOUND',upgrade_eligible:false}};
+  var range=sheet.getDataRange(),values=range.getValues(),formulas=range.getFormulas();
+  var lastRow=sheet.getLastRow(),lastColumn=sheet.getLastColumn();
+  [values,formulas].forEach(function(rows){rows.forEach(function(row){while(row.length<spec.headers.length)row.push('');});});
+  var header=values[0].slice(0,spec.headers.length),headerFormulas=formulas[0].slice(0,spec.headers.length);
+  var extension=header.slice(spec.legacy),expected=spec.headers.slice(spec.legacy);
+  var headerState=extension.every(function(v){return v==='';})?'BLANK':JSON.stringify(extension)===JSON.stringify(expected)?'CANONICAL':
+    extension.every(function(v,i){return v===''||v===expected[i];})?'PARTIAL':'CONFLICT';
+  if(headerFormulas.slice(spec.legacy).some(function(v){return v!=='';}))headerState='CONFLICT';
+  var types=[],nonblank={},formulaCounts={existing_data:0,extension_data:0},count=0;
+  for(var c=0;c<spec.headers.length;c++){
+    types.push({column:String.fromCharCode(65+c),header:spec.headers[c],string:0,number:0,boolean:0,date:0,blank:0,other:0});
+    if(c>=spec.legacy)nonblank[String.fromCharCode(65+c)]=0;
+  }
+  for(var r=1;r<values.length;r++){
+    if(values[r].some(function(v){return v!=='';})||formulas[r].some(function(v){return v!=='';}))count++;
+    for(var col=0;col<spec.headers.length;col++){
+      var v=values[r][col],type=v===''?'blank':v instanceof Date?'date':typeof v;
+      types[col][['string','number','boolean','date','blank'].indexOf(type)!==-1?type:'other']++;
+      if(col>=spec.legacy&&v!=='')nonblank[String.fromCharCode(65+col)]++;
+      if(formulas[r][col]!=='')formulaCounts[col<spec.legacy?'existing_data':'extension_data']++;
+    }
+  }
+  var existingValues=values.slice(1).map(function(row){return row.slice(0,spec.legacy);});
+  var existingFormulas=formulas.slice(1).map(function(row){return row.slice(0,spec.legacy);});
+  var currentValues=values.map(function(row){return row.slice(0,spec.headers.length);});
+  var currentFormulas=formulas.map(function(row){return row.slice(0,spec.headers.length);});
+  var snapshot={sheet:name,values:values,formulas:formulas},plan=null,planError='';
+  var capacity=sheet.getMaxColumns()>=spec.headers.length;
+  var merged=capacity?sheet.getRange(1,spec.legacy+1,1,4).getMergedRanges().length:0;
+  try{plan=vocabularySetSchemaPlanV1_(snapshot);}catch(err){planError=err.vocabularyCode||'SCHEMA_CONFLICT';}
+  var eligible=!!plan&&capacity&&merged===0,totalNonblank=Object.keys(nonblank).reduce(function(n,k){return n+nonblank[k];},0);
+  return {snapshot:snapshot,report:{sheet_name:name,header_values:header,header_formulas:headerFormulas,last_row:lastRow,last_column:lastColumn,data_row_count:count,
+    canonical_prefix_match:JSON.stringify(header.slice(0,spec.legacy))===JSON.stringify(spec.headers.slice(0,spec.legacy)),extension_header_state:headerState,
+    missing_headers:expected.map(function(h,i){return{column:String.fromCharCode(65+spec.legacy+i),header:h};}).filter(function(x,i){return extension[i]==='';}),
+    extension_data:{all_blank:totalNonblank===0&&formulaCounts.extension_data===0,nonblank_count:totalNonblank,nonblank_by_column:nonblank},
+    formula_counts:formulaCounts,runtime_type_counts:types,type_count_scope:'data rows 2..last_row, including blank gaps',
+    existing_data_values_fingerprint:vocabularySetStateV1_(existingValues),existing_data_formulas_fingerprint:vocabularySetStateV1_(existingFormulas),
+    existing_data_state_fingerprint:vocabularySetStateV1_(existingValues.concat(existingFormulas)),
+    current_values_fingerprint:vocabularySetStateV1_(currentValues),current_formulas_fingerprint:vocabularySetStateV1_(currentFormulas),
+    current_state_fingerprint:vocabularySetStateV1_(currentValues.concat(currentFormulas)),
+    planner_pre_fingerprint:vocabularySetStateV1_(values.concat(formulas)),
+    upgrade_eligible:eligible,planner_status:plan?plan.status:'SCHEMA_CONFLICT',planner_error:planError||(!eligible?'SCHEMA_CONFLICT':''),
+    capacity_ready:capacity,merged_extension_ranges:merged,planned_writes:eligible?plan.writes:[],planned_header_cells:eligible?plan.planned_header_cells:0,planned_data_writes:0}};
+}
+function vocabularySetLegacyDiagnosticV1_(snapshot){
+  var out={legacy_item_count:0,snapshot_item_count:0,invalid_item_count:0,resolved_count:0,metadata_missing_count:0,metadata_conflict_count:0,empty_word_count:0,empty_meaning_count:0,sample_limit:5,samples:[]};
+  var legacy=[];
+  for(var i=1;i<snapshot.values.length;i++){
+    var row=snapshot.values[i];if(row.every(function(v){return v==='';})&&snapshot.formulas[i].every(function(v){return v==='';}))continue;
+    try{if(vocabularySetItemKindV1_(row)==='LEGACY')legacy.push(row);else out.snapshot_item_count++;}
+    catch(err){if(err.vocabularyCode!=='VOCAB_SET_ITEM_SNAPSHOT_INVALID')throw err;out.invalid_item_count++;}
+  }
+  out.legacy_item_count=legacy.length;
+  if(!legacy.length)return out;
+  var sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(WORDS_V2_SHEET),words=sheet?sheet.getDataRange().getValues():[];
+  out.words_sheet_found=!!sheet;out.words_header_match=!!sheet&&JSON.stringify((words[0]||[]).slice(0,WORDS_V2_HEADERS.length))===JSON.stringify(WORDS_V2_HEADERS);
+  var byId=vocabularySetWordMapV1_(words);
+  legacy.forEach(function(row){
+    var matches=byId[String(row[2])]||[];
+    if(matches.length===1){
+      if(typeof matches[0][2]!=='string'||!matches[0][2].trim())out.empty_word_count++;
+      if(typeof matches[0][3]!=='string'||!matches[0][3].trim())out.empty_meaning_count++;
+    }
+    try{
+      vocabularyDbCheckV1_(!sheet||out.words_header_match,'LEGACY_WORD_METADATA_CONFLICT');
+      var metadata=vocabularySetLegacyMetadataV1_(row,byId);out.resolved_count++;
+      if(out.samples.length<out.sample_limit)out.samples.push({vocab_set_id:String(row[1]).slice(0,128),word_id:row[2].slice(0,128),resolved_word:metadata.word.slice(0,512),resolved_meaning:metadata.meaning.slice(0,512),
+        truncated:String(row[1]).length>128||row[2].length>128||metadata.word.length>512||metadata.meaning.length>512});
+    }catch(err){if(err.vocabularyCode==='LEGACY_WORD_METADATA_NOT_FOUND')out.metadata_missing_count++;else if(err.vocabularyCode==='LEGACY_WORD_METADATA_CONFLICT')out.metadata_conflict_count++;else throw err;}
+  });
+  return out;
+}
+function handleInspectVocabularySetSchemasV1_(e){
+  var p=e&&e.parameter||{};
+  if(typeof p.token!=='string'||!p.token||p.token!==getToken_())return{ok:false,error:'UNAUTHORIZED'};
+  try{
+    var tables=[VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SETS_V2_SHEET].map(vocabularySetSchemaDiagnosticV1_),reports=tables.map(function(t){return t.report;});
+    var found=reports.every(function(r){return !r.error;}),eligible=reports.every(function(r){return r.upgrade_eligible;});
+    return{ok:found,error:found?'':'SCHEMA_NOT_FOUND',sheets:reports,upgrade_eligible:eligible,
+      planned_writes:eligible?reports.reduce(function(a,r){return a.concat(r.planned_writes);},[]):[],
+      planned_header_cells:eligible?reports.reduce(function(n,r){return n+r.planned_header_cells;},0):0,planned_data_writes:0,
+      legacy_resolution:tables[0].snapshot?vocabularySetLegacyDiagnosticV1_(tables[0].snapshot):null};
+  }catch(err){return{ok:false,error:err.vocabularyCode||'SCHEMA_DIAGNOSTIC_FAILED'};}
 }
 function handleFetchVocabularySetV1_(e){
   var ss=SpreadsheetApp.getActiveSpreadsheet(),setSheet=ss.getSheetByName(VOCAB_SETS_V2_SHEET),itemSheet=ss.getSheetByName(VOCAB_SET_ITEMS_V2_SHEET);
@@ -3436,6 +3530,7 @@ function doGet(e) {
   if (action === 'listDueVocabReviewsV1') return jsonpOut_(cb, handleListDueVocabReviewsV1_(e));
   if (action === 'getVocabularyImportStatusV1') return jsonpOut_(cb, handleGetVocabularyImportStatusV1_(e));
   if (action === 'inspectVocabularyStagingStateV1') return jsonpOut_(cb, handleInspectVocabularyStagingStateV1_(e));
+  if (action === 'inspectVocabularySetSchemasV1') return jsonpOut_(cb, handleInspectVocabularySetSchemasV1_(e));
   if (action === 'listVocabularyDbV1') return jsonpOut_(cb, handleListVocabularyDbV1_(e));
   if (action === 'getVocabularyDbItemV1') return jsonpOut_(cb, handleGetVocabularyDbItemV1_(e));
   if (action === 'listVocabularySensesV1') return jsonpOut_(cb, handleListVocabularySensesV1_(e));

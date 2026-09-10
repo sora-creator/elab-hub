@@ -22,6 +22,13 @@ function createFirstImportMock(snapshot) {
       Object.keys(this.formulas).forEach(key => { last = Math.max(last, Number(key.split(',')[0])); });
       return last;
     }
+    getLastColumn() {
+      track('getLastColumn', this.name);
+      let last=0;
+      this.rows.forEach(row=>row.forEach((v,i)=>{if(v!==''&&v!==undefined)last=Math.max(last,i+1);}));
+      Object.keys(this.formulas).forEach(key=>{last=Math.max(last,Number(key.split(',')[1]));});
+      return last;
+    }
     getDataRange() {
       track('getDataRange', this.name);
       const width = Math.max(this.rows[0].length, ...this.rows.map(r => r.length), ...Object.keys(this.formulas).map(key => Number(key.split(',')[1])));
