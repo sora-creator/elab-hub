@@ -79,5 +79,11 @@ for(const name of ['StudentsV2','AssignmentsV2','AssignmentTargetsV2','AttemptsV
 for(const token of ['',undefined,'wrong','student-capability'])test('unauthorized token reads no sheets',()=>{const e=make();assert.equal(inspect(e,{token}).error,'UNAUTHORIZED');assert.equal(e.operations.length,0);});
 for(const field of Object.keys(ids))test('invalid '+field+' reads no sheets',()=>{const e=make();assert.equal(inspect(e,{[field]:' '}).error,'INVALID_PREFLIGHT_INPUT');assert.equal(e.operations.length,0);});
 test('500 items all validated, bounded output and field lengths',()=>{const e=make(),template=row(e,'VocabSetItemsV2');e.sheets.VocabSetItemsV2.rows=[e.sheets.VocabSetItemsV2.rows[0],...Array.from({length:500},(_,i)=>{const r=[...template];r[0]='item'+i;r[3]=i+1;r[6]='x'.repeat(2000);return r;})];const out=inspect(e);assert(out.eligible&&out.items_truncated);assert.equal(out.valid_item_count,500);assert.equal(out.items.length,20);assert(out.items.every(i=>i.truncated&&i.word.length===512));assert(Buffer.byteLength(JSON.stringify(out))<25000);e.sheets.VocabSetItemsV2.rows[500][8]='V6';assert(!inspect(e).eligible);});
-test('existing backend is unchanged except dedicated handler and GET route',()=>{const old=execFileSync('git',['show','HEAD:exam/sheet_backend.gs'],{encoding:'utf8'}).replace(/\r\n/g,'\n'),now=fs.readFileSync('exam/sheet_backend.gs','utf8').replace(/\r\n/g,'\n');const stripped=now.replace(/\/\/ VOCAB-7P: administrative evidence only;[\s\S]*?(?=function handleFetchVocabularySetV1_)/,'').replace(/^  if \(action === 'PUBLIC_IDENTIFIER_REMOVED'\).*\n/m,'');assert.equal(stripped,old);});
+test('diagnostic, fetch and start implementations remain unchanged from committed baseline',()=>{
+  const old=execFileSync('git',['show','HEAD:exam/sheet_backend.gs'],{encoding:'utf8'}).replace(/\r\n/g,'\n'),now=fs.readFileSync('exam/sheet_backend.gs','utf8').replace(/\r\n/g,'\n');
+  for(const name of ['PUBLIC_IDENTIFIER_REMOVED','handleFetchVocabularySetV1_','handleStartAttemptV2_','getOrCreateAttemptV2_']){
+    const section=s=>{const start=s.indexOf('function '+name+'(');assert(start>=0,name);const end=s.indexOf('\nfunction ',start+1);return s.slice(start,end<0?s.length:end);};
+    assert.equal(section(now),section(old),name);
+  }
+});
 console.log(JSON.stringify({tests:count,passed:count,spreadsheet_writes:0,script_properties_writes:0,start_attempt_calls:0,get_or_create_attempt_calls:0,fetch_vocabulary_set_calls:0,setup_calls:0,operating_requests:0}));

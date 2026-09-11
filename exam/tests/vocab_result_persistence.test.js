@@ -1,14 +1,15 @@
-const assert=require('assert'),crypto=require('crypto'),fs=require('fs'),vm=require('vm');
-const props={TOKEN:'teacher',STUDENT_CAPABILITY_SECRET:'student-secret'},sheets={};
-function sheet(name,rows=[]){return sheets[name]={rows,getDataRange(){return{getValues:()=>this.rows}},getRange(r,c,rc=1,cc=1){let t=this;return{getValues:()=>t.rows.slice(r-1,r-1+rc).map(x=>x.slice(c-1,c-1+cc)),getValue:()=>t.rows[r-1]&&t.rows[r-1][c-1],setValue(v){while(t.rows.length<r)t.rows.push([]);t.rows[r-1][c-1]=v},setValues(vs){vs.forEach((x,ri)=>x.forEach((v,ci)=>{while(t.rows.length<r+ri)t.rows.push([]);t.rows[r-1+ri][c-1+ci]=v}))}}},appendRow(x){this.rows.push(x)},getLastRow(){return this.rows.length},getLastColumn(){return Math.max(0,...this.rows.map(x=>x.length))},deleteRow(r){this.rows.splice(r-1,1)},copyTo(){return this},setName(){return this}}}
-const ss={getId:()=>'',getName:()=>'',getSheets:()=>Object.values(sheets),getSheetByName:n=>sheets[n]||null,insertSheet:n=>sheet(n)};
-const ctx={console,Date,JSON,Math,Array,Object,String,Number,PropertiesService:{getScriptProperties:()=>({getProperty:k=>props[k]||'',setProperty:(k,v)=>props[k]=v})},SpreadsheetApp:{getActiveSpreadsheet:()=>ss,flush(){}},Session:{getEffectiveUser:()=>({getEmail:()=>''}),getScriptTimeZone:()=>''},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},CacheService:{getScriptCache:()=>({put(){},get:()=>null,remove(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),formatDate:()=>'',Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},base64EncodeWebSafe:v=>Buffer.from(v).toString('base64url'),base64DecodeWebSafe:v=>Buffer.from(v,'base64url'),computeHmacSha256Signature:(v,s)=>crypto.createHmac('sha256',s).update(v).digest(),computeDigest:(_a,v)=>crypto.createHash('sha256').update(v).digest(),newBlob:v=>({getDataAsString:()=>Buffer.from(v).toString('utf8')})},ContentService:{MimeType:{JAVASCRIPT:'js'},createTextOutput:body=>({body,setMimeType(){return this}})}};
-vm.createContext(ctx);vm.runInContext(fs.readFileSync('exam/sheet_backend.gs','utf8'),ctx);ctx.setup();
+const assert=require('assert'),crypto=require('crypto'),fs=require('fs');
+const {createSubmitMock}=require('./helpers/vocab-submit-mock.cjs');
+const env=createSubmitMock(),{ctx,sheets,properties:props}=env;
 const now=new Date(),teacher=props.DEFAULT_TEACHER_ID,student=crypto.randomUUID(),assignment=crypto.randomUUID(),target=crypto.randomUUID();
 sheets.StudentsV2.appendRow([student,teacher,'테스트학생','고1',true,now,now]);
 sheets.AssignmentsV2.appendRow([assignment,teacher,'VOCAB','vocab-set-1','V3 Set 01','',now,'',true,now,now,'FIXED','request-assignment']);
 sheets.AssignmentTargetsV2.appendRow([target,assignment,student,'NOT_STARTED','','',true,now,now]);
 sheets.VocabSetsV2.appendRow(['vocab-set-1',teacher,'fixed-session-1','V3 Set 01','V3','https://example.test/vocab',true,now,now,'V3','',1,2,'1~2','FIXED',2,'catalog-v3',1,'[]']);
+for(const [id,term,meaning] of [['word-a','apple','사과'],['word-b','book','책']]){
+ sheets.WordsV2.rows.push([id,'vocab-set-1',term,meaning,true,now,now]);
+ sheets.VocabSetItemsV2.rows.push([crypto.randomUUID(),'vocab-set-1',id,sheets.VocabSetItemsV2.rows.length,now,'','','','']);
+}
 const expiredLaunch=ctx.createStudentCapability_('assignmentTarget',target,['launchAssignment'],{student_id:student},Date.now()-1000);
 assert.strictEqual(ctx.verifyStudentCapability_(expiredLaunch,'launchAssignment','assignmentTarget',target,{student_id:student}),false);
 assert.strictEqual(ctx.verifyStudentCapabilityGrace_(expiredLaunch,'launchAssignment','assignmentTarget',target,{student_id:student},30*24*60*60*1000),true);

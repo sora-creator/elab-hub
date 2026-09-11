@@ -766,9 +766,11 @@ function verifyStudentCapability_(capability, action, resourceType, resourceKey,
   try {
     var parts = String(capability || '').split('.');
     if (parts.length !== 2) return false;
+    var secret=PropertiesService.getScriptProperties().getProperty('STUDENT_CAPABILITY_SECRET');
+    if(!secret)return false;
     var expected = base64UrlEncode_(Utilities.computeHmacSha256Signature(
       parts[0],
-      getOrCreateStudentSecret_('STUDENT_CAPABILITY_SECRET'),
+      secret,
       Utilities.Charset.UTF_8
     ));
     if (!timingSafeEqual_(parts[1], expected)) return false;
@@ -1872,8 +1874,7 @@ function handleCreateVocabularySetV1_(d){
       vocabularyDbCheckV1_([0,2,3,19].every(function(i){return typeof row[i]==='string'&&!!row[i].trim()&&row[i].length<=10000;})&&/^V[1-5]$/.test(row[19]),'SET_VALIDATION_ERROR');
       var old=byWord[id];
       // A WordsV2 row can belong to an earlier set. Preserve its link and timestamps.
-      if(old)vocabularyDbCheckV1_(old[2]===row[2]&&old[3]===row[3]&&old[4]===true&&typeof old[1]==='string'&&
-        [5,6].every(function(i){return old[i] instanceof Date&&isFinite(old[i].getTime());}),'WORD_COMPAT_CONFLICT');
+      vocabularyWordCompatibilityV1_(old,id,row[2],row[3]);
       return {id:id,word:row[2],meaning:row[3],level:row[19],missing:!old};
     });
     level=level||items[0].level;
@@ -2225,10 +2226,10 @@ function reviewItemRowV2_(studentId,itemType,itemRefId,subskillKey){
   for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(studentId)&&String(rows[i][3])===String(itemType)&&String(rows[i][4])===String(itemRefId)&&String(rows[i][5]||'')===String(subskillKey||''))return rows[i];
   return null;
 }
-function recordReviewOutcomeV2_(attempt,itemType,itemRefId,subskillKey,isCorrect,sourceItemId,eventVersion,wrongDelta){
+function recordReviewOutcomeV2_(attempt,itemType,itemRefId,subskillKey,isCorrect,sourceItemId,eventVersion,wrongDelta,validatedLock){
   if(!attempt||!itemRefId||isCorrect==='')return null;
-  setupReviewItemsV2_();
-  var lock=LockService.getScriptLock();lock.waitLock(10000);
+  if(!validatedLock)setupReviewItemsV2_();
+  var lock=validatedLock||LockService.getScriptLock();if(!validatedLock)lock.waitLock(10000);
   try{
     var review=reviewItemRowV2_(attempt[2],itemType,itemRefId,subskillKey),delta=Math.max(0,Number(wrongDelta==null?(isCorrect?0:1):wrongDelta)||0);
     if(!review&&isCorrect&&delta===0)return null;
@@ -2241,7 +2242,7 @@ function recordReviewOutcomeV2_(attempt,itemType,itemRefId,subskillKey,isCorrect
     review[15]=true;review[17]=now;upsertRow_(getOrCreateSheet_(REVIEW_ITEMS_V2_SHEET,REVIEW_ITEMS_V2_HEADERS),review[0],review);
     events.appendRow([eventId,review[0],attempt[0],sourceItemId,isCorrect?'CORRECT':'WRONG',delta,now]);
     return review;
-  }finally{lock.releaseLock();}
+  }finally{if(!validatedLock)lock.releaseLock();}
 }
 function syncQuestionReviewV2_(attempt,item){
   if(!attempt||!item||String(attempt[4])==='SENTENCE_STRUCTURE'||item[5]==='')return;
@@ -2388,7 +2389,22 @@ function handleListStudentAttemptHistoryV2_(e){
   units.sort(function(x,y){return String(y.sort_key).localeCompare(String(x.sort_key));});var page=units.slice(cursor,cursor+limit),pageGroups=[],pageUnlinked=[];page.forEach(function(unit){(unit.kind==='group'?pageGroups:pageUnlinked).push(unit.value);});
   return{ok:true,student:{student_id:studentId,name:student[2]||'',grade:student[3]||''},groups:pageGroups,unlinked_attempts:pageUnlinked,next_cursor:cursor+limit<units.length?String(cursor+limit):null};
 }
-function handleVerifyVocabResultV2_(e){var traceId=String(e.parameter.trace_id||''),attemptId=String(e.parameter.attempt_id||''),targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||''),expected=Math.max(0,Number(e.parameter.expected_word_count)||0),response;if(!attemptId||!targetId||!studentId)response={trace_id:traceId,found:false,found_attempt:false,error:'missing context'};else if(!verifyStudentCapability_(e.parameter.attemptCapability,'verifyVocabResultV2','assignmentTarget',targetId,{student_id:studentId}))response={trace_id:traceId,found:false,found_attempt:false,error:'forbidden'};else{var attempt=attemptByIdV2_(attemptId);if(!attempt||String(attempt[1])!==targetId||String(attempt[2])!==studentId)response={trace_id:traceId,found:false,found_attempt:false,error:''};else{var rows=getOrCreateSheet_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues(),wordCount=0;for(var i=1;i<rows.length;i++)if(String(rows[i][1])===attemptId)wordCount++;var completed=String(attempt[9])==='COMPLETED',itemsComplete=wordCount>0&&(!expected||wordCount===expected);response={trace_id:traceId,found:true,found_attempt:true,complete:completed&&itemsComplete,attempt_complete:completed,attempt_status:attempt[9],items_complete:itemsComplete,attempt_id:attemptId,status:attempt[9],score:attempt[14],repetition_count:attempt[15],word_item_count:wordCount,expected_word_item_count:expected,expected_word_count:expected,error:''};}}resultTraceLog_(traceId,'VERIFY RESPONSE',response);return response;}
+function handleVerifyVocabResultV2_(e){
+  var p=e.parameter,traceId=String(p.trace_id||''),attemptId=String(p.attempt_id||''),targetId=String(p.assignment_target_id||''),studentId=String(p.student_id||''),expected=Math.max(0,Number(p.expected_word_count)||0),response;
+  try{
+    if(!attemptId||!targetId||!studentId)throw new Error('missing context');
+    if(!verifyStudentCapability_(p.attemptCapability,'verifyVocabResultV2','assignmentTarget',targetId,{student_id:studentId}))throw new Error('forbidden');
+    var attempt=vocabSubmitExactV2_(vocabSubmitReadV2_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS),attemptId),
+      target=vocabSubmitExactV2_(vocabSubmitReadV2_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),targetId);
+    if(attempt[1]!==targetId||attempt[2]!==studentId||target[2]!==studentId)throw new Error('forbidden');
+    var rows=vocabSubmitReadV2_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS).rows.slice(1).filter(function(row){return row[1]===attemptId;}),wordCount=rows.length,seen=Object.create(null),
+      valid=rows.every(function(row){if(!row[2]||seen[row[2]]||row[5]!==true)return false;seen[row[2]]=true;return true;}),
+      completed=attempt[9]==='COMPLETED'&&target[3]==='COMPLETED',itemsComplete=wordCount>0&&valid&&(!expected||wordCount===expected),
+      partial=attempt[9]==='SUBMITTING'||attempt[9]==='COMPLETED'&&!completed;
+    response={trace_id:traceId,found:true,found_attempt:true,complete:completed&&itemsComplete,attempt_complete:completed,attempt_status:attempt[9],target_status:target[3],items_complete:itemsComplete,attempt_id:attemptId,status:attempt[9],score:attempt[14],repetition_count:attempt[15],word_item_count:wordCount,expected_word_item_count:expected,expected_word_count:expected,error:partial?'PARTIAL_VOCAB_SUBMIT:READ_ONLY_DIAGNOSIS_REQUIRED':''};
+  }catch(error){response={trace_id:traceId,found:false,found_attempt:false,complete:false,error:String(error&&error.message||error)};}
+  resultTraceLog_(traceId,'VERIFY RESPONSE',response);return response;
+}
 
 function handleVerifyAttemptCompletionV2_(e){
   var attemptId=String(e.parameter.attempt_id||''),targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');
@@ -3214,29 +3230,133 @@ function handleSaveAssignment_(d) {
 // vocab/index.html의 sendResult()가 결과 웹훅을 이 백엔드로 등록해두면 자동으로 호출됨(action
 // 필드만 추가된 것 — VocaTest 자체 개인 Apps Script를 쓰는 기존 사용자는 이 필드를 무시하므로
 // 하위호환에 영향 없음).
+// Shared with set creation: exact compatibility rows retain their original set and dates.
+function vocabularyWordCompatibilityV1_(old,id,term,meaning){
+  if(old)vocabularyDbCheckV1_(old[0]===id&&old[2]===term&&old[3]===meaning&&old[4]===true&&typeof old[1]==='string'&&
+    [5,6].every(function(i){return old[i] instanceof Date&&isFinite(old[i].getTime());}),'WORD_COMPAT_CONFLICT');
+}
+function vocabSubmitReadV2_(name,headers,legacyWidth){
+  var sheet=SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name),error=name===WORD_ATTEMPT_ITEMS_V2_SHEET?'WORD_ATTEMPT_SCHEMA_NOT_READY':'VOCAB_SUBMIT_SCHEMA_NOT_READY:'+name;
+  vocabularyDbCheckV1_(!!sheet,error);
+  var actual=sheet.getDataRange().getValues()[0];
+  if(legacyWidth&&actual.length===legacyWidth)headers=headers.slice(0,legacyWidth);
+  vocabularyDbCheckV1_(JSON.stringify(actual)===JSON.stringify(headers),error);
+  return vocabularySetReadV1_(name,headers);
+}
+function vocabSubmitExactV2_(table,id){
+  var found=table.rows.slice(1).filter(function(row){return row[0]===id;});
+  vocabularyDbCheckV1_(found.length===1,'VOCAB_SUBMIT_IDENTITY_CONFLICT:'+table.sheet.getName());
+  return found[0];
+}
+function vocabSubmitUpdateV2_(table,row){
+  var index=table.rows.findIndex(function(old){return old[0]===row[0];});
+  vocabularyDbCheckV1_(index>0,'VOCAB_SUBMIT_IDENTITY_CONFLICT');
+  table.sheet.getRange(index+1,1,1,table.headers.length).setValues([row]);
+  SpreadsheetApp.flush();
+  var expected=table.rows.slice();expected[index]=row;
+  vocabularyDbCheckV1_(vocabularySetStateV1_(vocabularySetReadV1_(table.sheet.getName(),table.headers).rows)===vocabularySetStateV1_(expected),'VOCAB_SUBMIT_READBACK_FAILED');
+  table.rows=expected;
+}
+function handleSubmitVocabResultSafeV2_(d){
+  var lock=LockService.getScriptLock(),started=false,stage='PREVALIDATION';
+  if(!lock.tryLock(20000))return textOut_('VOCAB_SUBMIT_BUSY');
+  try{
+    vocabularyDbCheckV1_(verifyStudentCapability_(d.attemptCapability,'submitAttemptQuestionV2','assignmentTarget',d.assignment_target_id,{student_id:String(d.student_id||'')}),'forbidden attempt');
+    var attempts=vocabSubmitReadV2_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS),targets=vocabSubmitReadV2_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),
+      attempt=vocabSubmitExactV2_(attempts,d.attempt_id),target=vocabSubmitExactV2_(targets,d.assignment_target_id);
+    vocabularyDbCheckV1_(attempt[1]===target[0]&&attempt[2]===d.student_id&&target[2]===d.student_id,'VOCAB_SUBMIT_SCOPE_MISMATCH');
+    vocabularyDbCheckV1_(attempt[9]!=='COMPLETED','ATTEMPT_ALREADY_COMPLETED');
+    vocabularyDbCheckV1_(attempt[9]!=='SUBMITTING','PARTIAL_VOCAB_SUBMIT:READ_ONLY_DIAGNOSIS_REQUIRED');
+    vocabularyDbCheckV1_(attempt[9]==='IN_PROGRESS'&&target[3]==='IN_PROGRESS','VOCAB_SUBMIT_STATUS_CONFLICT');
+    var assignments=vocabSubmitReadV2_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),students=vocabSubmitReadV2_(STUDENTS_V2_SHEET,STUDENTS_V2_HEADERS),
+      assignment=vocabSubmitExactV2_(assignments,target[1]),student=vocabSubmitExactV2_(students,d.student_id),
+      sets=vocabSubmitReadV2_(VOCAB_SETS_V2_SHEET,VOCAB_SETS_V2_HEADERS,19),set=vocabSubmitExactV2_(sets,d.vocab_set_id),
+      sources=vocabSubmitReadV2_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS,5),words=vocabSubmitReadV2_(WORDS_V2_SHEET,WORDS_V2_HEADERS),
+      items=vocabSubmitReadV2_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS),results=vocabSubmitReadV2_(VOCAB_RESULTS_SHEET,VOCAB_RESULTS_HEADERS);
+    vocabularyDbCheckV1_(assignment[2]==='VOCAB'&&attempt[4]==='VOCAB'&&assignment[3]===set[0]&&
+      (!d.assignment_id||d.assignment_id===assignment[0])&&(!d.sessionKey||d.sessionKey===set[2])&&
+      attempt[3]===assignment[1]&&student[1]===assignment[1]&&set[1]===assignment[1]&&
+      boolValue_(target[6],true)&&boolValue_(assignment[8],true)&&boolValue_(student[4],true)&&boolValue_(set[6],true),'VOCAB_SUBMIT_SCOPE_MISMATCH');
+    var now=new Date(),sourceRows=sources.rows.slice(1).filter(function(row){return row[1]===set[0];}),byWord=vocabularySetWordMapV1_(words.rows),
+      submitted=Array.isArray(d.wordItems)?d.wordItems:[],seen=Object.create(null),saved=[],newWords=[],newItems=[],correct=0;
+    vocabularyDbCheckV1_(sourceRows.length>0&&submitted.length===sourceRows.length,'VOCAB_SUBMIT_ITEMS_MISMATCH');
+    submitted.forEach(function(w){
+      vocabularyDbCheckV1_(w&&typeof w.word_id==='string'&&!seen[w.word_id],'VOCAB_SUBMIT_ITEMS_MISMATCH');seen[w.word_id]=true;
+      var matches=sourceRows.filter(function(row){return row[2]===w.word_id;});
+      vocabularyDbCheckV1_(matches.length===1,'VOCAB_SUBMIT_ITEMS_MISMATCH');
+      var source=matches[0],kind=vocabularySetItemKindV1_(source),meta=kind==='SNAPSHOT'?{word:source[6],meaning:source[7]}:vocabularySetLegacyMetadataV1_(source,byWord);
+      vocabularyDbCheckV1_(kind!=='SNAPSHOT'||source[5]===w.word_id,'VOCAB_SUBMIT_ITEMS_MISMATCH');
+      vocabularyDbCheckV1_(w.term===meta.word&&w.meaning===meta.meaning&&typeof w.first_correct==='boolean'&&w.final_correct===true&&
+        typeof w.wrong_count==='number'&&isFinite(w.wrong_count)&&w.wrong_count>=0&&Math.floor(w.wrong_count)===w.wrong_count&&
+        (w.first_correct?w.wrong_count===0:w.wrong_count>0),'VOCAB_SUBMIT_ANSWER_INVALID');
+      var oldWords=byWord[w.word_id]||[];vocabularyDbCheckV1_(oldWords.length<=1,'WORD_COMPAT_CONFLICT');
+      vocabularyWordCompatibilityV1_(oldWords[0],w.word_id,meta.word,meta.meaning);
+      if(!oldWords.length){vocabularyDbCheckV1_(kind==='SNAPSHOT','WORD_COMPAT_SOURCE_REQUIRED');newWords.push([w.word_id,set[0],meta.word,meta.meaning,true,now,now]);}
+      var oldItems=items.rows.slice(1).filter(function(row){return row[1]===attempt[0]&&row[2]===w.word_id;});
+      vocabularyDbCheckV1_(oldItems.length<=1,'WORD_ATTEMPT_ITEM_CONFLICT');
+      vocabularyDbCheckV1_([w.first_answered_at,w.final_answered_at].every(function(value){return value==null||typeof value==='number'&&isFinite(value)&&value>=0;}),'VOCAB_SUBMIT_ANSWER_INVALID');
+      var old=oldItems[0],first=w.first_answered_at==null?(old?old[6]:now):new Date(w.first_answered_at),last=w.final_answered_at==null?(old?old[7]:now):new Date(w.final_answered_at);
+      vocabularyDbCheckV1_(first instanceof Date&&last instanceof Date&&isFinite(first.getTime())&&isFinite(last.getTime())&&first<=last,'VOCAB_SUBMIT_ANSWER_INVALID');
+      if(old)vocabularyDbCheckV1_(typeof old[0]==='string'&&!!old[0]&&old[3]===w.first_correct&&old[4]===w.wrong_count&&old[5]===true&&
+        [6,7,8,9].every(function(i){return old[i] instanceof Date&&isFinite(old[i].getTime());})&&old[6].getTime()===first.getTime()&&old[7].getTime()===last.getTime(),'WORD_ATTEMPT_ITEM_CONFLICT');
+      var row=old||[Utilities.getUuid(),attempt[0],w.word_id,w.first_correct,w.wrong_count,true,first,last,now,now];
+      saved.push(row);if(!old)newItems.push(row);if(w.first_correct)correct++;
+    });
+    vocabularyDbCheckV1_(!items.rows.slice(1).some(function(row){return row[1]===attempt[0]&&!seen[row[2]];}),'WORD_ATTEMPT_ITEM_CONFLICT');
+    saved.forEach(function(row){vocabularyDbCheckV1_(saved.filter(function(other){return other[0]===row[0];}).length===1&&
+      !items.rows.slice(1).some(function(old){return old[0]===row[0]&&old!==row;}),'WORD_ATTEMPT_ITEM_CONFLICT');});
+    var score=correct+'/'+saved.length+' ('+Math.round(correct/saved.length*100)+'%)',repetition=d.repetition_count==null?0:d.repetition_count;
+    vocabularyDbCheckV1_(typeof repetition==='number'&&isFinite(repetition)&&repetition>=0&&Math.floor(repetition)===repetition,'VOCAB_SUBMIT_ANSWER_INVALID');
+    vocabularyDbCheckV1_(!d.score||d.score===score||d.score===correct+'/'+saved.length,'VOCAB_SUBMIT_SCORE_MISMATCH');
+    var wrong=saved.filter(function(row){return row[4]>0;});
+    var resultRow=[now,String(d.name||''),String(d.range||''),score,String(d.timeStr||''),wrong.map(function(row){return submitted.find(function(w){return w.word_id===row[2];}).term;}).join(', '),String(d.count||saved.length),String(d.qtype||''),String(d.attempt||''),(d.known||[]).join(', ')];
+    // Preflight all ancillary tables before the first write; existing policies remain in their helpers.
+    if(wrong.length){
+      var reviews=vocabSubmitReadV2_(REVIEW_ITEMS_V2_SHEET,REVIEW_ITEMS_V2_HEADERS),events=vocabSubmitReadV2_(REVIEW_EVENTS_V2_SHEET,REVIEW_EVENTS_V2_HEADERS);
+      wrong.forEach(function(row){
+        var matches=reviews.rows.slice(1).filter(function(review){return review[1]===attempt[2]&&review[3]==='WORD'&&review[4]===row[2]&&!review[5];});
+        vocabularyDbCheckV1_(matches.length<=1,'VOCAB_SUBMIT_REVIEW_CONFLICT');
+        var prior=events.rows.slice(1).filter(function(event){return event[0]===row[0]+':1:GENERAL';});
+        vocabularyDbCheckV1_(prior.length<=1&&(!prior.length||matches.length===1&&prior[0][1]===matches[0][0]&&prior[0][2]===attempt[0]&&prior[0][3]===row[0]&&prior[0][4]==='CORRECT'&&prior[0][5]===row[4]),'VOCAB_SUBMIT_REVIEW_CONFLICT');
+        if(matches.length)vocabularyDbCheckV1_(!reviews.sheet.getRange(reviews.rows.indexOf(matches[0])+1,1,1,reviews.headers.length).getMergedRanges().length,'VOCAB_SUBMIT_CAPACITY_NOT_READY');
+      });
+      vocabularySetCapacityV1_(reviews,wrong.length);vocabularySetCapacityV1_(events,wrong.length);
+    }
+    var schedules=vocabSubmitReadV2_(VOCAB_REVIEW_SCHEDULES_V2_SHEET,VOCAB_REVIEW_SCHEDULES_V2_HEADERS);
+    if(attempt[5]==='D7'||attempt[5]==='D30'){
+      var matchingSchedules=schedules.rows.slice(1).filter(function(row){return row[1]===attempt[3]&&row[9]===assignment[0]&&row[5]===attempt[5];});
+      vocabularyDbCheckV1_(matchingSchedules.length<=1,'VOCAB_SUBMIT_RETENTION_CONFLICT');
+      if(matchingSchedules.length)vocabularyDbCheckV1_(!schedules.sheet.getRange(schedules.rows.indexOf(matchingSchedules[0])+1,1,1,schedules.headers.length).getMergedRanges().length,'VOCAB_SUBMIT_CAPACITY_NOT_READY');
+    }
+    if(attempt[5]==='INITIAL')vocabSubmitReadV2_(HOMEWORK_BATCH_ASSIGNMENTS_V2_SHEET,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS);
+    vocabularySetCapacityV1_(schedules,attempt[5]==='INITIAL'?2:0);
+    vocabularySetCapacityV1_(words,newWords.length);vocabularySetCapacityV1_(items,newItems.length);vocabularySetCapacityV1_(results,1);
+    [[attempts,attempt],[targets,target]].forEach(function(pair){vocabularyDbCheckV1_(!pair[0].sheet.getRange(pair[0].rows.indexOf(pair[1])+1,1,1,pair[0].headers.length).getMergedRanges().length,'VOCAB_SUBMIT_CAPACITY_NOT_READY');});
+    vocabularyDbCheckV1_(isFinite(new Date(attempt[6]).getTime()),'VOCAB_SUBMIT_ATTEMPT_TIME_INVALID');
+    // A small durable fence, not an automatic retry protocol. Any uncertainty requires read-only diagnosis.
+    stage='ATTEMPT_FENCE';started=true;
+    var pending=attempt.slice();pending[9]='SUBMITTING';vocabSubmitUpdateV2_(attempts,pending);
+    stage='WORDS';vocabularySetAppendV1_(words,newWords,[[0,4]]);
+    stage='WORD_ATTEMPT_ITEMS';vocabularySetAppendV1_(items,newItems,[[0,3]]);
+    stage='RESULT';vocabularySetAppendV1_(results,[resultRow],[[1,9]]);
+    var completed=attempt.slice();completed[7]=now;completed[8]=Math.max(0,now.getTime()-new Date(attempt[6]).getTime());completed[9]='COMPLETED';completed[13]=now;completed[14]=score;completed[15]=repetition;
+    var completedTarget=target.slice();completedTarget[3]='COMPLETED';completedTarget[4]=target[4]||attempt[6];completedTarget[5]=now;completedTarget[8]=now;
+    stage='TARGET_COMPLETION';vocabSubmitUpdateV2_(targets,completedTarget);
+    stage='REVIEW';wrong.forEach(function(row){recordReviewOutcomeV2_(completed,'WORD',row[2],'',true,row[0],1,row[4],lock);});
+    stage='RETENTION';syncVocabRetentionOnCompleteV1_(completed);SpreadsheetApp.flush();
+    // Completion is the final seal, so verify cannot report success after an earlier partial write.
+    stage='ATTEMPT_COMPLETION';vocabSubmitUpdateV2_(attempts,completed);
+    CacheService.getScriptCache().remove('teacher-student-list-v1');
+    return textOut_('ok');
+  }catch(error){
+    return textOut_(started?'PARTIAL_VOCAB_SUBMIT:'+stage+':READ_ONLY_DIAGNOSIS_REQUIRED':String(error&&error.message||error));
+  }finally{lock.releaseLock();}
+}
 function handleSubmitVocabResult_(d) {
-  var traceId=String(d.trace_id||''),target=targetByIdV2_(d.assignment_target_id),attempt=attemptForLegacySubmissionV2_(d);resultTraceLog_(traceId,'STEP_D assignment_target lookup '+(target?'OK':'FAIL'),{target_active:!!target&&boolValue_(target[6],true),student_match:!!target&&String(target[2])===String(d.student_id||'')});resultTraceLog_(traceId,'STEP_E attempt lookup '+(attempt?'OK':'FAIL'),{attempt_id:d.attempt_id||'',attempt_status:attempt&&attempt[9]||''});if(d.assignment_target_id&&!attempt)return textOut_('forbidden attempt');
-  var items=Array.isArray(d.wordItems)?d.wordItems:[],now=new Date(),savedItems=[];
-  if(attempt&&String(attempt[9])==='COMPLETED'){try{syncVocabRetentionOnCompleteV1_(attempt);}catch(retentionRetryError){console.error('[ELAB-RETENTION] retry sync failed',attempt[0],String(retentionRetryError&&retentionRetryError.stack||retentionRetryError));}return textOut_('ok:'+attempt[0]);}
-  if(attempt){
-    if(!items.length||items.some(function(w){return !String(w.word_id||'')||w.final_correct!==true;}))return textOut_('incomplete vocab result');
-    setupAttemptsV2_();
-    var lock=LockService.getScriptLock();lock.waitLock(20000);
-    try{
-      var wordSh=getOrCreateSheet_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS),wordRows=wordSh.getDataRange().getValues(),existing={};
-      for(var wi=1;wi<wordRows.length;wi++)if(String(wordRows[wi][1])===String(attempt[0]))existing[String(wordRows[wi][2])]=wordRows[wi];
-      items.forEach(function(w){var wordId=String(w.word_id),old=existing[wordId],id=old?old[0]:Utilities.getUuid(),wrong=Math.max(0,Number(w.wrong_count)||0),row=[id,attempt[0],wordId,!!w.first_correct,wrong,true,w.first_answered_at?new Date(w.first_answered_at):(old?old[6]:now),w.final_answered_at?new Date(w.final_answered_at):now,old?old[8]:now,now];savedItems.push({row:row,term:w.term||'',meaning:w.meaning||''});if(old){for(var c=0;c<row.length;c++)old[c]=row[c];}else{wordRows.push(row);existing[wordId]=row;}});
-      if(wordRows.length>1)wordSh.getRange(1,1,wordRows.length,WORD_ATTEMPT_ITEMS_V2_HEADERS.length).setValues(wordRows.map(function(row){var out=row.slice(0,WORD_ATTEMPT_ITEMS_V2_HEADERS.length);while(out.length<WORD_ATTEMPT_ITEMS_V2_HEADERS.length)out.push('');return out;}));
-      resultTraceLog_(traceId,'STEP_G WordAttemptItemsV2 write OK',{attempt_id:attempt[0],written_items:savedItems.length});
-      completeAttemptV2_(attempt,d.score,d.repetition_count);
-      resultTraceLog_(traceId,'STEP_F AttemptsV2 write OK',{attempt_id:attempt[0],status:'COMPLETED',score:d.score});
-      SpreadsheetApp.flush();
-    }catch(primaryWriteError){resultTraceLog_(traceId,'STEP_F/G primary write ERROR',{message:String(primaryWriteError&&primaryWriteError.message||primaryWriteError),stack:String(primaryWriteError&&primaryWriteError.stack||'')});throw primaryWriteError;}finally{lock.releaseLock();}
-    // Review/legacy는 결과 원본 저장 이후의 파생 데이터다. 실패해도 완료 결과를 되돌리지 않는다.
-    savedItems.forEach(function(saved){try{upsertWordV2_({word_id:saved.row[2],term:saved.term,meaning:saved.meaning},d.vocab_set_id||'');recordReviewOutcomeV2_(attempt,'WORD',saved.row[2],'',true,saved.row[0],1,saved.row[4]);resultTraceLog_(traceId,'STEP_I Review write OK',{word_id:saved.row[2]});}catch(reviewError){resultTraceLog_(traceId,'STEP_I Review write ERROR',{word_id:saved.row[2],message:String(reviewError&&reviewError.message||reviewError),stack:String(reviewError&&reviewError.stack||'')});}});
-  }
+  if(d.assignment_target_id||d.attempt_id||d.student_id||d.attemptCapability)return handleSubmitVocabResultSafeV2_(d);
+  var traceId=String(d.trace_id||''),now=new Date();
   try{getOrCreateSheet_(VOCAB_RESULTS_SHEET,VOCAB_RESULTS_HEADERS).appendRow([now,d.name||'',d.range||'',d.score||'',d.timeStr||'',(d.wrong||[]).join(', '),d.count||'',d.qtype||'',d.attempt||'',(d.known||[]).join(', ')]);resultTraceLog_(traceId,'STEP_H VocabResults write OK');}catch(legacyError){resultTraceLog_(traceId,'STEP_H VocabResults write ERROR',{message:String(legacyError&&legacyError.message||legacyError),stack:String(legacyError&&legacyError.stack||'')});}
-  resultTraceLog_(traceId,'STEP_J submitVocabResult success',{attempt_id:attempt&&attempt[0]||'',word_items:savedItems.length});
+  resultTraceLog_(traceId,'STEP_J submitVocabResult success',{legacy:true});
   return textOut_('ok');
 }
 
