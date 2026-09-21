@@ -1,0 +1,61 @@
+// Isolated local browser regression for optional interpretation features.
+const assert=require('assert/strict'),path=require('path'),{pathToFileURL}=require('url');
+const root=path.resolve(__dirname,'../..');
+process.env.PLAYWRIGHT_BROWSERS_PATH=path.join(root,'.pw-browsers');
+const {chromium}=require('playwright');
+
+(async()=>{
+  const browser=await chromium.launch({headless:true});
+  const context=await browser.newContext({viewport:{width:1440,height:1000}});
+  const page=await context.newPage(),errors=[];
+  page.on('pageerror',error=>errors.push(error.message));
+  await context.route(/^https?:\/\//,route=>route.abort());
+  const settle=()=>page.evaluate(()=>ReviewAdapter.whenIdle());
+  try{
+    await page.goto(pathToFileURL(path.join(__dirname,'index.html')).href);
+    await page.locator('.queue-item').first().waitFor();
+    await page.click('[data-open="corpus:2970"]');
+    await page.locator('.advanced').evaluate(el=>el.open=true);
+    const before=await page.evaluate(()=>{const r=ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2970');return {level:r.auto.teacher_level_candidate,goldErrors:ReviewCore.goldErrors(r),features:r.teacher.interpretation_features};});
+    assert.equal(before.level,'S1');
+    assert(before.features.some(x=>x.type==='DISCOURSE_ADVERB'&&x.evidence_text==='then'&&x.source==='AUTO'));
+    assert(await page.locator('.interpretation-review').innerText().then(text=>text.includes('문맥 연결 부사')&&text.includes('then')&&text.includes('OPTIONAL')));
+    await page.click('[data-interpretation-evidence]');
+    assert.deepEqual(await page.locator('.sentence-sheet mark.evidence-active').allTextContents(),['then']);
+    await page.click('[data-interpretation-remove="0"]');await settle();
+    assert(await page.evaluate(()=>ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2970').teacher.interpretation_features[0].teacher_removed));
+    assert.deepEqual(await page.evaluate(()=>ReviewCore.goldErrors(ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2970'))),before.goldErrors);
+    await page.locator('.advanced').evaluate(el=>el.open=true);
+    await page.locator('.interpretation-add').evaluate(el=>el.open=true);
+    await page.selectOption('#interpretation-type','CONTEXT_DEPENDENT_MEANING');
+    await page.click('[data-interpretation-token="0"]');
+    await page.click('[data-interpretation-add]');await settle();
+    assert(await page.evaluate(()=>ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2970').teacher.interpretation_features.some(x=>x.type==='CONTEXT_DEPENDENT_MEANING'&&x.evidence_text==='Identity'&&!x.teacher_removed&&x.source==='TEACHER')));
+    await page.reload();await page.locator('.queue-item').first().waitFor();await page.click('[data-open="corpus:2970"]');await page.locator('.advanced').evaluate(el=>el.open=true);
+    assert(await page.evaluate(()=>{const features=ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2970').teacher.interpretation_features;return features[0].teacher_removed&&features.some(x=>x.type==='CONTEXT_DEPENDENT_MEANING'&&x.evidence_text==='Identity'&&!x.teacher_removed);}));
+    await page.click('[data-open="corpus:21875"]');
+    await page.locator('.advanced').evaluate(el=>el.open=true);
+    const quantityBefore=await page.evaluate(()=>{const r=ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:21875');return {level:r.auto.teacher_level_candidate,skills:r.teacher.teacher_skills,status:ReviewCore.status(r)};});
+    const quantityCard=page.locator('.interpretation-card').filter({hasText:'수량 표현'});
+    assert.equal(await quantityCard.count(),1);
+    assert(await quantityCard.innerText().then(text=>text.includes('a billion more questions.')));
+    assert(!(await page.locator('.interpretation-review').innerText()).includes('QUANTITY_EXPRESSION'));
+    await quantityCard.locator('[data-interpretation-evidence]').click();
+    assert.deepEqual(await page.locator('.sentence-sheet mark.evidence-active').allTextContents(),['a','billion','more','questions.']);
+    await quantityCard.locator('[data-interpretation-remove]').click();await settle();
+    assert.equal(await page.locator('.interpretation-card').filter({hasText:'수량 표현'}).count(),0);
+    await page.locator('.advanced').evaluate(el=>el.open=true);
+    await page.locator('.interpretation-add').evaluate(el=>el.open=true);
+    await page.selectOption('#interpretation-type','QUANTITY_EXPRESSION');
+    for(const index of [2,3,4,5])await page.click(`[data-interpretation-token="${index}"]`);
+    await page.click('[data-interpretation-add]');await settle();
+    assert.equal(await page.locator('.interpretation-card').filter({hasText:'수량 표현'}).count(),1);
+    assert.deepEqual(await page.evaluate(before=>{const r=ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:21875');return {unchanged:r.auto.teacher_level_candidate===before.level&&JSON.stringify(r.teacher.teacher_skills)===JSON.stringify(before.skills)&&ReviewCore.status(r)===before.status,feature:r.teacher.interpretation_features.find(x=>x.type==='QUANTITY_EXPRESSION'&&!x.teacher_removed)};},quantityBefore),{unchanged:true,feature:{type:'QUANTITY_EXPRESSION',evidence_token_indexes:[2,3,4,5],evidence_text:'a billion more questions.',source:'AUTO',teacher_removed:false}});
+    await page.reload();await page.locator('.queue-item').first().waitFor();await page.click('[data-open="corpus:21875"]');await page.locator('.advanced').evaluate(el=>el.open=true);
+    assert.equal(await page.locator('.interpretation-card').filter({hasText:'수량 표현'}).count(),1);
+    await page.setViewportSize({width:390,height:844});
+    assert(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth));
+    assert.deepEqual(errors,[]);
+    console.log('PASS interpretation feature browser tests: 20');
+  }finally{await context.close();await browser.close();}
+})().catch(error=>{console.error(error);process.exitCode=1;});

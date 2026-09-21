@@ -1,0 +1,15 @@
+'use strict';
+const assert=require('node:assert/strict'),M=require('./source-mapping.js');
+assert.equal(M.normalizedBasename(' A_B  C.PDF '),'A B C.pdf');
+assert.equal(M.normalizedBasename('A  B_C.pdf'),'A B C.pdf');
+const mapped=M.pathToLocalhost('D:\\pdf-library\\고2\\한 글.pdf','D:\\pdf-library','http://localhost:8010');
+assert.equal(mapped.url,'http://localhost:8010/%EA%B3%A02/%ED%95%9C%20%EA%B8%80.pdf');
+const manifest={program_root:'C:\\root',http_server_root:'C:\\root',sources:{'x.pdf':{status:'MATCHED',absolute_path:'C:\\root\\한 글.pdf',source_format:'UNKNOWN',sentences:{s1:{page:4}}}}};
+const row={sentence_id:'s1',auto:{source:{source_file:'x.pdf',question_no:'24번'},source_evidence:[]},teacher:{teacher_source_pdf:null}};
+assert.equal(M.resolve(row,{manifest,origin:'http://localhost:8010'}).page,4);
+row.auto.source_evidence=[{pdf_path:'C:\\root\\verified.pdf',page:2}];assert.equal(M.resolve(row,{manifest,origin:'http://localhost:8010'}).origin,'VERIFIED_AUTO_SOURCE_PATH');
+manifest.sources['x.pdf'].source_format='ORIGINAL_EXAM';assert.equal(M.resolve(row,{manifest,origin:'http://localhost:8010'}).origin,'GENERATED_MANIFEST');
+row.teacher.teacher_source_pdf={pdf_path:'C:\\root\\teacher.pdf',page:3};assert.equal(M.resolve(row,{manifest,origin:'http://localhost:8010'}).origin,'TEACHER_SOURCE_OVERRIDE');
+row.teacher.teacher_source_pdf=null;row.auto.source_evidence=[];const duplicate={program_root:'C:\\root',sources:{'x.pdf':{status:'DUPLICATE_CANDIDATE',candidates:[{absolute_path:'C:\\root\\a.pdf'},{absolute_path:'C:\\root\\b.pdf'}]}}};const unresolved=M.resolve(row,{manifest:duplicate,origin:'http://localhost:8010'});assert.equal(unresolved.reference,null);assert.equal(unresolved.status,'DUPLICATE_CANDIDATE');
+const memory={v:{},getItem(k){return this.v[k]||null;},setItem(k,v){this.v[k]=v;}};M.saveManual(memory,'x.pdf',{absolute_path:'C:\\root\\chosen.pdf',page:null});assert.equal(M.loadManual(memory)['x.pdf'].absolute_path,'C:\\root\\chosen.pdf');
+console.log('source-mapping tests: PASS');

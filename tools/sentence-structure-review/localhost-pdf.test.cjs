@@ -1,0 +1,127 @@
+// Isolated localhost PDF E2E. Synthetic confirmation is never an actual teacher review.
+const fs=require('fs');
+const path=require('path');
+const http=require('http');
+const assert=require('assert/strict');
+const appRoot=path.resolve(__dirname,'../..');
+const programRoot=path.resolve(appRoot,'../../..');
+const port=Number(process.env.ELAB_TEST_PORT||8011);
+process.env.PLAYWRIGHT_BROWSERS_PATH=path.join(appRoot,'.pw-browsers');
+const {chromium}=require('playwright');
+const out=path.join(appRoot,'output/sentence-structure-review/tests');
+const manifest=require('./pdf-source-manifest.generated.json');
+fs.mkdirSync(out,{recursive:true});
+const types={'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8','.pdf':'application/pdf'};
+const isInside=(file,root)=>file===root||file.startsWith(root+path.sep);
+const server=http.createServer((req,res)=>{
+  try{
+    const relative=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname).replace(/^\/+/,''),target=path.resolve(programRoot,relative);
+    if(!isInside(target,programRoot)){res.writeHead(403).end();return;}
+    const stat=fs.statSync(target);
+    if(!stat.isFile()){res.writeHead(404).end();return;}
+    const range=req.headers.range;
+    res.setHeader('Content-Type',types[path.extname(target).toLowerCase()]||'application/octet-stream');
+    res.setHeader('Accept-Ranges','bytes');
+    if(range){const match=/bytes=(\d+)-(\d*)/.exec(range),start=Number(match?.[1]||0),end=Math.min(match?.[2]?Number(match[2]):stat.size-1,stat.size-1);res.writeHead(206,{'Content-Range':`bytes ${start}-${end}/${stat.size}`,'Content-Length':end-start+1});fs.createReadStream(target,{start,end}).pipe(res);return;}
+    res.writeHead(200,{'Content-Length':stat.size});fs.createReadStream(target).pipe(res);
+  }catch(error){res.writeHead(error.code==='ENOENT'?404:500).end();}
+});
+const near=(actual,expected,tolerance,message)=>assert(Math.abs(actual-expected)<=tolerance,`${message}: ${actual} vs ${expected}`);
+const waitMatched=page=>page.locator('.pdf-custom-status.matched').waitFor({timeout:20000});
+const viewerState=page=>page.evaluate(()=>{const host=document.querySelector('[data-pdf-reviewer]'),state=host?._pdfReviewState,scroll=host?.querySelector('.pdf-custom-scroll'),stage=host?.querySelector('.pdf-custom-stage');return state&&{page:state.page,zoom:state.zoom,matchType:state.matchType,matchedPage:state.matchedPage,rects:state.rects.map(x=>({...x})),scrollLeft:scroll.scrollLeft,scrollTop:scroll.scrollTop,clientWidth:scroll.clientWidth,clientHeight:scroll.clientHeight,scrollWidth:scroll.scrollWidth,scrollHeight:scroll.scrollHeight,stageLeft:stage.offsetLeft,stageTop:stage.offsetTop,canvasWidth:parseFloat(host.querySelector('canvas').style.width),canvasHeight:parseFloat(host.querySelector('canvas').style.height)};});
+(async()=>{
+  await new Promise((resolve,reject)=>server.once('error',reject).listen(port,'127.0.0.1',resolve));
+  const browser=await chromium.launch({headless:true}),context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),page=await context.newPage();
+  const responses=[],requests=[],pageErrors=[],consoleErrors=[];
+  context.on('response',response=>responses.push({url:response.url(),status:response.status(),type:response.headers()['content-type']||''}));
+  context.on('request',request=>requests.push(request.url()));
+  page.on('pageerror',error=>pageErrors.push(error.message));
+  page.on('console',message=>{if(message.type()==='error')consoleErrors.push(message.text());});
+  try{
+    const reviewUrl=`http://127.0.0.1:${port}/%ED%95%99%EC%9B%90/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8/%ED%86%B5%ED%95%A9%20%EC%9B%B9%EC%95%B1/tools/sentence-structure-review/index.html`;
+    await page.goto(reviewUrl);
+    const expectedWorkerUrl=new URL('./vendor/pdfjs/pdf.worker.min.js',reviewUrl).href;
+    const workerUrl=await page.evaluate(()=>pdfjsLib.GlobalWorkerOptions.workerSrc);
+    assert.equal(workerUrl,expectedWorkerUrl,'worker URL must resolve from the Review Adapter URL');
+    const original=manifest.sources['2024_고2_9월_고2 9월 학평(인천)_영어_문제.pdf'];
+    const originalUrl=`http://127.0.0.1:${port}/`+original.relative_path.split(/[\\/]/).map(encodeURIComponent).join('/');
+    const originalResponse=await context.request.get(originalUrl);assert.equal(originalResponse.status(),200,'original exam candidate HTTP response');assert((originalResponse.headers()['content-type']||'').startsWith('application/pdf'),'original exam candidate content type');
+    const ainka=manifest.pdf_inventory.find(x=>x.source_format==='AINKA'),ainkaUrl=`http://127.0.0.1:${port}/`+ainka.relative_path_from_http_root.split(/[\\/]/).map(encodeURIComponent).join('/');
+    const ainkaResponse=await context.request.get(ainkaUrl);assert.equal(ainkaResponse.status(),200,'AINKA PDF HTTP response');assert((ainkaResponse.headers()['content-type']||'').startsWith('application/pdf'),'AINKA PDF content type');
+    const ainkaPages=await page.evaluate(async url=>{const pdf=await pdfjsLib.getDocument(url).promise;const pages=pdf.numPages;await pdf.destroy();return pages;},ainkaUrl);assert(ainkaPages>0,'AINKA PDF parses through the configured local worker');
+    await page.locator('.queue-item').first().waitFor();
+    await page.locator('[data-open="corpus:2449"]').click();
+    const teacherBefore=await page.evaluate(()=>JSON.stringify(ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2449').teacher));
+    await waitMatched(page);await page.waitForTimeout(450);
+    const initial=await viewerState(page),link=page.locator('[data-pdf-open]'),href=await link.getAttribute('href'),pdfBase=href.split('#')[0];
+    const expectedPage=manifest.sources['모의고사_2학년_2025년_09월_수업용자료_A_학생용_18_45_아잉카.pdf'].sentences['corpus:2449'].page;
+    assert.equal(initial.page,expectedPage,'source page');
+    assert.equal(initial.matchedPage,expectedPage,'matched page');
+    assert.equal(initial.matchType,'WHITESPACE_NORMALIZED_EXACT','corpus:2449 exact policy');
+    assert(initial.rects.length>=1,'corpus:2449 must have a sentence highlight');
+    assert.equal(await page.locator('.pdf-sentence-highlight').count(),initial.rects.length,'highlight DOM rectangles');
+    assert.equal(await page.locator('[data-pdf-retry]').isVisible(),false,'retry is hidden after a successful match');
+    assert(href.endsWith(`.pdf#page=${expectedPage}`),'new-window page fragment');
+    assert(responses.some(x=>x.url===pdfBase&&[200,206].includes(x.status)&&x.type.startsWith('application/pdf')),'PDF HTTP response');
+    const center=await page.evaluate(()=>{const h=document.querySelector('[data-pdf-reviewer]'),s=h._pdfReviewState,v=h.querySelector('.pdf-custom-scroll'),stage=h.querySelector('.pdf-custom-stage'),left=Math.min(...s.rects.map(x=>x.left)),right=Math.max(...s.rects.map(x=>x.left+x.width)),top=Math.min(...s.rects.map(x=>x.top)),bottom=Math.max(...s.rects.map(x=>x.top+x.height));return {dx:Math.abs(stage.offsetLeft+(left+right)/2-(v.scrollLeft+v.clientWidth/2)),dy:Math.abs(stage.offsetTop+(top+bottom)/2-(v.scrollTop+v.clientHeight/2)),w:v.clientWidth,h:v.clientHeight};});
+    assert(center.dx<center.w*.25&&center.dy<center.h*.18,'automatic sentence centering '+JSON.stringify(center));
+    await page.click('[data-pdf-zoom-in]');await page.locator('[data-pdf-zoom-label]').filter({hasText:'125%'}).waitFor();await waitMatched(page);
+    const zoomed=await viewerState(page);
+    near(zoomed.rects[0].left/initial.rects[0].left,1.25,.04,'highlight x scale');
+    near(zoomed.rects[0].width/initial.rects[0].width,1.25,.04,'highlight width scale');
+    near(zoomed.canvasWidth/initial.canvasWidth,1.25,.04,'canvas scale');
+    await page.evaluate(()=>{const v=document.querySelector('.pdf-custom-scroll');v.scrollLeft=0;v.scrollTop=Math.min(180,v.scrollHeight-v.clientHeight);});
+    const box=await page.locator('.pdf-custom-scroll').boundingBox(),beforeDrag=await viewerState(page);
+    await page.mouse.move(box.x+box.width*.55,box.y+box.height*.55);await page.mouse.down();await page.mouse.move(box.x+box.width*.35,box.y+box.height*.30,{steps:8});await page.mouse.up();
+    const afterDrag=await viewerState(page);
+    assert(afterDrag.scrollLeft>beforeDrag.scrollLeft+20,'horizontal drag pan '+JSON.stringify({beforeDrag,afterDrag}));
+    assert(afterDrag.scrollTop>beforeDrag.scrollTop+20,'vertical drag pan '+JSON.stringify({beforeDrag,afterDrag}));
+    await page.evaluate(()=>{const v=document.querySelector('.pdf-custom-scroll');v.scrollLeft=0;v.scrollTop=0;});await page.locator('.pdf-custom-scroll').hover();await page.mouse.wheel(0,120);await page.waitForTimeout(100);assert((await viewerState(page)).scrollTop>0,'ordinary wheel vertical scroll');
+    await page.evaluate(()=>{document.querySelector('.pdf-custom-scroll').scrollLeft=0;});await page.keyboard.down('Shift');await page.mouse.wheel(0,100);await page.keyboard.up('Shift');await page.waitForTimeout(100);assert((await viewerState(page)).scrollLeft>0,'Shift+wheel horizontal scroll');
+    await page.click('[data-pdf-zoom-out]');await page.locator('[data-pdf-zoom-label]').filter({hasText:'100%'}).waitFor();await waitMatched(page);
+    const zoomBack=await viewerState(page);
+    near(zoomBack.rects[0].left,initial.rects[0].left,1,'zoom-out highlight x sync');
+    near(zoomBack.rects[0].width,initial.rects[0].width,1,'zoom-out highlight width sync');
+    await page.locator('.pdf-custom-scroll').hover();await page.keyboard.down('Control');await page.mouse.wheel(0,-100);await page.keyboard.up('Control');await page.locator('[data-pdf-zoom-label]').filter({hasText:'125%'}).waitFor();await page.keyboard.down('Control');await page.mouse.wheel(0,100);await page.keyboard.up('Control');await page.locator('[data-pdf-zoom-label]').filter({hasText:'100%'}).waitFor();
+    await page.evaluate(()=>{const v=document.querySelector('.pdf-custom-scroll');v.scrollTo(0,0);});await page.click('[data-pdf-sentence]');await page.waitForTimeout(450);
+    const recentered=await page.evaluate(()=>{const h=document.querySelector('[data-pdf-reviewer]'),s=h._pdfReviewState,v=h.querySelector('.pdf-custom-scroll'),stage=h.querySelector('.pdf-custom-stage'),left=Math.min(...s.rects.map(x=>x.left)),right=Math.max(...s.rects.map(x=>x.left+x.width)),top=Math.min(...s.rects.map(x=>x.top)),bottom=Math.max(...s.rects.map(x=>x.top+x.height));return {dx:Math.abs(stage.offsetLeft+(left+right)/2-(v.scrollLeft+v.clientWidth/2)),dy:Math.abs(stage.offsetTop+(top+bottom)/2-(v.scrollTop+v.clientHeight/2)),w:v.clientWidth,h:v.clientHeight};});
+    assert(recentered.dx<recentered.w*.25&&recentered.dy<recentered.h*.18,'sentence position re-centering');
+    await page.click('[data-pdf-next]');await page.locator('.pdf-custom-status.failed').waitFor();assert.equal((await viewerState(page)).page,expectedPage+1,'manual page navigation');assert.equal(await page.locator('[data-pdf-retry]').isVisible(),true,'retry is visible only on match failure');await page.click('[data-pdf-sentence]');await waitMatched(page);assert.equal((await viewerState(page)).page,expectedPage,'sentence position returns to source page');
+    assert.equal(await page.evaluate(before=>JSON.stringify(ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2449').teacher)===before,teacherBefore),true,'viewer interactions must not mutate teacher state');
+    const coverage=[];
+    const mappedIds=await page.evaluate(()=>ReviewAdapter.getDocument().records.filter(r=>r.auto.source_evidence.some(x=>x.pdf_path)).map(r=>r.sentence_id));
+    for(const id of mappedIds){await page.locator(`[data-open="${id}"]`).click();await page.locator('.pdf-custom-status:not(.loading)').waitFor({timeout:20000});coverage.push(await page.evaluate(sentenceId=>{const host=document.querySelector('[data-pdf-reviewer]'),state=host?._pdfReviewState;return {sentence_id:sentenceId,matched:!!state?.matchType,match_type:state?.matchType||null,highlight_rectangles:state?.rects.length||0,page:state?.page||null,status:document.querySelector('.pdf-custom-status')?.textContent||''};},id));}
+    const matched=coverage.filter(x=>x.matched),failed=coverage.filter(x=>!x.matched);
+    assert.equal(coverage.length,12,'auto-linked coverage');
+    assert(matched.length>1,'next mapped sentence coverage');
+    const nextId=matched.find(x=>x.sentence_id!=='corpus:2449').sentence_id;
+    await page.locator(`[data-open="${nextId}"]`).click();await waitMatched(page);
+    assert.equal(await page.locator('.pdf-sentence-highlight').count()>0,true,'next sentence highlight');
+    await page.locator('[data-open="corpus:2449"]').click();await waitMatched(page);
+    assert.equal(await page.evaluate(()=>ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2449').teacher.source_verified),false,'highlight must not auto verify source');
+    await page.click('[data-source-one-click]');await page.evaluate(()=>ReviewAdapter.whenIdle());
+    const source=await page.evaluate(()=>{const row=ReviewAdapter.getDocument().records.find(x=>x.sentence_id==='corpus:2449'),t=row.teacher,p=t.teacher_source_pdf;return {status:ReviewCore.status(row),visual:t.pdf_visual_reviewed,verified:t.source_verified,confirmed:t.teacher_source_confirmed,pdf_path:p?.pdf_path,pdf_reference:p?.pdf_reference,page:p?.page,question_no:p?.question_no,method:p?.review_method,reviewed_at:p?.reviewed_at};});
+    assert.equal(source.status,'SOURCE_VERIFIED');assert(source.visual&&source.verified&&source.confirmed);assert.equal(source.page,expectedPage);assert.equal(source.question_no,'18번');assert.equal(source.method,'TEACHER_VISUAL_PDF_REVIEW');assert(source.reviewed_at);assert(path.isAbsolute(source.pdf_path));assert(!source.pdf_reference.startsWith('http'));
+    const targetId='corpus:25018',targetEntry=Object.values(manifest.sources).find(x=>x.sentences?.[targetId]),targetExpected=targetEntry.sentences[targetId];
+    await page.locator(`[data-open="${targetId}"]`).click();await waitMatched(page);await page.waitForTimeout(300);
+    const targetInitial=await viewerState(page),targetLink=page.locator('[data-pdf-open]'),targetHref=await targetLink.getAttribute('href'),targetPdfBase=targetHref.split('#')[0];
+    assert.equal(targetInitial.page,5,'corpus:25018 page 5');assert.equal(targetInitial.page,targetExpected.page,'corpus:25018 manifest page');assert.equal(targetInitial.matchType,'EXACT','corpus:25018 exact highlight');assert(targetInitial.rects.length>0,'corpus:25018 highlight');
+    const targetPdfResponse=await context.request.get(targetPdfBase);assert.equal(targetPdfResponse.status(),200,'corpus:25018 original PDF HTTP response');
+    assert.equal(await targetLink.getAttribute('target'),'_blank','new-window PDF target');const popupPromise=context.waitForEvent('page');await targetLink.click();const popup=await popupPromise;assert(popup,'new-window PDF tab opens');await popup.close();
+    await page.click('[data-pdf-zoom-in]');await page.locator('[data-pdf-zoom-label]').filter({hasText:'125%'}).waitFor();await waitMatched(page);assert.equal((await viewerState(page)).zoom,125,'corpus:25018 zoom');
+    const targetScroll=page.locator('.pdf-custom-scroll'),targetBox=await targetScroll.boundingBox();await page.evaluate(()=>{const v=document.querySelector('.pdf-custom-scroll');v.scrollLeft=0;v.scrollTop=0;});await page.mouse.move(targetBox.x+targetBox.width*.65,targetBox.y+targetBox.height*.65);await page.mouse.down();await page.mouse.move(targetBox.x+targetBox.width*.35,targetBox.y+targetBox.height*.35,{steps:6});await page.mouse.up();const targetPanned=await viewerState(page);assert(targetPanned.scrollLeft>0||targetPanned.scrollTop>0,'corpus:25018 pan');
+    await page.click('[data-pdf-sentence]');await page.waitForTimeout(400);assert.equal((await viewerState(page)).page,5,'corpus:25018 sentence position');
+    await page.click('[data-source-one-click]');await page.evaluate(()=>ReviewAdapter.whenIdle());const targetSource=await page.evaluate(id=>{const row=ReviewAdapter.getDocument().records.find(x=>x.sentence_id===id);return {status:ReviewCore.status(row),visual:row.teacher.pdf_visual_reviewed,verified:row.teacher.source_verified,confirmed:row.teacher.teacher_source_confirmed,page:row.teacher.teacher_source_pdf?.page,question_no:row.teacher.teacher_source_pdf?.question_no};},targetId);
+    assert.deepEqual(targetSource,{status:'SOURCE_VERIFIED',visual:true,verified:true,confirmed:true,page:5,question_no:'32번'},'corpus:25018 one-click source verification');
+    await page.screenshot({path:path.join(out,'pdf-panzoom-highlight.png'),fullPage:false});
+    assert.equal(requests.some(url=>/^https?:/.test(url)&&!url.startsWith(`http://127.0.0.1:${port}/`)),false,'no external request');
+    assert.equal(requests.some(url=>url.startsWith('file:')),false,'no file navigation');
+    assert.equal(pageErrors.length,0,'browser page errors: '+pageErrors.join(' | '));
+    assert.equal(consoleErrors.length,0,'browser console errors: '+consoleErrors.join(' | '));
+    const workerResponse=responses.find(x=>x.url===workerUrl);
+    assert(workerResponse&&workerResponse.status===200,'PDF.js worker HTTP 200 '+JSON.stringify({workerUrl,workerResponse}));
+    const result={test_only:true,review_url:reviewUrl,worker_url:workerUrl,worker_http_status:workerResponse.status,ainka_pdf_http_status:ainkaResponse.status(),ainka_pdf_pages:ainkaPages,pdf_url:href,pdf_http:true,original_candidate_url:originalUrl,original_candidate_http:true,source_page:initial.page,match_type:initial.matchType,multiline_rectangles:initial.rects.length,zoom:true,horizontal_pan:true,vertical_pan:true,wheel_vertical:true,shift_wheel_horizontal:true,ctrl_wheel_zoom:true,zoom_highlight_sync:true,auto_center:true,sentence_position:true,page_return:true,next_sentence_id:nextId,next_sentence_highlight:true,PUBLIC_IDENTIFIER_REMOVED:true,source_status:source.status,corpus_25018:{page:targetInitial.page,match_type:targetInitial.matchType,highlight_rectangles:targetInitial.rects.length,pdf_http_status:targetPdfResponse.status(),new_window:true,zoom:true,pan:true,sentence_position:true,source_verify:targetSource.status},coverage:{total:coverage.length,highlight_success:matched.length,highlight_failure:failed.length,records:coverage},page_errors:pageErrors,console_errors:consoleErrors,external_request_count:0};
+    fs.writeFileSync(path.join(out,'localhost-pdf-results.json'),JSON.stringify(result,null,2)+'\n');
+    console.log(JSON.stringify(result));
+  }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+})().catch(error=>{console.error(error);process.exitCode=1;});

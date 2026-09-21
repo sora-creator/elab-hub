@@ -43,6 +43,11 @@ logs/
 browser-profile/
 browser-data/
 
+# Local sentence-review datasets and machine-specific PDF mapping
+PILOT_*_TEACHER_REVIEWED*.json
+tools/sentence-structure-review/pdf-source-manifest.generated.json
+tools/sentence-structure-review/pdf-source-manifest.generated.js
+
 # 운영·원본 데이터 및 대량 산출물
 *.xlsx
 *.xls

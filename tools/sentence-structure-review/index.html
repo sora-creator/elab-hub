@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' file:; style-src 'self' file:; connect-src 'self' file: blob:; worker-src 'self' file: blob:; img-src 'self' data: file:; frame-src 'self' file: blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>ELAB · 문장구조 교사 검수</title><link rel="stylesheet" href="./review.css?v=20260922-simple-teacher-flow">
+</head>
+<body>
+  <header class="topbar"><div><span class="wordmark">ELAB <b>REVIEW</b></span><span class="local">LOCAL ONLY</span></div><div class="file-actions"><label class="button" for="import-file">JSON 가져오기</label><input id="import-file" type="file" accept=".json,application/json" hidden><button id="export-json">검수 JSON 내보내기</button><button id="export-summary" class="quiet">요약 내보내기</button></div></header>
+  <div id="notice" role="status" aria-live="polite">교사 검수 자료를 여는 중입니다.</div>
+  <div class="workspace"><aside class="sidebar"><div class="side-heading"><p class="eyebrow">SENTENCE STRUCTURE</p><h1>교사 검수 노트</h1><p>후보를 읽고, 고치고, 확인합니다.</p></div><div id="progress"></div>
+    <div class="filters"><label>문장 찾기<input id="filter-search" type="search" placeholder="문장, ID, 출처"></label><div class="two-cols"><label>단계<select id="filter-level"><option value="">모든 Level</option><option>S1</option><option>S2</option><option>S3</option><option>S4</option><option>S5</option></select></label><label>검수 상태<select id="filter-status"><option value="">모든 상태</option><option value="SOURCE_PENDING">SOURCE_PENDING</option><option value="AUTO_SOURCE_CHECK_OK">AUTO_SOURCE_CHECK_OK</option><option value="SOURCE_VERIFIED">TEACHER_SOURCE_VERIFIED</option><option value="REVIEW_REQUIRED">REVIEW_REQUIRED</option><option value="GOLD_READY">GOLD_READY</option><option value="DEFERRED">DEFERRED</option><option value="REJECTED">REJECTED</option></select></label></div><label class="check"><input id="filter-that" type="checkbox">THAT / CONTENT 절</label><label class="check"><input id="filter-boundary" type="checkbox">BOUNDARY_CASE</label></div>
+    <div id="queue-count" class="queue-count"></div><nav id="queue" aria-label="문장 검수 대기열"></nav>
+  </aside><main id="editor" tabindex="-1"><div class="empty">자료를 불러오면 검수를 시작할 수 있습니다.</div></main></div>
+  <footer><span id="storage-health" class="storage-health pending">로컬 검수 저장: 확인 중</span> · 검수 내용은 이 브라우저의 IndexedDB에 저장됩니다. 작업을 마치면 별도 JSON 파일로 내보내세요. 원본·운영 DB는 변경하지 않습니다.</footer>
+  <script src="./core.js?v=20260922-source-marker-migration"></script>
+  <script src="./pdf-source-manifest.generated.js?v=20260919-pdf-map-v1"></script>
+  <script src="./source-mapping.js?v=20260919-pdf-map-v1"></script>
+  <script src="../../output/sentence-structure-review/pilot-data.js"></script>
+  <script src="../../output/sentence-structure-review/final-holdout8-data.js?v=20260922-source-marker-migration"></script>
+  <script src="./storage.js"></script>
+  <script src="./vendor/pdfjs/pdf.min.js"></script>
+  <script src="./pdf-reviewer.js?v=20260921-worker-path"></script>
+  <script src="./app.js?v=20260922-source-marker-migration"></script>
+</body></html>

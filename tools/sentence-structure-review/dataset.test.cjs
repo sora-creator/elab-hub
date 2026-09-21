@@ -1,0 +1,25 @@
+const assert=require('assert/strict');
+const crypto=require('crypto');
+const C=require('./core.js');
+const pilot=require('../../output/sentence-structure-pilot/PILOT_50_ANNOTATIONS.json');
+const holdout=require('../../output/sentence-structure-final-holdout/FINAL_HOLDOUT_8_ANNOTATIONS.json');
+
+const checks=[];
+const check=(name,value)=>{assert.ok(value,name);checks.push(name);};
+const pilotFingerprint='PUBLIC_IDENTIFIER_REMOVED';
+const ids=['corpus:58378','corpus:60837','corpus:23009','corpus:2590','corpus:24339','corpus:23568','corpus:24238','corpus:26675'];
+const canonical={dataset_id:holdout.dataset_id,dataset_version:holdout.dataset_version,expected_record_count:holdout.expected_record_count,record_ids:holdout.record_ids,record_texts:holdout.record_texts,records:holdout.records};
+check('final fingerprint exact',crypto.createHash('sha256').update(JSON.stringify(canonical)).digest('hex')===holdout.fingerprint);
+const p=C.fromPilot(pilot,pilotFingerprint),h=C.fromDataset(holdout);
+check('Pilot50 contract unchanged',p.dataset_id==='pilot50'&&p.records.length===50&&p.input_fingerprint===pilotFingerprint);
+check('Final Holdout8 exact IDs/order',h.records.length===8&&JSON.stringify(h.records.map(x=>x.sentence_id))===JSON.stringify(ids));
+check('Final Holdout8 initial Gold 0/8',C.progress(h).gold===0&&h.records.every(x=>C.status(x)!=='GOLD_READY'));
+check('Final Holdout8 PDF/page exact evidence 8/8',h.records.every(x=>{const e=x.auto.source_evidence[0];return e?.pdf_path&&Number.isInteger(e.page)&&e.page>0&&e.PUBLIC_IDENTIFIER_REMOVED&&e.question_heading_same_page;}));
+check('export includes dataset contract',(()=>{const x=C.exportDoc(h);return x.dataset_id==='final-holdout8'&&x.dataset_version==='1'&&x.dataset_fingerprint===holdout.fingerprint&&x.records.length===8&&x.exported_at;})());
+check('same-dataset import roundtrip',JSON.stringify(C.exportDoc(C.importDoc(C.exportDoc(h),h)).records.map(x=>x.teacher))===JSON.stringify(C.exportDoc(h).records.map(x=>x.teacher)));
+assert.throws(()=>C.importDoc(C.exportDoc(p),h),/dataset|fingerprint/);checks.push('Pilot import rejected by Holdout');
+assert.throws(()=>C.importDoc(C.exportDoc(h),p),/dataset|fingerprint/);checks.push('Holdout import rejected by Pilot');
+const wrongOrder=structuredClone(holdout);[wrongOrder.records[0],wrongOrder.records[1]]=[wrongOrder.records[1],wrongOrder.records[0]];assert.throws(()=>C.fromDataset(wrongOrder),/순서/);checks.push('record order mismatch blocked');
+const wrongText=structuredClone(holdout);wrongText.records[0].text+=' changed';assert.throws(()=>C.fromDataset(wrongText),/원문/);checks.push('record text mismatch blocked');
+const before=JSON.stringify(p.records.map(x=>x.teacher));C.fromDataset(holdout);check('loading Holdout does not mutate Pilot teacher state',JSON.stringify(p.records.map(x=>x.teacher))===before);
+console.log(JSON.stringify({passed:checks.length,checks,pilot_fingerprint:pilotFingerprint,holdout_fingerprint:holdout.fingerprint},null,2));
