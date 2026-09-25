@@ -34,7 +34,10 @@ node_modules/
 coverage/
 test-results/
 playwright-report/
-output/
+output/*
+!output/sentence-chunking-v1-final/
+output/sentence-chunking-v1-final/*
+!output/sentence-chunking-v1-final/*.md
 outputs/
 backups/
 logs/
