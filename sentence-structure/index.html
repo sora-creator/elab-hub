@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="description" content="ELAB 학생용 문장구조 연습">
+  <title>ELAB · 문장구조 연습</title>
+  <link rel="stylesheet" href="./style.css?v=student-v1-1">
+  <link rel="stylesheet" href="./edit-answers.css?v=student-v1-24">
+</head>
+<body>
+  <main class="practice-shell">
+    <header class="practice-top">
+      <a class="brand" href="../student/index.html" aria-label="ELAB 학생 홈"><img src="../shared/assets/ELAB_logo.svg" alt="ELAB"></a>
+      <div class="support-control">
+        <label for="supportLevel">읽기 도움</label>
+        <select id="supportLevel">
+          <option value="foundation">차근차근</option>
+          <option value="beginner">기초</option>
+          <option value="intermediate">보통</option>
+          <option value="advanced">도전</option>
+        </select>
+      </div>
+    </header>
+    <section id="app" aria-live="polite"><div class="loading">문장을 준비하고 있습니다.</div></section>
+  </main>
+  <script src="../output/sentence-structure-student-v1/student-v1-data.js"></script>
+  <script src="./smart-hints.js?v=student-v1-11"></script>
+  <script src="./smart-hint-data.js?v=student-v1-11"></script>
+  <script src="./core.js?v=student-v1-22"></script>
+  <script src="./sv-continuation.js?v=student-v1-16"></script>
+  <script src="./chunk-guide.js?v=student-v1-15"></script>
+  <script src="./app.js?v=student-v1-24"></script>
+</body>
+</html>

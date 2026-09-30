@@ -38,6 +38,12 @@ output/*
 !output/sentence-chunking-v1-final/
 output/sentence-chunking-v1-final/*
 !output/sentence-chunking-v1-final/*.md
+!output/sentence-structure-student-v1/
+output/sentence-structure-student-v1/*
+!output/sentence-structure-student-v1/*.md
+!output/sentence-structure-student-v1-final/
+output/sentence-structure-student-v1-final/*
+!output/sentence-structure-student-v1-final/*.md
 outputs/
 backups/
 logs/
