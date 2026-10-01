@@ -32,9 +32,13 @@ test('sentence assignment link persists the teacher-selected level', () => {
   };
   vm.runInNewContext(`${source};result=assignmentLink({content_type:'SENTENCE_STRUCTURE',content_ref_id:'set-1',content_link:'../sentence-structure/index.html?sentence_id=corpus%3A23568'});`, context);
   assert.equal(new URL(context.result).searchParams.get('hint_level'), 'NONE');
+  assert.equal(new URL(context.result).searchParams.get('reading_support'), 'beginner');
   context.state.sentenceHintLevel = 'DETAILED';
   vm.runInNewContext("result=assignmentLink({content_type:'SENTENCE_STRUCTURE',content_ref_id:'set-1',content_link:'../sentence-structure/index.html'});", context);
   assert.equal(new URL(context.result).searchParams.get('hint_level'), 'DETAILED');
+  vm.runInNewContext("result=assignmentLink({content_type:'SENTENCE_STRUCTURE',content_ref_id:'set-1',content_link:''});", context);
+  assert.match(new URL(context.result).pathname, /\/sentence-structure\/index\.html$/);
+  assert.equal(new URL(context.result).searchParams.get('set_key'), 'set-1');
 });
 
 test('non-sentence assignment links do not receive hint_level', () => {
@@ -48,9 +52,11 @@ test('non-sentence assignment links do not receive hint_level', () => {
 test('assignment capability carries the stored hint level without a sheet schema change', () => {
   assert.match(backend, /metadata:\s*metadata \|\| \{\}/);
   assert.match(backend, /sentenceHintLevelFromLinkV2_/);
-  assert.match(backend, /\{hint_level:hintLevel\}/);
+  assert.match(backend, /sentenceReadingSupportFromLinkV2_/);
+  assert.match(backend, /reading_support_level:supportLevel/);
   const header = backend.match(/var ASSIGNMENTS_V2_HEADERS = \[([^\]]+)\]/)?.[1] || '';
   assert.equal(header.includes('hint_level'), false);
+  assert.equal(header.includes('reading_support_level'), false);
 });
 
 for (const [index, script] of [...teacher.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/gi)].map(match => match[1]).filter(code => code.trim()).entries()) {

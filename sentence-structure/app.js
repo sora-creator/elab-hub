@@ -1,5 +1,13 @@
-(function () {
+(async function () {
   'use strict';
+  const assignmentIntegration = window.ELABSentenceStructureStaging;
+  if (assignmentIntegration?.active) {
+    try { await assignmentIntegration.ready; }
+    catch (error) {
+      document.getElementById('app').innerHTML = `<div class="load-error">${String(error?.message || '배정 정보를 불러오지 못했습니다.')}</div>`;
+      return;
+    }
+  }
   const C = window.ELABSentenceStructureStudentCore;
   const H = window.ELABSentenceStructureSmartHints;
   const G = window.ELABSentenceStructureChunkGuide;
@@ -16,21 +24,22 @@
   dataset.records.forEach(C.validateRecord);
   const params = new URLSearchParams(location.search);
   const HINT_LEVELS = ['NONE', 'BASIC', 'DETAILED'];
-  function capabilityHintLevel(capability) {
+  function capabilityMetadata(capability, key) {
     try {
       let encoded = String(capability || '').split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
       while (encoded.length % 4) encoded += '=';
       const payload = JSON.parse(atob(encoded));
-      const value = String(payload?.metadata?.hint_level || '').toUpperCase();
-      return HINT_LEVELS.includes(value) ? value : '';
+      return String(payload?.metadata?.[key] || '');
     } catch (_) { return ''; }
   }
-  const signedHintLevel = params.get('assignment_target_id') ? capabilityHintLevel(params.get('assignmentCapability')) : '';
+  const signedHintCandidate = params.get('assignment_target_id') ? capabilityMetadata(params.get('assignmentCapability'), 'hint_level').toUpperCase() : '';
+  const signedHintLevel = HINT_LEVELS.includes(signedHintCandidate) ? signedHintCandidate : '';
   const requestedHintLevel = String(params.get('hint_level') || '').toUpperCase();
   // Legacy/local links had the fully expanded hint flow. Preserve that behavior.
   const assignedHintLevel = signedHintLevel || (HINT_LEVELS.includes(requestedHintLevel) ? requestedHintLevel : 'DETAILED');
+  const signedSupport = params.get('assignment_target_id') ? capabilityMetadata(params.get('assignmentCapability'), 'reading_support_level').toLowerCase() : '';
   const requestedSupport = params.get('reading_support');
-  const initialSupport = C.SUPPORT_LEVELS.includes(requestedSupport) ? requestedSupport : 'beginner';
+  const initialSupport = C.SUPPORT_LEVELS.includes(signedSupport) ? signedSupport : C.SUPPORT_LEVELS.includes(requestedSupport) ? requestedSupport : 'beginner';
   const assignmentScope = params.get('assignment_target_id') || params.get('assignment_id') || '';
   const storageKey = `elab.student.sentence-structure.v1.${dataset.fingerprint}${assignmentScope ? `.${assignmentScope}` : ''}`;
 
@@ -76,10 +85,22 @@
     return { dataset_fingerprint: dataset.fingerprint, scoring_version: SCORING_VERSION, intro_complete: false, current_index: 0, results: [], attempt_history: [], draft: blankDraft(initialSupport) };
   }
   let state = load();
+  const remoteProgress = assignmentIntegration?.context?.progress;
+  if (assignmentIntegration?.active && Array.isArray(remoteProgress?.results) && remoteProgress.results.length) {
+    const byId = new Map(remoteProgress.results.map(result => [result.sentence_id, result]));
+    state.results = dataset.records.map(item => byId.get(item.sentence_id)).filter(Boolean);
+    const nextIndex = dataset.records.findIndex(item => !byId.has(item.sentence_id));
+    state.current_index = nextIndex === -1 ? dataset.records.length : nextIndex;
+    if (state.current_index >= dataset.records.length || state.results.length !== Number(state.current_index)) state.draft = blankDraft(initialSupport);
+  }
   let ruleGuideOpen = false;
   let pointerSelection = null;
   let suppressTokenClickUntil = 0;
-  if (C.SUPPORT_LEVELS.includes(requestedSupport)) state.draft.reading_support_level = requestedSupport;
+  if (assignmentIntegration?.active) {
+    state.draft.reading_support_level = initialSupport;
+    supportSelect.disabled = true;
+    supportSelect.title = '과제에서 지정된 읽기 도움 단계입니다.';
+  } else if (C.SUPPORT_LEVELS.includes(requestedSupport)) state.draft.reading_support_level = requestedSupport;
   const requestedId = params.get('sentence_id');
   if (requestedId) {
     const index = dataset.records.findIndex(record => record.sentence_id === requestedId);
@@ -509,10 +530,14 @@
     ruleGuideOpen = false;
     persist(); render(); focusStage('#structure-step');
   }
-  function finishSentence() {
+  async function finishSentence() {
     const completedAt = new Date().toISOString();
     state.draft.smart_hint_visible = assignedHintLevel !== 'NONE' && Boolean(currentSmartHint());
     const result = C.buildResult(record(), state.draft, completedAt);
+    if (assignmentIntegration?.active) {
+      try { await assignmentIntegration.postResult(result, state.current_index + 1); }
+      catch (error) { return setMessage(error?.message || '학습 결과를 저장하지 못했습니다. 다시 시도해주세요.', 'error'); }
+    }
     state.results = state.results.filter(item => item.sentence_id !== result.sentence_id).concat(result);
     state.current_index += 1;
     state.draft = blankDraft(supportSelect.value);
@@ -560,7 +585,7 @@
     if (event.target.closest('[data-reset]')) { localStorage.removeItem(storageKey); state = { dataset_fingerprint: dataset.fingerprint, scoring_version: SCORING_VERSION, intro_complete: false, current_index: 0, results: [], attempt_history: [], draft: blankDraft(supportSelect.value) }; persist(); render(); }
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && ruleGuideOpen) { ruleGuideOpen = false; render(); focusStage('#chunk-step'); return; } if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z' && state.draft.stage === 'structure' && !/INPUT|TEXTAREA|SELECT/.test(event.target.tagName)) { event.preventDefault(); undoAnswer(); } });
-  supportSelect.addEventListener('change', () => { state.draft.reading_support_level = supportSelect.value; persist(); render(); });
+  supportSelect.addEventListener('change', () => { if (assignmentIntegration?.active) return; state.draft.reading_support_level = supportSelect.value; persist(); render(); });
   window.ELABSentenceStructurePractice = { getState: () => structuredClone(state), getRecord: () => structuredClone(record()), getResults: () => structuredClone(state.results), getStorageKey: () => storageKey, getAssignedHintLevel: () => assignedHintLevel, reset: () => { localStorage.removeItem(storageKey); location.reload(); } };
   persist(); render();
 })();

@@ -4,10 +4,14 @@
 {
   "sentence_id": "corpus:25018",
   "structure_level": "S1",
+  "subject_answers": [[0, 1]],
+  "verb_answers": [[2]],
   "subject_attempts": 1,
   "subject_correct": true,
   "verb_attempts": 1,
   "verb_correct": true,
+  "student_chunk_boundaries": [],
+  "chunk_completed": true,
   "chunk_required_missed": 0,
   "chunk_forbidden_used": 0,
   "chunk_optional_used": 0,
@@ -19,13 +23,13 @@
 }
 ```
 
-## Future wrongnote error types
+## Wrongnote error types
 
 - `SUBJECT_SPAN`
 - `VERB_SPAN`
-- `REQUIRED_CHUNK_MISSED`
-- `FORBIDDEN_CHUNK_USED`
+
+Chunking is free-form in Student V1. `student_chunk_boundaries` is retained as learning analytics, but chunk differences never create a ReviewItem or increase a wrong count.
 
 ## Current persistence
 
-The prototype stores an array of these objects under a fingerprinted localStorage namespace. It performs no network request and no operating write.
+Local preview stores these objects under a fingerprinted localStorage namespace. Assignment launch posts the same raw + derived object to the existing Sentence Structure result store; the backend trusts the V1 scorer's derived S/V booleans and does not implement a second scoring rule.

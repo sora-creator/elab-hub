@@ -150,10 +150,14 @@
     return {
       sentence_id: record.sentence_id,
       structure_level: record.structure_level,
+      subject_answers: (state.subject_answers || []).map(span => normalizeSpan(span, record.tokens.length)),
       subject_attempts: state.subject_attempts,
       subject_correct: structure.subject_correct,
+      verb_answers: (state.verb_answers || []).map(span => normalizeSpan(span, record.tokens.length)),
       verb_attempts: state.verb_attempts,
       verb_correct: structure.verb_correct,
+      student_chunk_boundaries: uniqueIndexes(state.chunk_boundaries, record.tokens.length - 1),
+      chunk_completed: true,
       chunk_required_missed: chunks.required_missed.length,
       chunk_forbidden_used: chunks.forbidden_used.length,
       chunk_optional_used: chunks.optional_used.length,
@@ -166,7 +170,7 @@
       chunk_hint_used: Boolean(state.hint_used),
       reading_support_level: state.reading_support_level,
       expression_ids_shown: (record.expressions || []).map(item => item.expression_id),
-      error_types: [...new Set([...structure.error_types, ...chunks.error_types])].filter(type => ERROR_TYPES.includes(type)),
+      error_types: [...structure.error_types],
       completed_at: completedAt || new Date().toISOString()
     };
   }

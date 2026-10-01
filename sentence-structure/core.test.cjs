@@ -280,7 +280,11 @@ test('source marker is absent from student text and tokens', () => {
 test('local result object follows the future integration contract', () => {
   const record = row('corpus:25018');
   const result = C.buildResult(record, { subject_answers: [[0, 1]], verb_answers: [[2]], subject_attempts: 1, verb_attempts: 1, chunk_boundaries: [], sv_hint_type: null, sv_hint_level: 0, sv_hint_used: false, hint_used: true, reading_support_level: 'foundation' }, '2026-09-25T00:00:00.000Z');
-  assert.deepEqual(Object.keys(result), ['sentence_id', 'structure_level', 'subject_attempts', 'subject_correct', 'verb_attempts', 'verb_correct', 'chunk_required_missed', 'chunk_forbidden_used', 'chunk_optional_used', 'sv_hint_type', 'sv_hint_level', 'sv_hint_used', 'assigned_hint_level', 'hint_used', 'second_hint_used', 'chunk_hint_used', 'reading_support_level', 'expression_ids_shown', 'error_types', 'completed_at']);
+  assert.deepEqual(Object.keys(result), ['sentence_id', 'structure_level', 'subject_answers', 'subject_attempts', 'subject_correct', 'verb_answers', 'verb_attempts', 'verb_correct', 'student_chunk_boundaries', 'chunk_completed', 'chunk_required_missed', 'chunk_forbidden_used', 'chunk_optional_used', 'sv_hint_type', 'sv_hint_level', 'sv_hint_used', 'assigned_hint_level', 'hint_used', 'second_hint_used', 'chunk_hint_used', 'reading_support_level', 'expression_ids_shown', 'error_types', 'completed_at']);
+  assert.deepEqual(result.subject_answers, [[0, 1]]);
+  assert.deepEqual(result.verb_answers, [[2]]);
+  assert.deepEqual(result.student_chunk_boundaries, []);
+  assert.equal(result.chunk_completed, true);
   assert.equal(result.assigned_hint_level, 'DETAILED');
   assert.equal(result.subject_correct, true);
   assert.equal(result.sv_hint_used, false);
@@ -289,7 +293,7 @@ test('local result object follows the future integration contract', () => {
   assert.equal(result.chunk_hint_used, true);
 });
 
-test('smart S/V hint use is recorded without answer spans', () => {
+test('smart S/V hint use is recorded with raw answer spans', () => {
   const record = row('corpus:23568');
   const result = C.buildResult(record, { subject_answers: record.subjects.map(item => item.primary), verb_answers: record.verbs.map(item => item.indexes), subject_attempts: 1, verb_attempts: 1, chunk_boundaries: [], smart_hint_visible: true, sv_hint_type: 'OMITTED_THAT', sv_hint_level: 2, sv_hint_used: true, hint_used: false, reading_support_level: 'beginner' });
   assert.equal(result.sv_hint_type, 'OMITTED_THAT');
@@ -298,7 +302,8 @@ test('smart S/V hint use is recorded without answer spans', () => {
   assert.equal(result.assigned_hint_level, 'DETAILED');
   assert.equal(result.hint_used, true);
   assert.equal(result.second_hint_used, true);
-  assert.equal(JSON.stringify(result).includes('subject_answers'), false);
+  assert.deepEqual(result.subject_answers, record.subjects.map(item => item.primary));
+  assert.deepEqual(result.verb_answers, record.verbs.map(item => item.indexes));
 });
 
 test('assignment hint levels are recorded independently from S1-S5', () => {
