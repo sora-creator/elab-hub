@@ -1,0 +1,34 @@
+const assert=require('assert'),crypto=require('crypto'),fs=require('fs'),vm=require('vm');
+const html=fs.readFileSync('teacher/assignments.html','utf8'),ui=fs.readFileSync('teacher/sentence-structure-assignment-v1.js','utf8'),css=fs.readFileSync('teacher/sentence-structure-assignment-v1.css','utf8'),backend=fs.readFileSync('exam/sheet_backend.gs','utf8');
+new vm.Script(ui,{filename:'sentence-structure-assignment-v1.js'});
+assert(html.includes('sentence-structure-assignment-v1.js'));
+['과제 제목','문장 수','구조 난이도','힌트 제공','읽기 도움','추천 문장 미리보기','배정 전 최종 확인','과제 배정'].forEach(text=>assert(ui.includes(text),text));
+['NONE','BASIC','DETAILED','foundation','beginner','intermediate','advanced'].forEach(value=>assert(ui.includes(value),value));
+assert(ui.includes('data-ss-replace'));
+assert(ui.includes('data-ss-edit-add'));
+assert(ui.includes('data-ss-edit-remove'));
+assert(ui.includes('data-ss-move'));
+assert(ui.includes("action:'saveSentenceSet'"));
+assert(ui.includes("action:'updateSentenceStructureAssignmentV1'"));
+assert(css.includes('@media(max-width:430px)'));
+assert(!ui.includes('C:\\Users\\'));
+
+const props={TOKEN:'teacher'},sheets={};
+function sheet(name,rows=[]){return sheets[name]={rows,getDataRange(){return{getValues:()=>this.rows}},getRange(r,c,rc=1,cc=1){const target=this;return{getValues:()=>target.rows.slice(r-1,r-1+rc).map(row=>row.slice(c-1,c-1+cc)),getValue:()=>target.rows[r-1]&&target.rows[r-1][c-1],setValues(values){values.forEach((row,ri)=>row.forEach((value,ci)=>{while(target.rows.length<r+ri)target.rows.push([]);target.rows[r-1+ri][c-1+ci]=value}))}}},appendRow(row){this.rows.push(row)},getLastRow(){return this.rows.length},getLastColumn(){return Math.max(0,...this.rows.map(row=>row.length))},deleteRow(r){this.rows.splice(r-1,1)},copyTo(){return this},setName(){return this}}}
+const spreadsheet={getId:()=>'',getName:()=>'',getSheets:()=>Object.values(sheets),getSheetByName:name=>sheets[name]||null,insertSheet:name=>sheet(name)};
+const context={console,Date,JSON,Math,Array,Object,String,Number,PropertiesService:{getScriptProperties:()=>({getProperty:key=>props[key]||'',setProperty:(key,value)=>props[key]=value})},SpreadsheetApp:{getActiveSpreadsheet:()=>spreadsheet,flush(){}},Session:{getEffectiveUser:()=>({getEmail:()=>''}),getScriptTimeZone:()=>''},LockService:{getScriptLock:()=>({waitLock(){},releaseLock(){}})},CacheService:{getScriptCache:()=>({put(){},get:()=>null,remove(){}})},Utilities:{getUuid:()=>crypto.randomUUID(),formatDate:()=>'',Charset:{UTF_8:'utf8'},DigestAlgorithm:{SHA_256:'sha256'},base64EncodeWebSafe:value=>Buffer.from(value).toString('base64url'),base64DecodeWebSafe:value=>Buffer.from(value,'base64url'),computeHmacSha256Signature:(value,secret)=>crypto.createHmac('sha256',secret).update(value).digest(),computeDigest:(_a,value)=>crypto.createHash('sha256').update(value).digest(),newBlob:value=>({getDataAsString:()=>Buffer.from(value).toString('utf8')})},ContentService:{MimeType:{JAVASCRIPT:'js'},createTextOutput:body=>({body,setMimeType(){return this}})}};
+vm.createContext(context);vm.runInContext(backend,context);context.setup();
+const teacher=props.DEFAULT_TEACHER_ID,now=new Date(),assignment='assignment-ss',target='target-ss';
+sheets.SentenceSets.appendRow(['set-old','Original',JSON.stringify([{sentence_id:'one',text:'We learn.',structure_level:'S1',subjects:[{primary:[0]}],verbs:[{indexes:[1]}]}]),now]);
+sheets.SentenceSets.appendRow(['set-new','Revised',JSON.stringify([{sentence_id:'two',text:'They study.',structure_level:'S1',subjects:[{primary:[0]}],verbs:[{indexes:[1]}]}]),now]);
+sheets.AssignmentsV2.appendRow([assignment,teacher,'SENTENCE_STRUCTURE','set-old','Original','https://example.test/sentence-structure/index.html?set_key=set-old&hint_level=BASIC&reading_support=beginner',now,'',true,now,now,'','']);
+sheets.AssignmentTargetsV2.appendRow([target,assignment,'student-1','NOT_STARTED','','',true,now,now]);
+let inspected=context.PUBLIC_IDENTIFIER_REMOVED({parameter:{token:'teacher',assignment_id:assignment}});
+assert.strictEqual(inspected.can_edit_content,true);assert.strictEqual(inspected.sentence_count,1);
+let result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,title:'Revised title',content_ref_id:'set-new',content_link:'https://example.test/sentence-structure/index.html?set_key=set-new&hint_level=DETAILED&reading_support=advanced'});
+assert.strictEqual(result.body,'ok');assert.strictEqual(context.assignmentByIdV2_(assignment)[3],'set-new');
+sheets.AttemptsV2.appendRow(['attempt-1',target,'student-1',teacher,'SENTENCE_STRUCTURE','',now,'',0,'IN_PROGRESS',1,'',now,now,'',0]);
+inspected=context.PUBLIC_IDENTIFIER_REMOVED({parameter:{token:'teacher',assignment_id:assignment}});assert.strictEqual(inspected.can_edit_content,false);
+result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,title:'Allowed title',due_at:'2026-12-31'});assert.strictEqual(result.body,'ok');
+result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,content_ref_id:'set-old',content_link:'https://example.test/sentence-structure/index.html?set_key=set-old'});assert.strictEqual(result.body,'assignment started');assert.strictEqual(context.assignmentByIdV2_(assignment)[3],'set-new');
+console.log('PUBLIC_IDENTIFIER_REMOVED.test.js: all assertions passed');

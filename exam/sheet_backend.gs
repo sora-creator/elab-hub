@@ -2130,6 +2130,28 @@ function handleUpdateAssignmentV2_(d) {
   var teacherId=getOrCreateDefaultTeacher_(), a=assignmentByIdV2_(d.assignment_id);if(!a||String(a[1])!==teacherId)return textOut_('forbidden');
   a[4]=d.title!==undefined?d.title:a[4];a[7]=d.due_at!==undefined?d.due_at:a[7];a[8]=d.active!==undefined?boolValue_(d.active,true):a[8];a[10]=new Date();upsertRow_(getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),a[0],a);CacheService.getScriptCache().remove('teacher-student-list-v1');return textOut_('ok');
 }
+function sentenceStructureAssignmentEditStateV1_(assignmentId) {
+  var teacherId=getOrCreateDefaultTeacher_(),a=assignmentByIdV2_(assignmentId);
+  if(!a||String(a[1])!==String(teacherId)||String(a[2])!=='SENTENCE_STRUCTURE')return null;
+  var targetRows=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),targetIds={},targets=[],started=false;
+  for(var i=1;i<targetRows.length;i++)if(String(targetRows[i][1])===String(a[0])&&boolValue_(targetRows[i][6],true)){targetIds[String(targetRows[i][0])]=true;targets.push({assignment_target_id:targetRows[i][0],student_id:targetRows[i][2],status:String(targetRows[i][3]||'NOT_STARTED')});if(String(targetRows[i][3]||'NOT_STARTED')!=='NOT_STARTED'||targetRows[i][4])started=true;}
+  var attemptRows=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS).getDataRange().getValues(),attemptCount=0;
+  for(var j=1;j<attemptRows.length;j++)if(targetIds[String(attemptRows[j][1])])attemptCount++;
+  if(attemptCount)started=true;
+  var setSheet=getOrCreateSheet_(SENTENCE_SETS_SHEET,SENTENCE_SETS_HEADERS),setIndex=findRowByKey_(setSheet,a[3]),passages=[];
+  if(setIndex!==-1)passages=parseJsonValue_(setSheet.getRange(setIndex,3).getValue(),[]);
+  var hint=sentenceHintLevelFromLinkV2_(a[2],a[5])||'BASIC',support=sentenceReadingSupportFromLinkV2_(a[2],a[5])||'beginner',completed=targets.filter(function(t){return t.status==='COMPLETED';}).length,inProgress=targets.filter(function(t){return t.status==='IN_PROGRESS';}).length;
+  return{assignment_id:a[0],content_type:a[2],content_ref_id:a[3],title:a[4],content_link:a[5],due_at:a[7]||'',hint_level:hint,reading_support:support,targets:targets,attempt_count:attemptCount,can_edit_content:!started,sentence_count:passages.length,passages:passages,progress_label:completed===targets.length&&targets.length?'완료':(inProgress||started?'진행 중':'미시작')};
+}
+function PUBLIC_IDENTIFIER_REMOVED(e){if(e.parameter.token!==getToken_())return{error:'no token'};var state=sentenceStructureAssignmentEditStateV1_(e.parameter.assignment_id);return state||{error:'not found'};}
+function PUBLIC_IDENTIFIER_REMOVED(d){
+  var state=sentenceStructureAssignmentEditStateV1_(d.assignment_id);if(!state)return textOut_('not found');
+  var a=assignmentByIdV2_(d.assignment_id),nextRef=String(d.content_ref_id||a[3]),nextLink=String(d.content_link||a[5]),oldHint=sentenceHintLevelFromLinkV2_(a[2],a[5])||'BASIC',nextHint=sentenceHintLevelFromLinkV2_(a[2],nextLink)||oldHint,oldSupport=sentenceReadingSupportFromLinkV2_(a[2],a[5])||'beginner',nextSupport=sentenceReadingSupportFromLinkV2_(a[2],nextLink)||oldSupport,changesContent=nextRef!==String(a[3])||nextHint!==oldHint||nextSupport!==oldSupport;
+  if(changesContent&&!state.can_edit_content)return textOut_('assignment started');
+  if(changesContent&&findRowByKey_(getOrCreateSheet_(SENTENCE_SETS_SHEET,SENTENCE_SETS_HEADERS),nextRef)===-1)return textOut_('sentence set not found');
+  if(d.title!==undefined)a[4]=String(d.title||'문장구조 연습').slice(0,120);if(d.due_at!==undefined)a[7]=d.due_at||'';if(changesContent){a[3]=nextRef;a[5]=nextLink;}a[10]=new Date();
+  upsertRow_(getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),a[0],a);CacheService.getScriptCache().remove('teacher-student-list-v1');return textOut_('ok');
+}
 function handleDeleteAssignmentV2_(d) {
   var teacherId=getOrCreateDefaultTeacher_(),a=assignmentByIdV2_(d.assignment_id);if(!a||String(a[1])!==teacherId)return textOut_('forbidden');
   var now=new Date();a[8]=false;a[10]=now;upsertRow_(getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),a[0],a);
@@ -2882,6 +2904,7 @@ function doPost(e) {
   if (d.action === 'upgradeVocabularySetSchemasV1') return textOut_(JSON.stringify(handleUpgradeVocabularySetSchemasV1_(d)));
   if (d.action === 'saveVocabSetV2') return handleSaveVocabSetV2_(d);
   if (d.action === 'updateAssignmentV2') return handleUpdateAssignmentV2_(d);
+  if (d.action === 'updateSentenceStructureAssignmentV1') return PUBLIC_IDENTIFIER_REMOVED(d);
   if (d.action === 'deleteAssignmentV2') return handleDeleteAssignmentV2_(d);
   if (d.action === 'cancelAssignmentTargetV2') return handleCancelAssignmentTargetV2_(d);
   if (d.action === 'updateAssignmentStatus') return handleUpdateAssignmentStatus_(d);
@@ -3746,6 +3769,7 @@ function doGet(e) {
   if (action === 'listGroupsV2') return jsonpOut_(cb, handleListGroupsV2_(e));
   if (action === 'getAssignmentWorkspaceV2') return jsonpOut_(cb, handleGetAssignmentWorkspaceV2_(e));
   if (action === 'listAssignmentsV2') return jsonpOut_(cb, handleListAssignmentsV2_(e));
+  if (action === 'getSentenceStructureAssignmentEditV1') return jsonpOut_(cb, PUBLIC_IDENTIFIER_REMOVED(e));
   if (action === 'listDueVocabReviewsV1') return jsonpOut_(cb, handleListDueVocabReviewsV1_(e));
   if (action === 'getVocabularyImportStatusV1') return jsonpOut_(cb, handleGetVocabularyImportStatusV1_(e));
   if (action === 'inspectVocabularyStagingStateV1') return jsonpOut_(cb, handleInspectVocabularyStagingStateV1_(e));
