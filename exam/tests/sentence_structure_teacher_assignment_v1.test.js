@@ -10,6 +10,9 @@ assert(ui.includes('data-ss-edit-remove'));
 assert(ui.includes('data-ss-move'));
 assert(ui.includes("action:'saveSentenceSet'"));
 assert(ui.includes("action:'updateSentenceStructureAssignmentV1'"));
+assert(ui.includes("link.searchParams.set('hook',config.url)"));
+assert(ui.includes('studentLaunchLink(nextKey,hint,support,editing.content_link)'));
+assert(!/script\.google\.com\/macros\/s\/[A-Za-z0-9_-]+/.test(ui),'launch hook must not be hardcoded');
 assert(css.includes('@media(max-width:430px)'));
 assert(!ui.includes('C:\\Users\\'));
 

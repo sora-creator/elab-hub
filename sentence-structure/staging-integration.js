@@ -13,7 +13,10 @@
     studentCapability: '',
     progress: null
   };
-  const active = Boolean(context.hook && context.set_key && context.assignment_target_id && context.student_id && context.assignmentCapability);
+  const assignmentIntent = Boolean(context.assignment_id || context.assignment_target_id || context.assignmentCapability);
+  const requiredRemoteParams = ['hook', 'set_key', 'assignment_target_id', 'student_id', 'assignmentCapability'];
+  const missingRemoteParams = assignmentIntent ? requiredRemoteParams.filter(key => !context[key]) : [];
+  const active = assignmentIntent;
 
   function fingerprint(records) {
     let hash = 2166136261;
@@ -31,6 +34,9 @@
   }
   async function load() {
     if (!active) return null;
+    if (missingRemoteParams.length) {
+      throw new Error('과제 연결 정보를 불러오지 못했습니다. 선생님에게 알려주세요.');
+    }
     const response = await global.ELABAppsScript.read(readUrl('fetchSentenceSet', {
       key: context.set_key,
       assignment_id: context.assignment_id,
