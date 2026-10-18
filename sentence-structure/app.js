@@ -144,7 +144,8 @@
     const { steps, current, completed } = learningSteps();
     return `<nav class="step-progress-shell" aria-label="문장 학습 단계"><ol class="step-progress">${steps.map(step => {
       const status = completed.has(step.id) ? 'completed' : step.id === current ? 'current' : 'upcoming';
-      return `<li class="step-progress-item ${status}" data-learning-step="${step.id}" ${status === 'current' ? 'aria-current="step"' : ''}><span class="step-dot">${status === 'completed' ? '✓' : step.id}</span><span class="step-label"><span class="step-label-full">${esc(step.label)}</span><span class="step-label-short">${esc(step.short)}</span></span></li>`;
+      const reviewComplete = state.draft.stage === 'structure-review' && step.id === 1;
+      return `<li class="step-progress-item ${status}" data-learning-step="${step.id}" ${status === 'current' ? 'aria-current="step"' : ''}><span class="step-dot">${status === 'completed' ? '✓' : step.id}</span><span class="step-label"><span class="step-label-full">${esc(step.label)}</span><span class="step-label-short">${esc(step.short)}</span>${reviewComplete ? '<span class="step-complete-state">완료</span>' : ''}</span></li>`;
     }).join('')}</ol></nav>`;
   }
   function header() {
@@ -166,6 +167,9 @@
   }
   function currentTask() {
     const stage = state.draft.stage;
+    if (stage === 'structure-review') {
+      return `<section class="current-task review-complete-banner" aria-labelledby="current-task-title"><span class="review-complete-icon" aria-hidden="true">✓</span><div><div class="current-task-top"><span class="current-task-kicker">1단계 완료</span><span class="current-task-badge">정답 확인</span></div><h2 id="current-task-title">정답 확인 완료</h2><p>현재는 정답 확인 화면입니다. 이 단계의 답은 더 이상 수정되지 않습니다.</p></div></section>`;
+    }
     let number = '', title = '', detail = '', badge = '';
     if (stage === 'structure') {
       const editing = state.draft.editing;
@@ -188,10 +192,6 @@
         const copy = N.copyFor(target);
         number = kind === 'subject' ? '①' : '②'; title = copy.title; detail = copy.detail; badge = `${kind === 'subject' ? '주어' : '동사'} 찾는 중`;
       }
-    } else if (stage === 'structure-review') {
-      title = '찾은 답을 확인하고 다음 단계로 가세요.';
-      detail = '다음에는 문장을 의미 단위로 나눠볼 거예요.';
-      badge = '답 확인 완료';
     } else if (stage === 'chunk') {
       title = '문장을 의미 단위로 나눠보세요.';
       detail = '끊고 싶은 위치를 눌러보세요.';
@@ -227,7 +227,8 @@
   }
   function sentenceCard(reveal) {
     const active = state.draft.stage === 'structure' || state.draft.stage === 'chunk';
-    return `<section class="sentence-card ${active ? 'active-workspace' : ''}" id="sentence"><div class="sentence-card-head"><span class="sentence-label">${active ? '여기에서 직접 선택하세요' : '오늘의 문장'}</span>${active ? '<span class="workspace-status">선택 영역</span>' : ''}</div><div class="sentence">${record().tokens.map((token, index) => `<button type="button" class="${tokenClass(index, reveal)}" data-token="${index}" aria-pressed="${state.draft.selected.includes(index)}">${esc(token)}</button>`).join('')}</div></section>`;
+    const reviewing = state.draft.stage === 'structure-review';
+    return `<section class="sentence-card ${active ? 'active-workspace' : ''} ${reviewing ? 'review-mode' : ''}" id="sentence"><div class="sentence-card-head"><span class="sentence-label">${reviewing ? '주어·동사 정답' : active ? '여기에서 직접 선택하세요' : '오늘의 문장'}</span>${reviewing ? '<span class="workspace-status review-status">확인 전용</span>' : active ? '<span class="workspace-status">선택 영역</span>' : ''}</div><div class="sentence">${record().tokens.map((token, index) => `<button type="button" class="${tokenClass(index, reveal)}" data-token="${index}" aria-pressed="${state.draft.selected.includes(index)}" ${reviewing ? 'disabled aria-disabled="true"' : ''}>${esc(token)}</button>`).join('')}</div></section>`;
   }
   function answerList(kind, label) {
     const answers = kind === 'subject' ? state.draft.subject_answers : state.draft.verb_answers;
@@ -318,7 +319,7 @@
     const revealed = state.draft.stage === 'structure-review';
     const reveal = revealed ? structureReveal() : null;
     const visibleMode = displayedMode();
-    return `${sentenceCard(reveal)}<section class="step-card" id="structure-step"><div class="step-head"><span class="step-number">1</span><div><h2>주어·동사 찾기</h2><p>${revealed ? '찾은 주어와 동사를 확인해보세요.' : '선택하면 답안에 바로 등록돼요.'}</p></div></div>${revealed ? structureReview(reveal) : `<div class="role-fallback" aria-label="찾을 대상 바꾸기"><span>찾을 대상 바꾸기</span><button type="button" class="role-toggle ${visibleMode === 'subject' ? 'active' : ''}" data-mode="subject">주어</button><button type="button" class="role-toggle ${visibleMode === 'verb' ? 'active' : ''}" data-mode="verb">동사</button></div>${registeredAnswers()}${state.draft.editing ? '<button type="button" class="text-action cancel-edit" data-cancel-edit>다시 선택 취소</button>' : ''}${state.draft.message ? `<div class="feedback ${state.draft.message_kind === 'error' ? 'error' : ''}">${esc(state.draft.message)}</div>` : ''}<div class="draft-tools"><button type="button" class="text-action" data-undo ${state.draft.undo_stack.length ? '' : 'disabled'}>↶ 되돌리기</button><span>Ctrl+Z</span></div><div class="action-row"><button type="button" class="button primary" data-check-structure>정답 확인</button></div>`}</section>`;
+    return `${sentenceCard(reveal)}<section class="step-card ${revealed ? 'review-mode' : ''}" id="structure-step"><div class="step-head"><span class="step-number">${revealed ? '✓' : '1'}</span><div><h2>${revealed ? '주어·동사 정답 확인' : '주어·동사 찾기'}</h2><p>${revealed ? '표시된 답을 확인한 뒤 2단계를 시작하세요.' : '선택하면 답안에 바로 등록돼요.'}</p></div>${revealed ? '<span class="step-review-badge">수정 불가</span>' : ''}</div>${revealed ? structureReview(reveal) : `<div class="role-fallback" aria-label="찾을 대상 바꾸기"><span>찾을 대상 바꾸기</span><button type="button" class="role-toggle ${visibleMode === 'subject' ? 'active' : ''}" data-mode="subject">주어</button><button type="button" class="role-toggle ${visibleMode === 'verb' ? 'active' : ''}" data-mode="verb">동사</button></div>${registeredAnswers()}${state.draft.editing ? '<button type="button" class="text-action cancel-edit" data-cancel-edit>다시 선택 취소</button>' : ''}${state.draft.message ? `<div class="feedback ${state.draft.message_kind === 'error' ? 'error' : ''}">${esc(state.draft.message)}</div>` : ''}<div class="draft-tools"><button type="button" class="text-action" data-undo ${state.draft.undo_stack.length ? '' : 'disabled'}>↶ 되돌리기</button><span>Ctrl+Z</span></div><div class="action-row"><button type="button" class="button primary" data-check-structure>정답 확인</button></div>`}</section>`;
   }
   function structureReview(reveal) {
     const result = state.draft.structure_result;
@@ -328,7 +329,7 @@
     const expressionChoice = good ? acceptedExpressionChoice() : null;
     const distinction = expressionChoice ? `<div class="verb-expression-note"><strong>둘 다 맞아요</strong><p>문법적 핵심 동사는 <b>${esc(expressionChoice.verb)}</b>예요. 해석할 때는 <b>${esc(expressionLabel(expressionChoice.expression))}</b>를 한 표현으로 알아두세요.</p></div>` : '';
     const review = good ? `<div class="answer-key"><div class="key-box"><span>주어</span><b>${esc(subjectText)}</b></div><div class="key-box"><span>동사</span><b>${esc(verbText)}</b></div></div>${distinction}` : answerComparisonCard();
-    return `<div class="feedback ${good ? 'success' : 'error'}">${good ? '✓ 잘했어요. 주어와 동사를 모두 찾았어요.' : '내 답과 정답을 비교해보세요.'}</div>${review}<div class="action-row"><button type="button" class="button secondary" data-retry-structure>다시 풀기</button><button type="button" class="button primary" data-go-chunk>다음: 의미 단위로 끊기 →</button></div>`;
+    return `<div class="feedback ${good ? 'success' : 'error'}">${good ? '✓ 잘했어요. 주어와 동사를 모두 찾았어요.' : '내 답과 정답을 비교해보세요.'}</div>${review}<div class="action-row"><button type="button" class="button secondary" data-retry-structure>다시 풀기</button><button type="button" class="button primary" data-go-chunk>2단계 시작: 의미 단위로 끊기</button></div>`;
   }
   function expressionLabel(item) {
     const value = String(item.expression || '').trim();
@@ -420,6 +421,7 @@
     return kind;
   }
   function commitAnswer(span) {
+    if (state.draft.stage !== 'structure') return;
     if (!span.length) return setMessage('먼저 문장에서 답이 되는 단어를 눌러주세요.');
     if (!isContiguous(span)) return setMessage('한 덩어리로 이어진 단어를 선택해주세요.');
     const kind = state.draft.editing?.kind || state.draft.mode, field = kind === 'subject' ? 'subject_answers' : 'verb_answers', editingIndex = state.draft.editing?.kind === kind ? state.draft.editing.index : -1;

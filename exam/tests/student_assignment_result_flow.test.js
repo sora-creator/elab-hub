@@ -12,7 +12,8 @@ const attemptCapabilityActions=(backend.match(/attemptCapability:createStudentCa
 });
 assert(backend.includes('word_item_count:wordCount'));
 assert(backend.includes('student_name:student[2]'));
-assert(backend.includes('function handleListHomeworkBatchesCachedV2_'));
+assert(backend.includes("if (action === 'listHomeworkBatchesV2') return jsonpOut_(cb, handleListHomeworkBatchesV2_(e))"));
+assert(!backend.includes('function handleListHomeworkBatchesCachedV2_'));
 assert(backend.includes("remove('homework-history-v2-'"));
 assert(vocab.includes("action=verifyVocabResultV2"));
 assert(vocab.includes('if(saved&&saved.found&&saved.complete){'));

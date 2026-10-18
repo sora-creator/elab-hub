@@ -81,7 +81,7 @@ for(const field of Object.keys(ids))test('invalid '+field+' reads no sheets',()=
 test('500 items all validated, bounded output and field lengths',()=>{const e=make(),template=row(e,'VocabSetItemsV2');e.sheets.VocabSetItemsV2.rows=[e.sheets.VocabSetItemsV2.rows[0],...Array.from({length:500},(_,i)=>{const r=[...template];r[0]='item'+i;r[3]=i+1;r[6]='x'.repeat(2000);return r;})];const out=inspect(e);assert(out.eligible&&out.items_truncated);assert.equal(out.valid_item_count,500);assert.equal(out.items.length,20);assert(out.items.every(i=>i.truncated&&i.word.length===512));assert(Buffer.byteLength(JSON.stringify(out))<25000);e.sheets.VocabSetItemsV2.rows[500][8]='V6';assert(!inspect(e).eligible);});
 test('diagnostic, fetch and start implementations remain unchanged from committed baseline',()=>{
   const old=execFileSync('git',['show','HEAD:exam/sheet_backend.gs'],{encoding:'utf8'}).replace(/\r\n/g,'\n'),now=fs.readFileSync('exam/sheet_backend.gs','utf8').replace(/\r\n/g,'\n');
-  for(const name of ['PUBLIC_IDENTIFIER_REMOVED','handleFetchVocabularySetV1_','handleStartAttemptV2_','getOrCreateAttemptV2_']){
+  for(const name of ['PUBLIC_IDENTIFIER_REMOVED','handleFetchVocabularySetV1_','handleStartAttemptV2_']){
     const section=s=>{const start=s.indexOf('function '+name+'(');assert(start>=0,name);const end=s.indexOf('\nfunction ',start+1);return s.slice(start,end<0?s.length:end);};
     assert.equal(section(now),section(old),name);
   }

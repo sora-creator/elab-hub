@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 process.env.PLAYWRIGHT_BROWSERS_PATH = path.resolve(__dirname, '../.pw-browsers');
 const { chromium } = require('playwright');
 
-const base = 'http://localhost:8010/%ED%95%99%EC%9B%90/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8/%ED%86%B5%ED%95%A9%20%EC%9B%B9%EC%95%B1/sentence-structure/index.html?assignment_id=isolated-completion-e2e';
+const base = 'http://localhost:8010/%ED%95%99%EC%9B%90/%ED%94%84%EB%A1%9C%EA%B7%B8%EB%9E%A8/%ED%86%B5%ED%95%A9%20%EC%9B%B9%EC%95%B1/sentence-structure/index.html?local_test_scope=isolated-completion-e2e';
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
@@ -33,7 +33,11 @@ const base = 'http://localhost:8010/%ED%95%99%EC%9B%90/%ED%94%84%EB%A1%9C%EA%B7%
   try {
     await page.goto(base);
     await page.waitForLoadState('networkidle');
-    check('isolated context starts with no user progress', await page.evaluate(() => localStorage.length === 1 && ELABSentenceStructurePractice.getResults().length === 0));
+    check('isolated context starts with a valid empty progress record', await page.evaluate(() => {
+      const key = ELABSentenceStructurePractice.getStorageKey();
+      const saved = JSON.parse(localStorage.getItem(key) || 'null');
+      return key.startsWith('elab.student.sentence-structure.v1.') && saved?.dataset_fingerprint && Array.isArray(saved.results) && saved.results.length === 0 && !Object.prototype.hasOwnProperty.call(saved, 'attempt_id');
+    }));
     check('nine-rule intro is the session entry', await page.locator('#chunk-intro .chunk-rule-detail').count() === 9);
     await page.click('[data-start-practice]');
 

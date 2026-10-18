@@ -13,7 +13,7 @@ assert(backend.includes('assignmentContentSummaryRows_(SENTENCE_SETS_SHEET,SENTE
 assert(backend.includes('assignmentContentSummaryRows_(PRACTICE_SHEET,PRACTICE_HEADERS,3,perf)'));
 assert.strictEqual((backend.match(/\[ELAB-PERF\]\[ASSIGNMENT\]/g)||[]).length,2);
 assert(!html.includes('listAssignmentContentV2 fallback'));
-assert(html.includes("cfgStatus.textContent='콘텐츠 불러오는 중...'"));
+assert(html.includes("cfgStatus.textContent='과제 정보를 불러오는 중...'"));
 assert.strictEqual((html.match(/base\+'&action=listAssignmentContentV2'/g)||[]).length,1);
 
 console.log('assignment_content_performance.test.js: all assertions passed');

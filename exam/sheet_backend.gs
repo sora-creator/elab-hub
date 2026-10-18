@@ -2182,28 +2182,43 @@ function attemptNoForTargetV2_(targetId) {
   return max+1;
 }
 function getOrCreateAttemptV2_(targetId,studentId,requestId,allowRetry,existingSchemaOnly) {
-  if(existingSchemaOnly){
-    // Fetch may start an attempt, but must never create or repair a schema.
-    var ss=SpreadsheetApp.getActiveSpreadsheet();
-    [[ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS],[QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS],
-     [SENTENCE_STRUCTURE_DETAILS_V2_SHEET,SENTENCE_STRUCTURE_DETAILS_V2_HEADERS],[WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS]].forEach(function(pair){
-      var sheet=ss.getSheetByName(pair[0]);
-      vocabularyDbCheckV1_(!!sheet,'VOCAB_SET_SCHEMA_NOT_READY');
-      var headers=sheet.getRange(1,1,1,pair[1].length).getValues()[0];
-      vocabularyDbCheckV1_(pair[1].every(function(h,i){return headers[i]===h;}),'VOCAB_SET_SCHEMA_NOT_READY');
-    });
-  }else setupAttemptsV2_();
-  var target=targetByIdV2_(targetId),assignment=target&&assignmentByIdV2_(target[1]);
-  if(!target||!assignment||String(target[2])!==String(studentId)||!boolValue_(target[6],true)||!boolValue_(assignment[8],true))return null;
-  var current=inProgressAttemptForTargetV2_(targetId);if(current)return current;
-  var lock=LockService.getScriptLock();lock.waitLock(10000);
+  var rid=String(requestId||''),lock=LockService.getScriptLock();lock.waitLock(10000);
   try{
-    current=inProgressAttemptForTargetV2_(targetId);if(current)return current;
+    if(existingSchemaOnly){
+      // Fetch may start an attempt, but must never create or repair a schema.
+      var ss=SpreadsheetApp.getActiveSpreadsheet();
+      [[ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS],[QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS],
+       [SENTENCE_STRUCTURE_DETAILS_V2_SHEET,SENTENCE_STRUCTURE_DETAILS_V2_HEADERS],[WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS]].forEach(function(pair){
+        var sheet=ss.getSheetByName(pair[0]);
+        vocabularyDbCheckV1_(!!sheet,'VOCAB_SET_SCHEMA_NOT_READY');
+        var headers=sheet.getRange(1,1,1,pair[1].length).getValues()[0];
+        vocabularyDbCheckV1_(pair[1].every(function(h,i){return headers[i]===h;}),'VOCAB_SET_SCHEMA_NOT_READY');
+      });
+    }else setupAttemptsV2_();
+    var target=targetByIdV2_(targetId),assignment=target&&assignmentByIdV2_(target[1]);
+    if(!target||!assignment||String(target[2])!==String(studentId)||!boolValue_(target[6],true)||!boolValue_(assignment[8],true))return null;
+    var sh=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS),rows=sh.getDataRange().getValues();
+    var current=null,maxAttemptNo=0;
+    for(var i=rows.length-1;i>0;i--){
+      if(String(rows[i][1])!==String(targetId))continue;
+      maxAttemptNo=Math.max(maxAttemptNo,Number(rows[i][10])||0);
+      if(!current&&String(rows[i][9])==='IN_PROGRESS')current=rows[i];
+    }
+    if(current)return current;
     if(String(target[3])==='COMPLETED'&&!allowRetry)return null;
-    var sh=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS),rows=sh.getDataRange().getValues(),rid=String(requestId||'');
-    if(rid)for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(targetId)&&String(rows[i][11])===rid)return rows[i];
-    var now=new Date(),id=Utilities.getUuid(),row=[id,targetId,studentId,assignment[1],assignment[2],assignment[11]||'',now,'','', 'IN_PROGRESS',attemptNoForTargetV2_(targetId),rid||Utilities.getUuid(),now,now,'',''];
-    sh.appendRow(row);if(String(target[3])==='NOT_STARTED'){target[3]='IN_PROGRESS';target[4]=target[4]||now;target[8]=now;upsertRow_(getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),target[0],target);}SpreadsheetApp.flush();return row;
+    if(rid)for(var j=1;j<rows.length;j++)if(String(rows[j][1])===String(targetId)&&String(rows[j][11])===rid)return rows[j];
+    var now=new Date(),id=Utilities.getUuid(),row=[id,targetId,studentId,assignment[1],assignment[2],assignment[11]||'',now,'','', 'IN_PROGRESS',maxAttemptNo+1,rid||Utilities.getUuid(),now,now,'',''];
+    sh.appendRow(row);
+    if(String(target[3])==='NOT_STARTED'){target[3]='IN_PROGRESS';target[4]=target[4]||now;target[8]=now;upsertRow_(getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),target[0],target);}
+    SpreadsheetApp.flush();
+    var verifiedRows=sh.getDataRange().getValues(),activeMatches=[],requestMatches=[],createdRequestId=String(row[11]);
+    for(var k=1;k<verifiedRows.length;k++){
+      if(String(verifiedRows[k][1])!==String(targetId))continue;
+      if(String(verifiedRows[k][9])==='IN_PROGRESS')activeMatches.push(verifiedRows[k]);
+      if(String(verifiedRows[k][11])===createdRequestId)requestMatches.push(verifiedRows[k]);
+    }
+    if(activeMatches.length!==1||String(activeMatches[0][0])!==String(id)||requestMatches.length!==1||String(requestMatches[0][0])!==String(id))throw new Error('ATTEMPT_ATOMICITY_POST_FLUSH_MISMATCH');
+    return row;
   }finally{lock.releaseLock();}
 }
 function attemptContextForFetchV2_(e,allowRetry,existingSchemaOnly) {
@@ -2567,7 +2582,8 @@ function handleGetAttemptDetailV2Enhanced_(e){
   for(var w=1;w<wRows.length;w++)if(String(wRows[w][1])===String(attempt[0])){var wm=wordsById[String(wRows[w][2])]||{display:'단어 정보 없음',meaning:''};words.push({term:wm.display,meaning:wm.meaning,first_correct:wRows[w][3],wrong_count:wRows[w][4],final_correct:wRows[w][5]});}var pub=attemptPublicV2_(attempt);delete pub.teacher_id;delete pub.student_id;delete pub.assignment_target_id;pub.assignment_title=assignment?assignment[4]:'';return{attempt:pub,question_items:questions,word_items:words};
 }
 function homeworkBatchSummaryV2_(batch,links,assignments,targetByAssignmentStudent){var areas={VOCAB:{assigned:0,completed:0},SENTENCE_STRUCTURE:{assigned:0,completed:0},GRAMMAR:{assigned:0,completed:0},READING:{assigned:0,completed:0}},items=[],completed=0,overdue=0;for(var i=0;i<links.length;i++){var link=links[i],a=assignments[String(link[2])];if(!a)continue;var target=targetByAssignmentStudent[String(a[0])+'|'+String(batch[2])],status=target?derivedAssignmentStatus_(target[3],a[7]):'NOT_STARTED',area=dashboardAreaV2_(a[2]),snap=parseJsonValue_(link[4],{});if(area){areas[area].assigned++;if(status==='COMPLETED')areas[area].completed++;if(area==='VOCAB'&&snap.display_range)areas[area].display_range=snap.display_range;}if(status==='COMPLETED')completed++;if(status==='OVERDUE')overdue++;items.push({assignment_id:a[0],content_type:a[2],content_subtype:a[11]||'',title:a[4],due_at:a[7],status:status,snapshot:snap});}var count=items.length;return{homework_batch_id:batch[0],lesson_date:batch[3],assigned_at:batch[4],title:batch[5],assignments:count,completed:completed,completion_rate:count?Math.round(completed/count*100):null,overdue:overdue,areas:areas,items:items};}
-function handleListHomeworkBatchesV2_(e){if(!e.parameter.token||e.parameter.token!==getToken_())return{error:'no token'};var teacherId=getOrCreateDefaultTeacher_(),studentId=String(e.parameter.student_id||''),student=studentV2ById_(studentId);if(!student||String(student[1])!==String(teacherId))return{error:'forbidden'};var br=getOrCreateSheet_(HOMEWORK_BATCHES_V2_SHEET,HOMEWORK_BATCHES_V2_HEADERS).getDataRange().getValues(),lr=getOrCreateSheet_(HOMEWORK_BATCH_ASSIGNMENTS_V2_SHEET,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),ar=getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),tr=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),assignments={},targets={},byBatch={};for(var a=1;a<ar.length;a++)if(String(ar[a][1])===String(teacherId))assignments[String(ar[a][0])]=ar[a];for(var t=1;t<tr.length;t++)targets[String(tr[t][1])+'|'+String(tr[t][2])]=tr[t];for(var l=1;l<lr.length;l++)if(String(lr[l][3])===studentId)(byBatch[String(lr[l][1])]||(byBatch[String(lr[l][1])]=[])).push(lr[l]);var out=[];for(var b=1;b<br.length;b++)if(String(br[b][1])===String(teacherId)&&String(br[b][2])===studentId&&boolValue_(br[b][6],true))out.push(homeworkBatchSummaryV2_(br[b],byBatch[String(br[b][0])]||[],assignments,targets));out.sort(function(x,y){return String(y.lesson_date).localeCompare(String(x.lesson_date))||new Date(y.assigned_at)-new Date(x.assigned_at);});return{batches:out};}
+function homeworkBatchReadRowsV2_(ss,name,headers,columnCount,perf){var opened=Date.now(),sheet=ss.getSheetByName(name);perf.sheet_open_ms+=Date.now()-opened;if(!sheet)return[];var readStarted=Date.now(),lastRow=sheet.getLastRow(),rows=lastRow>1?sheet.getRange(2,1,lastRow-1,columnCount).getValues():[];perf.range_read_ms+=Date.now()-readStarted;perf.reads.push({sheet:name,rows:rows.length,columns:columnCount});return rows;}
+function handleListHomeworkBatchesV2_(e){var totalStarted=Date.now(),perf={api:'listHomeworkBatchesV2',dispatch_ms:e.__elab_dispatch_started?totalStarted-e.__elab_dispatch_started:0,sheet_open_ms:0,range_read_ms:0,filter_ms:0,group_ms:0,serialize_ms:0,sheet_read_count:0,reads:[]};if(!e.parameter.token||e.parameter.token!==getToken_())return{error:'no token'};var teacherId=PropertiesService.getScriptProperties().getProperty('DEFAULT_TEACHER_ID')||getOrCreateDefaultTeacher_(),studentId=String(e.parameter.student_id||''),openStarted=Date.now(),ss=SpreadsheetApp.getActiveSpreadsheet();perf.sheet_open_ms+=Date.now()-openStarted;var students=homeworkBatchReadRowsV2_(ss,STUDENTS_V2_SHEET,STUDENTS_V2_HEADERS,5,perf),br=homeworkBatchReadRowsV2_(ss,HOMEWORK_BATCHES_V2_SHEET,HOMEWORK_BATCHES_V2_HEADERS,HOMEWORK_BATCHES_V2_HEADERS.length,perf),lr=homeworkBatchReadRowsV2_(ss,HOMEWORK_BATCH_ASSIGNMENTS_V2_SHEET,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS.length,perf),ar=homeworkBatchReadRowsV2_(ss,ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS,ASSIGNMENTS_V2_HEADERS.length,perf),tr=homeworkBatchReadRowsV2_(ss,ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS,ASSIGNMENT_TARGETS_V2_HEADERS.length,perf),filterStarted=Date.now(),student=null,assignments={},targets={},byBatch={};perf.sheet_read_count=perf.reads.length;for(var s=0;s<students.length;s++)if(String(students[s][0])===studentId){student=students[s];break}if(!student||String(student[1])!==String(teacherId))return{error:'forbidden'};for(var a=0;a<ar.length;a++)if(String(ar[a][1])===String(teacherId))assignments[String(ar[a][0])]=ar[a];for(var t=0;t<tr.length;t++)if(String(tr[t][2])===studentId)targets[String(tr[t][1])+'|'+studentId]=tr[t];for(var l=0;l<lr.length;l++)if(String(lr[l][3])===studentId)(byBatch[String(lr[l][1])]||(byBatch[String(lr[l][1])]=[])).push(lr[l]);var selected=[];for(var b=0;b<br.length;b++)if(String(br[b][1])===String(teacherId)&&String(br[b][2])===studentId&&boolValue_(br[b][6],true))selected.push(br[b]);perf.filter_ms=Date.now()-filterStarted;var groupStarted=Date.now(),out=[];for(var i=0;i<selected.length;i++)out.push(homeworkBatchSummaryV2_(selected[i],byBatch[String(selected[i][0])]||[],assignments,targets));out.sort(function(x,y){return String(y.lesson_date).localeCompare(String(x.lesson_date))||new Date(y.assigned_at)-new Date(x.assigned_at);});perf.group_ms=Date.now()-groupStarted;var response={batches:out},serializeStarted=Date.now();JSON.stringify(response);perf.serialize_ms=Date.now()-serializeStarted;perf.total_ms=Date.now()-totalStarted;response.perf=perf;console.log('[ELAB-PERF][HOMEWORK_BATCHES] '+JSON.stringify(perf));return response;}
 function handleGetTeacherDashboardG01_(e){if(!e.parameter.token||e.parameter.token!==getToken_())return{error:'no token'};var p={};Object.keys(e.parameter||{}).forEach(function(k){p[k]=e.parameter[k];});p.days='0';var base=handleGetTeacherDashboardV2_({parameter:p});if(base.error)return base;var teacherId=getOrCreateDefaultTeacher_(),br=getOrCreateSheet_(HOMEWORK_BATCHES_V2_SHEET,HOMEWORK_BATCHES_V2_HEADERS).getDataRange().getValues(),lr=getOrCreateSheet_(HOMEWORK_BATCH_ASSIGNMENTS_V2_SHEET,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),ar=getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),tr=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),assignments={},targets={},linksByBatch={},batchByAssignmentStudent={};for(var a=1;a<ar.length;a++)if(String(ar[a][1])===String(teacherId))assignments[String(ar[a][0])]=ar[a];for(var t=1;t<tr.length;t++)targets[String(tr[t][1])+'|'+String(tr[t][2])]=tr[t];for(var l=1;l<lr.length;l++){(linksByBatch[String(lr[l][1])]||(linksByBatch[String(lr[l][1])]=[])).push(lr[l]);batchByAssignmentStudent[String(lr[l][2])+'|'+String(lr[l][3])]=String(lr[l][1]);}var batchesByStudent={};for(var b=1;b<br.length;b++)if(String(br[b][1])===String(teacherId)&&boolValue_(br[b][6],true)){var sum=homeworkBatchSummaryV2_(br[b],linksByBatch[String(br[b][0])]||[],assignments,targets);(batchesByStudent[String(br[b][2])]||(batchesByStudent[String(br[b][2])]=[])).push(sum);}base.students.forEach(function(st){var list=batchesByStudent[String(st.student_id)]||[];list.sort(function(x,y){return String(y.lesson_date).localeCompare(String(x.lesson_date))||new Date(y.assigned_at)-new Date(x.assigned_at);});st.homework_batches=list;st.current_batch=list[0]||null;if(st.current_batch){st.assignments=st.current_batch.assignments;st.completed=st.current_batch.completed;st.completion_rate=st.current_batch.completion_rate;st.overdue=st.current_batch.overdue;st.areas=st.current_batch.areas;}else{st.assignments=0;st.completed=0;st.completion_rate=null;st.overdue=0;st.areas={VOCAB:{assigned:0},SENTENCE_STRUCTURE:{assigned:0},GRAMMAR:{assigned:0},READING:{assigned:0}};}(st.attempts||[]).forEach(function(at){var target=targetByIdV2_(at.assignment_target_id),aid=target&&target[1];at.homework_batch_id=aid?batchByAssignmentStudent[String(aid)+'|'+String(st.student_id)]||'':'';});if(st.current_batch&&st.current_batch.areas.VOCAB.display_range){st.vocab_display_range=st.current_batch.areas.VOCAB.display_range;}});base.students.sort(function(a,b){return(a.status==='CHECK'?0:1)-(b.status==='CHECK'?0:1)||(a.completion_rate==null?101:a.completion_rate)-(b.completion_rate==null?101:b.completion_rate)||String(a.name).localeCompare(String(b.name));});base.summary={active_students:base.students.length,incomplete_students:base.students.filter(function(x){return x.current_batch&&x.current_batch.assignments>x.current_batch.completed;}).length,pending_items:base.students.reduce(function(n,x){return n+x.pending;},0)};base.dashboard_basis='LATEST_HOMEWORK_BATCH';return base;}
 function attachBatchPerformanceG01_(base){var students={},batches={},teacherId=getOrCreateDefaultTeacher_();(base.students||[]).forEach(function(st){students[String(st.student_id)]=st;(st.homework_batches||[]).forEach(function(b){b.performance={correct:0,total:0,subject_correct:0,subject_sample:0,main_verb_correct:0,main_verb_sample:0,categories:{}};batches[String(b.homework_batch_id)]=b;});});var lr=getOrCreateSheet_(HOMEWORK_BATCH_ASSIGNMENTS_V2_SHEET,HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),tr=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),atr=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS).getDataRange().getValues(),qr=getOrCreateSheet_(QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues(),dr=getOrCreateSheet_(SENTENCE_STRUCTURE_DETAILS_V2_SHEET,SENTENCE_STRUCTURE_DETAILS_V2_HEADERS).getDataRange().getValues(),cr=getOrCreateSheet_(CATEGORIES_V2_SHEET,CATEGORIES_V2_HEADERS).getDataRange().getValues(),qcr=getOrCreateSheet_(QUESTION_CATEGORIES_V2_SHEET,QUESTION_CATEGORIES_V2_HEADERS).getDataRange().getValues(),batchByAssignmentStudent={},targetById={},attemptBatch={},attemptStudent={},itemAttempt={};for(var l=1;l<lr.length;l++)batchByAssignmentStudent[String(lr[l][2])+'|'+String(lr[l][3])]=String(lr[l][1]);for(var t=1;t<tr.length;t++)targetById[String(tr[t][0])]=tr[t];for(var a=1;a<atr.length;a++){if(String(atr[a][3])!==String(teacherId)||!students[String(atr[a][2])])continue;var target=targetById[String(atr[a][1])],bid=target&&batchByAssignmentStudent[String(target[1])+'|'+String(atr[a][2])];if(bid&&batches[bid]){attemptBatch[String(atr[a][0])]=batches[bid];attemptStudent[String(atr[a][0])]=students[String(atr[a][2])];}}var catById={},catsByQ={};for(var c=1;c<cr.length;c++)catById[String(cr[c][0])]={key:cr[c][2],label:cr[c][3],domain:cr[c][1],parent_category_id:cr[c][4]||''};for(var qc=1;qc<qcr.length;qc++){var cat=catById[String(qcr[qc][1])];if(cat)(catsByQ[String(qcr[qc][0])]||(catsByQ[String(qcr[qc][0])]=[])).push(cat);}for(var q=1;q<qr.length;q++){var item=qr[q],batch=attemptBatch[String(item[1])];if(!batch)continue;itemAttempt[String(item[0])]=String(item[1]);if(item[5]===true||item[5]===false){batch.performance.total++;if(item[5]===true)batch.performance.correct++;(catsByQ[String(item[2])]||[]).forEach(function(cat){var x=batch.performance.categories[cat.key]||(batch.performance.categories[cat.key]={key:cat.key,label:cat.label,domain:cat.domain,parent_category_id:cat.parent_category_id,correct:0,total:0,elapsed_sum:0,elapsed_sample:0});x.total++;if(item[5]===true)x.correct++;if(Number(item[7])>0){x.elapsed_sum+=Number(item[7]);x.elapsed_sample++;}});}}for(var d=1;d<dr.length;d++){var aid=itemAttempt[String(dr[d][0])],batch2=aid&&attemptBatch[aid],st=aid&&attemptStudent[aid];if(!batch2||!st)continue;batch2.performance.subject_sample++;batch2.performance.main_verb_sample++;st.subject_sample=(st.subject_sample||0)+1;st.main_verb_sample=(st.main_verb_sample||0)+1;if(dr[d][5]===true)batch2.performance.subject_correct++;if(dr[d][6]===true)batch2.performance.main_verb_correct++;}Object.keys(batches).forEach(function(id){var p=batches[id].performance;p.accuracy=p.total?Math.round(p.correct/p.total*100):null;p.subject_accuracy=p.subject_sample?Math.round(p.subject_correct/p.subject_sample*100):null;p.main_verb_accuracy=p.main_verb_sample?Math.round(p.main_verb_correct/p.main_verb_sample*100):null;p.categories=Object.keys(p.categories).map(function(k){var x=p.categories[k];return{key:x.key,label:x.label,domain:x.domain,parent_category_id:x.parent_category_id,correct:x.correct,total:x.total,accuracy:x.total?Math.round(x.correct/x.total*100):null,average_elapsed_ms:x.elapsed_sample?Math.round(x.elapsed_sum/x.elapsed_sample):null,elapsed_sample_size:x.elapsed_sample};});});return base;}
 function handleGetTeacherDashboardH_(e){
@@ -2819,7 +2835,6 @@ function logStudentWrite_(requestId, action, studentId, status, note) {
   ]);
 }
 
-function handleListHomeworkBatchesCachedV2_(e){var studentId=String(e.parameter.student_id||''),key='homework-history-v2-'+studentId,cache=CacheService.getScriptCache(),cached=cache.get(key);if(cached){try{return JSON.parse(cached)}catch(ignore){}}var result=handleListHomeworkBatchesV2_(e);if(result&&!result.error)cache.put(key,JSON.stringify(result),60);return result;}
 function textOut_(body) {
   return ContentService.createTextOutput(body);
 }
@@ -3747,17 +3762,9 @@ function handleSubmitGrammarFinalResult_(d) {
 /* ============================= doGet ============================= */
 // 전부 JSONP(?callback=...)로 호출됨.
 function doGet(e) {
+  e.__elab_dispatch_started = Date.now();
   var cb = e.parameter.callback || 'callback';
   var action = e.parameter.action;
-
-  // TEMP diagnostics: 배포본/단어 결과 capability 조건 확인 후 제거한다.
-  if (action === 'buildInfo') return jsonpOut_(cb, {
-    version: '2026-09-03-p0-transport-stability-1',
-    has_verifyStudentCapabilityGrace: typeof verifyStudentCapabilityGrace_ === 'function',
-    has_verifyAttemptCompletionV2: typeof handleVerifyAttemptCompletionV2_ === 'function',
-    has_verifyDataIntegrityV2: typeof verifyDataIntegrityV2 === 'function'
-  });
-  if (action === 'diagnoseVocabCapability') return jsonpOut_(cb, handleDiagnoseVocabCapability_(e));
 
   if (action === 'imageStatus') return jsonpOut_(cb, handleImageStatus_(e));
   if (action === 'fetchExam') return jsonpOut_(cb, handleFetchExam_(e));
@@ -3788,7 +3795,7 @@ function doGet(e) {
   if (action === 'listWrongnoteGroupsV2') return jsonpOut_(cb, handleListWrongnoteGroupsV2_(e));
   if (action === 'listWrongnoteGroupItemsV2') return jsonpOut_(cb, handleListWrongnoteGroupItemsV2_(e));
   if (action === 'getReviewItemHistoryV2') return jsonpOut_(cb, handleGetReviewItemHistoryV2_(e));
-  if (action === 'listHomeworkBatchesV2') return jsonpOut_(cb, handleListHomeworkBatchesCachedV2_(e));
+  if (action === 'listHomeworkBatchesV2') return jsonpOut_(cb, handleListHomeworkBatchesV2_(e));
   if (action === 'getTeacherDashboardV2') return jsonpOut_(cb, handleGetTeacherDashboardSafe_(e));
   if (action === 'measureTeacherDashboardReads') return jsonpOut_(cb, handleMeasureTeacherDashboardReads_(e));
   if (action === 'fetchGrammarSet') return jsonpOut_(cb, handleFetchGrammarSet_(e));
@@ -3816,29 +3823,6 @@ function doGet(e) {
   if (action === 'getAttemptDetailV2') return jsonpOut_(cb, handleGetAttemptDetailV2Enhanced_(e));
 
   return jsonpOut_(cb, { error: 'unknown action' });
-}
-
-// 유효하게 서명된 launch capability 자체를 제시한 요청에 한해 조건별 boolean만 반환한다.
-// 학생/과제/세트 원문이나 capability 값은 응답 및 로그에 노출하지 않는다.
-function handleDiagnoseVocabCapability_(e) {
-  var key=String(e.parameter.key||''),targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');
-  var target=targetByIdV2_(targetId),assignment=target&&assignmentByIdV2_(target[1]),vocab=assignment&&findVocabSetByIdOrSessionV2_(assignment[3]);
-  var signedScopeValid=verifyStudentCapabilityGrace_(e.parameter.assignmentCapability,'launchAssignment','assignmentTarget',targetId,{student_id:studentId},30*24*60*60*1000);
-  if(!signedScopeValid)return {ok:false,error:'invalid signed capability'};
-  var checks={
-    target_exists:!!target,
-    assignment_exists:!!assignment,
-    target_student_matches:!!target&&String(target[2])===studentId,
-    target_active:!!target&&boolValue_(target[6],true),
-    assignment_active:!!assignment&&boolValue_(assignment[8],true),
-    content_type_vocab:!!assignment&&String(assignment[2])==='VOCAB',
-    vocab_set_exists:!!vocab,
-    assignment_ref_matches_vocab_set:!!assignment&&!!vocab&&String(assignment[3])===String(vocab[0]),
-    session_key_matches:!!vocab&&String(vocab[2])===key,
-    normal_capability_valid:!!assignment&&validateAssignmentLaunchV2_(e,'VOCAB',assignment[3]),
-    grace_capability_valid:signedScopeValid
-  };
-  return {ok:true,version:'2026-09-02-vocab-capability-grace-1',checks:checks,passes_issue_gate:Object.keys(checks).filter(function(k){return k!=='normal_capability_valid';}).every(function(k){return checks[k]===true;})};
 }
 
 // ?action=imageStatus&key=IMAGEKEY

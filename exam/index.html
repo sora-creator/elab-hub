@@ -3,16 +3,16 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ELAB · 교사용</title>
+<title>개별문제 시험보기 · ELAB</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
-<link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<link rel="stylesheet" href="../shared/theme.css" />
 <script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
 <script src="../shared/pdfLibrary.js?v=preserve-reviewed-upload-16"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
   tailwind.config = {
     theme: { extend: { colors: {
-      brand: { 50:'#f0f5fa',100:'#e0eaf3',400:'#5484aa',500:'#326b98',600:'#245984' },
+      brand: { 50:'#ecfeff',100:'#cffafe',400:'#22d3ee',500:'#0891b2',600:'#0e7490' },
       coral: { 200:'#fecaca',400:'#f87171',500:'#ef4444' },
       grass: { 400:'#4ade80',500:'#22c55e' }
     } } }
@@ -22,7 +22,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   body{font-family:"Pretendard",-apple-system,BlinkMacSystemFont,sans-serif;background:var(--eb-bg);}
-  .btn3d{--btn-edge:#17456f;position:relative;border-radius:1rem;font-weight:800;box-shadow:0 4px 0 var(--btn-edge);transition:transform .05s,box-shadow .05s;}
+  .btn3d{--btn-edge:#155e75;position:relative;border-radius:1rem;font-weight:800;box-shadow:0 4px 0 var(--btn-edge);transition:transform .05s,box-shadow .05s;}
   .btn3d:active{transform:translateY(3px);box-shadow:0 1px 0 var(--btn-edge);}
   .btn3d:disabled{opacity:.45;cursor:not-allowed;}
   .boundary-line{position:absolute;left:0;right:0;height:0;border-top:3px dashed #ef4444;cursor:row-resize;}
@@ -32,40 +32,19 @@
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1e293b;color:#fff;padding:10px 18px;border-radius:999px;font-size:13px;font-weight:600;z-index:9999;opacity:0;transition:opacity .2s;pointer-events:none;}
   .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.5);display:flex;align-items:center;justify-content:center;z-index:9998;padding:16px;}
   .sent-num{ display:inline-flex; align-items:center; justify-content:center; width:19px; height:19px; min-width:19px;
-    margin-right:4px; border-radius:50%; background:#12bbaf; color:#fff; font-size:13px; font-weight:800;
+    margin-right:4px; border-radius:50%; background:#0891b2; color:#fff; font-size:13px; font-weight:800;
     line-height:1; vertical-align:0.5px; user-select:none; }
 
   /* 끊어읽기 마킹 위젯(원래 끊어읽기 모듈에 있던 스타일을 개별문제로 통합하며 그대로 옮김) */
-  .passage-mark-view{ line-height:2.1; font-size:16px; text-align:justify; text-justify:inter-word; }
+  .passage-mark-view{ line-height:2.1; font-size:16px; }
   .sv-word{ display:inline; border-radius:3px; cursor:pointer; user-select:none; }
   .sv-word.subj{ background:#fde68a; box-shadow:0 0 0 1px #fde68a; }
   .sv-word.verb{ background:#a7f3d0; box-shadow:0 0 0 1px #a7f3d0; }
   .sv-word.unknown{ background:#fecaca; box-shadow:0 0 0 1px #fecaca; }
-  .ss-token-grid{display:flex;flex-wrap:wrap;gap:9px 7px;align-items:center;padding:18px;border:1px solid var(--eb-border);border-radius:14px;background:#fff;line-height:1.5}
-  .ss-token{min-height:42px;padding:8px 9px;border:2px solid transparent;border-radius:8px;background:#f5f7fa;color:#19324d;font-size:16px;font-weight:650;cursor:pointer;touch-action:manipulation}
-  .ss-token:focus-visible{outline:3px solid rgba(18,187,175,.34);outline-offset:2px}
-  .ss-token.subject{border-color:#326b98;background:#e7f0f8}.ss-token.subject::after{content:'주';margin-left:5px;color:#245984;font-size:10px;font-weight:900}
-  .ss-token.verb{border-color:#0e968e;background:#e4f8f5}.ss-token.verb::after{content:'동';margin-left:5px;color:#0b746f;font-size:10px;font-weight:900}
-  .ss-token.unknown{border-color:#ef4444;background:#fee2e2}.ss-token.unknown::after{content:'?';margin-left:5px;color:#b91c1c;font-size:10px;font-weight:900}
-  .ss-token.wrong{border-color:#dc5263;background:#fff0f2;text-decoration:line-through;text-decoration-color:#c83449;text-decoration-thickness:2px}
-  .ss-token.correct{box-shadow:inset 0 -4px 0 #1f9d68}
-  .ss-mode[aria-pressed="true"]{background:#245984!important;color:#fff!important;border-color:#245984!important}
-  .ss-mode[data-mode="verb"][aria-pressed="true"]{background:#0e968e!important;border-color:#0e968e!important}
-  .ss-mode[data-mode="unknown"][aria-pressed="true"]{background:#ef4444!important;border-color:#ef4444!important}
-  .ss-feedback{border:1px solid var(--eb-border);border-radius:12px;background:#f8fafc;padding:14px}.ss-feedback[hidden]{display:none}
-  @media(max-width:430px){.ss-token-grid{gap:8px 5px;padding:14px}.ss-token{min-height:44px;padding:9px 8px;font-size:15px}}
-  .chunk-gap{ display:inline; padding:0 1px; border-radius:4px; cursor:pointer;
+  .chunk-gap{ display:inline; padding:2px 4px; border-radius:4px; cursor:pointer;
     color:#ef4444; font-weight:800; user-select:none; }
   .chunk-gap:hover{ background:#e2e8f0; }
   .chunk-gap.active{ background:#fee2e2; }
-  .pdf-mark-stage{position:relative;width:100%;overflow:hidden;border-radius:12px;background:#fff}.pdf-mark-stage>img{display:block;width:100%;height:auto}.pdf-word-hit{position:absolute;z-index:2;border:1px solid transparent;border-radius:3px;background:transparent;cursor:pointer}.pdf-word-hit.subj{background:rgba(253,230,138,.72);border-color:#f59e0b}.pdf-word-hit.verb{background:rgba(167,243,208,.72);border-color:#10b981}.pdf-word-hit.unknown{background:rgba(254,202,202,.72);border-color:#ef4444}.pdf-gap-hit{position:absolute;z-index:3;display:grid;place-items:center;width:18px;height:24px;border:0;background:transparent;color:transparent;font-size:20px;font-weight:900;cursor:pointer;transform:translate(-50%,-10%)}.pdf-gap-hit.active{color:#ef4444;text-shadow:0 0 2px #fff,0 0 4px #fff}
-  .pdf-draw-layer{position:absolute;inset:0;z-index:4;cursor:crosshair;touch-action:none}.pdf-draw-mark{position:absolute;border:1px solid;border-radius:4px;cursor:pointer}.pdf-draw-mark:disabled{opacity:1;cursor:default}.pdf-draw-mark.subj{border-color:#f59e0b;background:rgba(253,230,138,.55)}.pdf-draw-mark.verb{border-color:#10b981;background:rgba(167,243,208,.55)}.pdf-draw-mark.unknown{border-color:#ef4444;background:rgba(254,202,202,.55)}.pdf-draw-mark.slash{display:grid;place-items:center;border:0;background:transparent;color:#ef4444;font-size:clamp(18px,2.4vw,34px);font-weight:900;line-height:1;text-shadow:0 0 3px #fff}.pdf-draw-preview{position:absolute;border:1px dashed #245984;border-radius:4px;background:rgba(50,107,152,.12);pointer-events:none}
-  .iq-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px;border-bottom:1px solid #dbe3ec;background:#f8fafc}.iq-toolbar button{min-height:34px;padding:6px 10px;border:1px solid #cbd5e1;border-radius:8px;background:#fff;color:#334155;font-size:12px;font-weight:800}.iq-toolbar .on[data-iq-tool="pen"]{border-color:#2563eb;background:#2563eb;color:#fff}.iq-toolbar .on[data-iq-tool="eraser"]{border-color:#d97706;background:#d97706;color:#fff}.iq-toolbar [data-iq-clear]{color:#be123c}.iq-toolbar [data-iq-clear]:disabled{opacity:.4}.iq-scale{min-width:46px;text-align:center;color:#475569;font-size:12px;font-weight:850}.iq-viewport{max-height:72vh;overflow:auto;cursor:grab;overscroll-behavior:contain;background:#eef2f6}.iq-viewport.dragging{cursor:grabbing}.iq-viewport.draw-mode{cursor:crosshair}.iq-document{position:relative;width:100%;transform-origin:top left}.iq-document>img{display:block;width:100%;height:auto}.iq-ink{position:absolute;inset:0;z-index:2;width:100%;height:100%;pointer-events:none}.iq-viewport.draw-mode .iq-ink{pointer-events:auto;touch-action:none}
-
-  .fx-passage{ font-size:14px; line-height:1.7; color:#1e293b; text-align:justify; text-justify:inter-word; }
-  .fx-passage .fx-box{ margin:8px 0; padding:10px 12px; border:1px solid #cbd5e1; border-radius:.5rem; text-align:justify; text-justify:inter-word; }
-  .fx-passage .fx-img{ display:block; max-width:100%; max-height:420px; object-fit:contain; margin:8px auto; border-radius:.5rem; }
-
 </style>
 </head>
 <body>
@@ -75,13 +54,13 @@
 <script src="../shared/appsScriptTransport.js?v=p0-transport-1"></script>
 <script src="js/utils.js"></script>
 <script src="js/sheetService.js"></script>
-<script src="js/questionTypes.js?v=sentence-clean-2"></script>
+<script src="js/questionTypes.js"></script>
 <script src="js/examDataStore.js?v=idb-db-2"></script>
 <script src="js/examMediaStore.js?v=idb-media-1"></script>
-<script src="js/pdfService.js?v=connected-complete-24"></script>
-<script src="js/passageBank.js?v=individual-image-tools-10"></script>
-<script src="js/teacherApp.js?v=choice-submit-label-21"></script>
-<script src="js/studentApp.js?v=sticky-marker-tools-1"></script>
-<script src="js/app.js?v=persistent-folder-3"></script>
+<script src="js/pdfService.js"></script>
+<script src="js/passageBank.js"></script>
+<script src="js/teacherApp.js"></script>
+<script src="js/studentApp.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>

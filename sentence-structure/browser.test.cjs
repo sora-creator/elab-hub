@@ -15,6 +15,7 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
   page.on('pageerror', error => errors.push(error.message));
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
   const check = (name, value) => { assert.ok(value, name); checks.push(name); console.log(`PASS ${name}`); };
+  const seededScopes = new WeakMap();
   const dragSpan = async (targetPage, start, end) => {
     const first = await targetPage.locator(`[data-token="${start}"]`).boundingBox();
     const last = await targetPage.locator(`[data-token="${end}"]`).boundingBox();
@@ -28,8 +29,14 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
     if (await targetPage.locator('[data-start-practice]').count()) await targetPage.click('[data-start-practice]');
   };
   const seedStructureReview = async (targetPage, sentenceId, subjects, verbs, scope) => {
-    await targetPage.goto(`${base}?sentence_id=${encodeURIComponent(sentenceId)}&assignment_id=${encodeURIComponent(scope)}`);
+    await targetPage.goto(`${base}?sentence_id=${encodeURIComponent(sentenceId)}&local_test_scope=${encodeURIComponent(scope)}`);
     await targetPage.waitForLoadState('networkidle');
+    if (seededScopes.get(targetPage) !== scope) {
+      await targetPage.evaluate(() => localStorage.removeItem(ELABSentenceStructurePractice.getStorageKey()));
+      await targetPage.reload();
+      await targetPage.waitForLoadState('networkidle');
+      seededScopes.set(targetPage, scope);
+    }
     await targetPage.evaluate(({ subjects, verbs }) => {
       const state = ELABSentenceStructurePractice.getState();
       state.intro_complete = true;
@@ -104,7 +111,11 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
     await page.click('[data-check-structure]');
     check('acceptable subject We all passes only after submit', await page.locator('.feedback.success').count() === 1);
     check('S/V completion marks step 1 done and step 2 current', await page.locator('[data-learning-step="1"].completed').count() === 1 && await page.locator('[data-learning-step="2"][aria-current="step"]').count() === 1);
-    check('step 1 CTA names the next student task', (await page.locator('[data-go-chunk]').innerText()).includes('다음: 의미 단위로 끊기'));
+    check('step 1 CTA clearly starts the next stage', (await page.locator('[data-go-chunk]').innerText()).includes('2단계 시작: 의미 단위로 끊기'));
+    check('step 1 review uses a prominent completion banner', await page.locator('.review-complete-banner h2').innerText() === '정답 확인 완료' && await page.locator('.review-complete-banner p').innerText() === '현재는 정답 확인 화면입니다. 이 단계의 답은 더 이상 수정되지 않습니다.');
+    check('step 1 review section is explicitly titled as answer review', await page.locator('#structure-step h2').innerText() === '주어·동사 정답 확인');
+    check('step 1 review cards show read-only status badges', await page.locator('.sentence-card .review-status').innerText() === '확인 전용' && await page.locator('#structure-step .step-review-badge').innerText() === '수정 불가');
+    check('step 1 review tokens are disabled and the stepper says complete', await page.locator('[data-token]').first().isDisabled() && (await page.locator('[data-learning-step="1"]').innerText()).includes('완료'));
     await page.click('[data-go-chunk]');
     await page.waitForTimeout(50);
     check('chunk screen keeps step 2 current', await page.locator('[data-learning-step="2"][aria-current="step"]').count() === 1);
@@ -193,7 +204,7 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
       const hintLevelPage = await hintLevelContext.newPage();
       hintLevelPage.on('pageerror', error => errors.push(error.message));
       hintLevelPage.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-      await hintLevelPage.goto(`${base}?sentence_id=corpus%3A23568&hint_level=${hintCase.level}&assignment_target_id=hint-${hintCase.level}`);
+      await hintLevelPage.goto(`${base}?sentence_id=corpus%3A23568&hint_level=${hintCase.level}`);
       await hintLevelPage.waitForLoadState('networkidle');
       await startPractice(hintLevelPage);
       check(`${hintCase.level} assignment setting loads as source of truth`, await hintLevelPage.evaluate(level => ELABSentenceStructurePractice.getAssignedHintLevel() === level && ELABSentenceStructurePractice.getState().draft.assigned_hint_level === level, hintCase.level));
@@ -207,21 +218,21 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
     const noHintPage = await noHintContext.newPage();
     noHintPage.on('pageerror', error => errors.push(error.message));
     noHintPage.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    await noHintPage.goto(`${base}?sentence_id=corpus%3A25018&hint_level=DETAILED&assignment_target_id=no-applicable-hint`);
+    await noHintPage.goto(`${base}?sentence_id=corpus%3A25018&hint_level=DETAILED`);
     await noHintPage.waitForLoadState('networkidle');
     await startPractice(noHintPage);
     check('simple sentence suppresses a non-applicable hint even when DETAILED', await noHintPage.locator('.sv-hint-card').count() === 0);
     await noHintContext.close();
 
-    const signedContext = await browser.newContext({ viewport: { width: 900, height: 760 } });
-    const signedPage = await signedContext.newPage();
-    signedPage.on('pageerror', error => errors.push(error.message));
-    signedPage.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
-    await signedPage.goto(`${base}?sentence_id=corpus%3A23568&hint_level=DETAILED&assignment_target_id=signed-setting&assignmentCapability=${encodeURIComponent(capabilityWithHint('NONE'))}`);
-    await signedPage.waitForLoadState('networkidle');
-    await startPractice(signedPage);
-    check('assignment capability hint level takes precedence over an edited query value', await signedPage.evaluate(() => ELABSentenceStructurePractice.getAssignedHintLevel() === 'NONE') && await signedPage.locator('.sv-hint-card').count() === 0);
-    await signedContext.close();
+    const incompleteRemoteContext = await browser.newContext({ viewport: { width: 900, height: 760 } });
+    const incompleteRemotePage = await incompleteRemoteContext.newPage();
+    const incompleteRemoteErrors = [];
+    incompleteRemotePage.on('pageerror', error => incompleteRemoteErrors.push(error.message));
+    incompleteRemotePage.on('console', message => { if (message.type() === 'error') incompleteRemoteErrors.push(message.text()); });
+    await incompleteRemotePage.goto(`${base}?sentence_id=corpus%3A23568&hint_level=DETAILED&assignment_target_id=incomplete-remote&assignmentCapability=${encodeURIComponent(capabilityWithHint('NONE'))}`);
+    await incompleteRemotePage.waitForLoadState('networkidle');
+    check('incomplete remote assignment shows an explicit launch error without local fallback', await incompleteRemotePage.locator('.load-error').innerText().then(text => text.includes('과제 연결 정보')) && await incompleteRemotePage.evaluate(() => typeof ELABSentenceStructurePractice === 'undefined') && await incompleteRemotePage.locator('.count-badge').count() === 0 && incompleteRemoteErrors.every(message => message.includes('과제 연결 정보')));
+    await incompleteRemoteContext.close();
 
     const uiFixtures = [
       { name: 'simple', tokens: ['Identity', 'became', 'a', 'problem.'], clauses: [{ clause_id: 'c1', type: 'MAIN' }], subjects: [['c1', [0]]], verbs: [['c1', 'p1', [1]]], first: [[0], [1]], after: '주어·동사 찾기 완료', role: '' },
@@ -454,6 +465,28 @@ const capabilityWithHint = level => `${Buffer.from(JSON.stringify({ metadata: { 
     check('multiple S/V comparison preserves every raw answer instead of replacing it with canonical', await comparePage.locator('.comparison-panel.student .comparison-answer').count() === 6 && await comparePage.locator('.comparison-panel.teacher .comparison-answer').count() === 6);
     await seedStructureReview(comparePage, 'corpus:2970', [[0]], [[2]], 'compare-correct');
     check('fully correct submission keeps the compact success UX without a large comparison card', await comparePage.locator('.feedback.success').count() === 1 && await comparePage.locator('.answer-comparison').count() === 0 && await comparePage.locator('[data-go-chunk]').count() === 1);
+    const lockedReviewBefore = await comparePage.evaluate(() => ({
+      draft: JSON.stringify(ELABSentenceStructurePractice.getState().draft),
+      tokens: [...document.querySelectorAll('[data-token]')].map(token => ({ className: token.className, pressed: token.getAttribute('aria-pressed'), color: getComputedStyle(token).color }))
+    }));
+    await comparePage.locator('[data-token="1"]').evaluate(token => token.click());
+    await comparePage.locator('[data-token="2"]').evaluate(token => token.click());
+    const lockedReviewAfter = await comparePage.evaluate(() => ({
+      draft: JSON.stringify(ELABSentenceStructurePractice.getState().draft),
+      tokens: [...document.querySelectorAll('[data-token]')].map(token => ({ className: token.className, pressed: token.getAttribute('aria-pressed'), color: getComputedStyle(token).color }))
+    }));
+    check('answer review token clicks are complete no-ops', JSON.stringify(lockedReviewAfter) === JSON.stringify(lockedReviewBefore));
+    await comparePage.click('[data-retry-structure]');
+    const retryBefore = await comparePage.evaluate(() => JSON.stringify(ELABSentenceStructurePractice.getState().draft));
+    await comparePage.click('[data-token="1"]');
+    check('retry re-enables step 1 token interaction', await comparePage.evaluate(before => ELABSentenceStructurePractice.getState().draft.stage === 'structure' && JSON.stringify(ELABSentenceStructurePractice.getState().draft) !== before, retryBefore));
+    await seedStructureReview(comparePage, 'corpus:2970', [[0]], [[2]], 'compare-correct');
+    await comparePage.click('[data-go-chunk]');
+    check('answer review next action enters step 2', await comparePage.evaluate(() => ELABSentenceStructurePractice.getState().draft.stage === 'chunk'));
+    const firstReviewJunction = comparePage.locator('[data-junction]').first();
+    const reviewJunctionIndex = Number(await firstReviewJunction.getAttribute('data-junction'));
+    await firstReviewJunction.click();
+    check('step 2 chunking remains interactive after review', await comparePage.evaluate(index => ELABSentenceStructurePractice.getState().draft.chunk_boundaries.includes(index), reviewJunctionIndex));
     await compareContext.close();
 
     const necessityContext = await browser.newContext({ viewport: { width: 1280, height: 900 } });

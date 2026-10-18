@@ -1,7 +1,7 @@
 const assert=require('assert');
 const {chromium}=require('playwright');
 (async()=>{
-  const browser=await chromium.launch({headless:true});
+  const browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe'});
   try{
     for(const viewport of [{width:1280,height:900},{width:390,height:844}]){
       const page=await browser.newPage({viewport});

@@ -129,7 +129,8 @@ function createFirstImportMock(snapshot) {
       flush() { track('flush'); if (hooks.flush) hooks.flush(); } },
     LockService: { getScriptLock: () => {
       let owns = false;
-      return { tryLock() { track('tryLock'); if (locked) return false; owns = true; locked = true; return true; }, hasLock: () => owns,
+      return { tryLock() { track('tryLock'); if (locked) return false; owns = true; locked = true; return true; },
+        waitLock() { track('waitLock'); if (locked) throw new Error('mock lock already held'); owns = true; locked = true; }, hasLock: () => owns,
         releaseLock() { if (owns) { track('releaseLock'); owns = false; locked = false; } } };
     } },
     Utilities: { DigestAlgorithm: { SHA_256: 'sha256' }, Charset: { UTF_8: 'utf8' }, computeDigest: (_, data) => Array.from(crypto.createHash('sha256').update(data).digest(), x => x > 127 ? x - 256 : x) },

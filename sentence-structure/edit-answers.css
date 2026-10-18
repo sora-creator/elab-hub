@@ -151,6 +151,14 @@
   color: var(--eb-text-muted);
 }
 
+.step-complete-state {
+  display: block;
+  margin-top: 2px;
+  color: var(--eb-accent-700);
+  font-size: 10px;
+  font-weight: 950;
+}
+
 .step-progress-item.current .step-dot {
   border-color: var(--eb-primary-700);
   background: var(--eb-primary-700);
@@ -226,6 +234,36 @@
   font-size: 13px;
   font-weight: 700;
 }
+
+.review-complete-banner {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+  border-color: var(--eb-accent-600);
+  background: linear-gradient(135deg, #effcf9 0%, #dff7f2 100%);
+  box-shadow: 0 12px 28px rgba(14, 150, 142, .16);
+}
+
+.review-complete-banner::before { background: var(--eb-accent-600); }
+
+.review-complete-icon {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--eb-accent-600);
+  color: #fff;
+  font-size: 23px;
+  font-weight: 950;
+  box-shadow: 0 0 0 6px rgba(18, 187, 175, .12);
+}
+
+.review-complete-banner .current-task-kicker,
+.review-complete-banner h2 { color: var(--eb-accent-700); }
+
+.review-complete-banner .current-task-badge { background: var(--eb-accent-700); }
 
 .sv-continuation-tip {
   display: flex;
@@ -623,6 +661,24 @@
   box-shadow: 0 12px 30px rgba(14, 150, 142, .11);
 }
 
+.sentence-card.review-mode {
+  border-color: rgba(14, 150, 142, .42);
+  background: #fbfffe;
+  box-shadow: 0 8px 22px rgba(14, 150, 142, .08);
+}
+
+.sentence-card.review-mode::before { background: var(--eb-accent-600); }
+
+.sentence-card.review-mode .sentence,
+.sentence-card.review-mode .token {
+  cursor: default;
+}
+
+.sentence-card.review-mode .token {
+  pointer-events: none;
+  opacity: 1;
+}
+
 .sentence-card-head {
   display: flex;
   align-items: center;
@@ -638,6 +694,29 @@
   font-size: 11px;
   font-weight: 850;
 }
+
+.review-status,
+.step-review-badge {
+  display: inline-flex;
+  min-height: 25px;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: #dff7f2;
+  color: var(--eb-accent-700);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.step-card.review-mode {
+  border-color: rgba(14, 150, 142, .35);
+  background: #fff;
+}
+
+.step-card.review-mode .step-number { background: var(--eb-accent-600); }
+
+.step-review-badge { margin-left: auto; }
 
 .selection-guide {
   display: flex;
@@ -988,6 +1067,16 @@
   .current-task p {
     font-size: 12px;
   }
+  .review-complete-banner {
+    grid-template-columns: 37px minmax(0, 1fr);
+    gap: 11px;
+  }
+  .review-complete-icon {
+    width: 37px;
+    height: 37px;
+    font-size: 20px;
+  }
+  .step-review-badge { display: none; }
   .sv-continuation-tip { padding: 9px 10px; }
   .sv-continuation-tip strong,
   .sv-continuation-tip p { font-size: 12px; }
