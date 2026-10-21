@@ -822,10 +822,9 @@
   function jsonpFetch(url, timeoutMs) {
     return ELABAppsScript.read(url,{timeoutMs:timeoutMs||12000}).catch(function(error){console.error('[ELAB grammar read]',{code:error.code||'NETWORK_ERROR',message:error.message||String(error)});return null});
   }
-  var grammarFetchInFlight = {}, grammarFetchCallNo = 0, grammarInitId = uid(12);
+  var grammarFetchInFlight = {};
   function fetchGrammarSetOnce(url, setKey, targetId, reason) {
-    var fetchKey = String(targetId || '') + '|' + String(setKey || ''), callNo = ++grammarFetchCallNo;
-    console.info('[GRAMMAR-FETCH]', {call_no:callNo,timestamp:new Date().toISOString(),setKey:setKey||'',assignment_id:new URLSearchParams(location.search).get('assignment_id')||'',assignment_target_id:targetId||'',reason:reason||'',document_ready_state:document.readyState,init_id:grammarInitId,reused:!!grammarFetchInFlight[fetchKey]});
+    var fetchKey = String(targetId || '') + '|' + String(setKey || '');
     if (grammarFetchInFlight[fetchKey]) return grammarFetchInFlight[fetchKey];
     var request = jsonpFetch(url).finally(function(){delete grammarFetchInFlight[fetchKey]});
     grammarFetchInFlight[fetchKey] = request;
@@ -843,6 +842,16 @@
     catch (error) { return { complete:false, reason:error.code || 'NETWORK_ERROR' }; }
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function confirmGrammarSetSaved(url, setKey) {
+    var delays = [1000, 2000, 3000, 4000, 5000, 5000];
+    for (var i = 0; i < delays.length; i++) {
+      await sleep(delays[i]);
+      var result = await jsonpFetch(url + '?action=fetchGrammarSet&key=' + encodeURIComponent(setKey));
+      if (result && result.found === true) return { status:'FOUND', result:result };
+      if (!result || (Object.prototype.hasOwnProperty.call(result,'error') && result.error)) return { status:'ERROR', result:result };
+    }
+    return { status:'DELAYED' };
+  }
 
   function ghDeliveryCfg() {
     var c = null;
@@ -936,8 +945,16 @@
       document.getElementById('stTitle').textContent = '✅ ' + r.label;
       document.title = 'ELAB · 학생용';
       var questions = r.questions || [];
+      var grammarProgress = r.grammar_progress || { question_items:[], completed:false };
+      var savedFinalByQuestion = {};
+      (grammarProgress.question_items || []).forEach(function (item) { savedFinalByQuestion[String(item.question_id)] = item; });
       if (questions.length === 0) {
         fqBody.innerHTML = '<div class="empty">문제가 없어요.</div>';
+        return;
+      }
+      if (grammarProgress.completed) {
+        fqBody.innerHTML = '<div class="card"><h2>완료한 문법 테스트입니다</h2><div class="help-text">저장된 결과를 확인하는 화면입니다. 답안은 더 이상 수정되지 않습니다.</div>' +
+          (grammarProgress.score !== '' && grammarProgress.score != null ? '<div class="result-count">점수 ' + escapeHtml(grammarProgress.score) + '점</div>' : '') + '</div>';
         return;
       }
 
@@ -960,16 +977,27 @@
       }
 
       function startFinalQuiz(name) {
+        var restoredQueue = [], restoredAttempted = {}, restoredWrong = [], restoredFirstAnswers = {}, restoredElapsed = {}, restoredCorrect = 0;
+        questions.forEach(function (q, i) {
+          var saved = savedFinalByQuestion[String(q.question_id)];
+          var item = { question_id:q.question_id, srcLabel:q.srcLabel, text:q.text, phrase:q.phrase, options:q.options, correctIdx:q.correctIdx, qIdx:i };
+          if (!saved) { restoredQueue.push(item); return; }
+          restoredAttempted[i] = true;
+          restoredFirstAnswers[i] = saved.answer;
+          restoredElapsed[i] = saved.elapsed_ms || 0;
+          if (saved.first_wrong) restoredWrong.push(item);
+          if (saved.is_correct === true) {
+            if (!saved.first_wrong) restoredCorrect++;
+          } else restoredQueue.push(item);
+        });
         fqState = {
           name: name,
-          queue: questions.map(function (q, i) {
-            return { question_id:q.question_id, srcLabel: q.srcLabel, text: q.text, phrase: q.phrase, options: q.options, correctIdx: q.correctIdx, qIdx: i };
-          }),
+          queue: restoredQueue,
           total: questions.length,
-          firstTryCorrect: 0,
-          attempted: {},
-          wrongList: [],
-          startedAt: Date.now(), questionStartedAt:Date.now(), firstAnswers:{}, elapsedByQuestion:{}
+          firstTryCorrect: restoredCorrect,
+          attempted: restoredAttempted,
+          wrongList: restoredWrong,
+          startedAt: Date.now(), questionStartedAt:Date.now(), firstAnswers:restoredFirstAnswers, elapsedByQuestion:restoredElapsed
         };
         renderFinalQuestion();
       }
@@ -1129,6 +1157,10 @@
 
         var optionIds = (r.tag || '').split(',').filter(Boolean);
         var isTheory = r.content_subtype === 'THEORY';
+        var grammarProgress = r.grammar_progress || { question_items:[], completed:false };
+        var grammarReadOnly = grammarProgress.completed === true;
+        var savedGrammarByQuestion = {};
+        (grammarProgress.question_items || []).forEach(function (item) { savedGrammarByQuestion[String(item.question_id)] = item; });
         var chunkDataBySentence = {}; // sIdx -> {words, gaps(correct Set)}
 
         var videoHtml = '';
@@ -1177,9 +1209,26 @@
             '</div>';
         }).join('');
 
-        var theoryCompleteHtml = isTheory && r.attempt_id ? '<div class="card"><button type="button" id="btnTheoryComplete">이론수업 완료</button><span id="theoryCompleteStatus" class="practice-submitted" style="display:none">✅ 완료</span></div>' : '';
+        var theoryCompleteHtml = isTheory && grammarReadOnly ? '<div class="card"><span id="theoryCompleteStatus" class="practice-submitted">✅ 이론수업 완료</span></div>' : (isTheory && r.attempt_id ? '<div class="card"><button type="button" id="btnTheoryComplete">이론수업 완료</button><span id="theoryCompleteStatus" class="practice-submitted" style="display:none">✅ 완료</span></div>' : '');
         stBody.innerHTML = videoHtml + nameHtml +
           '<div class="result-count">' + sentences.length + '개 문장</div>' + sentencesHtml + theoryCompleteHtml;
+
+        stBody.querySelectorAll('[data-mcq-group]').forEach(function (group) {
+          var buttons = Array.from(group.querySelectorAll('button')), questionId = buttons[0] && buttons[0].dataset.questionId, saved = savedGrammarByQuestion[String(questionId || '')];
+          if (!saved) return;
+          buttons.forEach(function (button) {
+            button.disabled = true;
+            if (button.dataset.choice === String(saved.answer)) button.classList.add(saved.is_correct === true ? 'mcq-correct' : 'mcq-wrong');
+            if (button.dataset.choice === button.dataset.correct) button.classList.add('mcq-correct');
+          });
+          group.dataset.submitted = '1';
+        });
+        if (grammarReadOnly) {
+          stBody.querySelectorAll('[data-mcq], .chunk-gap, [data-submit-idx], [data-interp-idx]').forEach(function (control) {
+            if ('disabled' in control) control.disabled = true;
+            control.style.pointerEvents = 'none';
+          });
+        }
 
         function attemptPayload(action) { return {action:action,studentCapability:r.attemptCapability||'',attemptCapability:r.attemptCapability||'',assignment_target_id:studyParams.get('assignment_target_id')||'',student_id:studyParams.get('student_id')||'',attempt_id:r.attempt_id||'',setKey:studyKey}; }
         if (isTheory && document.getElementById('btnTheoryComplete')) document.getElementById('btnTheoryComplete').addEventListener('click', async function(){var button=this,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){button.style.display='none';document.getElementById('theoryCompleteStatus').style.display='inline';}else{button.disabled=false;button.textContent='이론수업 완료';alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
@@ -1843,6 +1892,7 @@
     var areaSelect=document.getElementById('inShareArea'),detailSelect=document.getElementById('inShareDetail');
     if(areaSelect)areaSelect.value=area;if(detailSelect)detailSelect.value=detail;
   }
+  var grammarSharePending = false;
   async function handleShare() {
     var cfg = ghDeliveryCfg();
     var statusEl = document.getElementById('shareStatus');
@@ -1852,45 +1902,56 @@
       return;
     }
     if (lastResults.length === 0) return;
+    if (grammarSharePending) return;
 
-    var selectedIds = getSelectedRuleIds();
-    var tagLabel = selectedIds.map(function (id) { return ruleById[id].label; }).join(' · ');
-    var setKey = uid(12);
-    var videoUrl = (document.getElementById('inShareVideo').value || '').trim();
-    var subtype = document.getElementById('inShareSubtype').value;
-    var area = document.getElementById('inShareArea').value;
-    var detail = document.getElementById('inShareDetail').value;
-    var difficulty = document.getElementById('inShareDifficulty').value;
-    var categoryKeys = [area].concat(detail ? [detail] : []);
-    var sentences = lastResults.map(function (r, sentenceIndex) {
-      var tags={};Object.keys(r.tagsForShare||{}).forEach(function(tagId){var legacyKey='GRAMMAR_'+tagId.replace(/([a-z])([A-Z])/g,'$1_$2').toUpperCase();tags[tagId]=(r.tagsForShare[tagId]||[]).map(function(hit){return Object.assign({},hit,{question_id:crypto.randomUUID?crypto.randomUUID():uid(32),category_keys:categoryKeys.concat([legacyKey]),difficulty:difficulty});});});
-      return { text: r.text, matches: r.hits, tags: tags, source_question_no:r.questionNo||sentenceIndex+1 };
-    });
+    var shareButton = document.getElementById('btnShare');
+    grammarSharePending = true;
+    shareButton.disabled = true;
 
-    statusEl.className = 'status show info';
-    statusEl.textContent = '공유 링크 만드는 중...';
+    try {
+      var selectedIds = getSelectedRuleIds();
+      var tagLabel = selectedIds.map(function (id) { return ruleById[id].label; }).join(' · ');
+      var setKey = uid(12);
+      var videoUrl = (document.getElementById('inShareVideo').value || '').trim();
+      var subtype = document.getElementById('inShareSubtype').value;
+      var area = document.getElementById('inShareArea').value;
+      var detail = document.getElementById('inShareDetail').value;
+      var difficulty = document.getElementById('inShareDifficulty').value;
+      var categoryKeys = [area].concat(detail ? [detail] : []);
+      var sentences = lastResults.map(function (r, sentenceIndex) {
+        var tags={};Object.keys(r.tagsForShare||{}).forEach(function(tagId){var legacyKey='GRAMMAR_'+tagId.replace(/([a-z])([A-Z])/g,'$1_$2').toUpperCase();tags[tagId]=(r.tagsForShare[tagId]||[]).map(function(hit){return Object.assign({},hit,{question_id:crypto.randomUUID?crypto.randomUUID():uid(32),category_keys:categoryKeys.concat([legacyKey]),difficulty:difficulty});});});
+        return { text: r.text, matches: r.hits, tags: tags, source_question_no:r.questionNo||sentenceIndex+1 };
+      });
 
-    await hookPost(cfg.url, {
-      action: 'saveGrammarSet', token: cfg.token,
-      setKey: setKey, tag: selectedIds.join(','), tagLabel: tagLabel, sentences: sentences,
-      videoUrl: videoUrl, category_keys:categoryKeys, difficulty:difficulty
-    });
-    await sleep(1000);
+      statusEl.className = 'status show info';
+      statusEl.textContent = '공유 링크 만드는 중...';
 
-    var check = await jsonpFetch(cfg.url + '?action=fetchGrammarSet&key=' + encodeURIComponent(setKey));
-    if (!check || !check.found) {
-      statusEl.className = 'status show error';
-      statusEl.textContent = '공유 링크 생성 확인에 실패했어요. 다시 시도해주세요.';
-      return;
-    }
+      await hookPost(cfg.url, {
+        action: 'saveGrammarSet', token: cfg.token,
+        setKey: setKey, tag: selectedIds.join(','), tagLabel: tagLabel, sentences: sentences,
+        videoUrl: videoUrl, category_keys:categoryKeys, difficulty:difficulty
+      });
 
-    var link = location.origin + location.pathname + '?study=' + setKey + '&hook=' + encodeURIComponent(cfg.url);
-    statusEl.className = 'status show success';
-    var assignmentUrl = '../teacher/assignments.html?content_type=GRAMMAR&content_ref_id=' + encodeURIComponent(setKey) + '&content_subtype=' + encodeURIComponent(subtype);
-    statusEl.innerHTML = '학생에게 공유할 링크: <br><input type="text" readonly value="' + escapeHtml(link) + '" style="width:100%;margin-top:6px" onclick="this.select()"><br><a href="' + assignmentUrl + '" class="secondary" style="display:inline-block;margin-top:10px;text-decoration:none">학생·그룹 선택하고 배정하기</a>';
-    if (new URLSearchParams(location.search).get('assignment_pick') === '1') {
-      location.href = assignmentUrl;
-      return;
+      var confirmation = await confirmGrammarSetSaved(cfg.url, setKey);
+      if (confirmation.status !== 'FOUND') {
+        statusEl.className = confirmation.status === 'ERROR' ? 'status show error' : 'status show info';
+        statusEl.textContent = confirmation.status === 'ERROR'
+          ? '공유 링크 생성 확인에 실패했어요.'
+          : '공유 저장 확인이 지연되고 있어요. 잠시 후 공유 목록에서 확인해 주세요.';
+        return;
+      }
+
+      var link = location.origin + location.pathname + '?study=' + setKey + '&hook=' + encodeURIComponent(cfg.url);
+      statusEl.className = 'status show success';
+      var assignmentUrl = '../teacher/assignments.html?content_type=GRAMMAR&content_ref_id=' + encodeURIComponent(setKey) + '&content_subtype=' + encodeURIComponent(subtype);
+      statusEl.innerHTML = '학생에게 공유할 링크: <br><input type="text" readonly value="' + escapeHtml(link) + '" style="width:100%;margin-top:6px" onclick="this.select()"><br><a href="' + assignmentUrl + '" class="secondary" style="display:inline-block;margin-top:10px;text-decoration:none">학생·그룹 선택하고 배정하기</a>';
+      if (new URLSearchParams(location.search).get('assignment_pick') === '1') {
+        location.href = assignmentUrl;
+        return;
+      }
+    } finally {
+      grammarSharePending = false;
+      shareButton.disabled = false;
     }
   }
 

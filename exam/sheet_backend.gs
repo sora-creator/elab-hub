@@ -2338,6 +2338,17 @@ function grammarQuestionIdsV1_(sentences) {
   (sentences||[]).forEach(function(sentence){Object.keys(sentence.tags||{}).forEach(function(tag){(sentence.tags[tag]||[]).forEach(function(hit){if(validUuid_(hit.question_id)&&ids.indexOf(String(hit.question_id))===-1)ids.push(String(hit.question_id));});});});
   return ids;
 }
+function grammarProgressForFetchV1_(e) {
+  var targetId=String(e.parameter.assignment_target_id||''),studentId=String(e.parameter.student_id||'');
+  if(!targetId||!studentId)return null;
+  var attempts=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS).getDataRange().getValues(),attempt=null;
+  for(var i=attempts.length-1;i>0;i--)if(String(attempts[i][1])===targetId&&String(attempts[i][2])===studentId&&String(attempts[i][4])==='GRAMMAR'){if(!attempt)attempt=attempts[i];if(String(attempts[i][9])==='IN_PROGRESS'){attempt=attempts[i];break;}}
+  if(!attempt)return null;
+  var rows=getOrCreateSheet_(QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues(),items=[];
+  for(var q=1;q<rows.length;q++)if(String(rows[q][1])===String(attempt[0]))items.push({question_id:rows[q][2],sequence:Number(rows[q][3])||0,answer:parseJsonValue_(rows[q][4],null),is_correct:rows[q][5],elapsed_ms:Number(rows[q][7])||0,attempt_count:Number(rows[q][8])||0,first_wrong:boolValue_(rows[q][9],false)});
+  items.sort(function(a,b){return a.sequence-b.sequence;});
+  return {attempt_id:attempt[0],attempt_status:attempt[9],attempt_no:attempt[10],completed:String(attempt[9])==='COMPLETED',score:attempt[14],question_items:items};
+}
 function handleCompleteGrammarActivityV1_(d) {
   var attempt=requireAttemptScopeV2_(d);
   if(!attempt||String(attempt[4])!=='GRAMMAR'||String(attempt[9])!=='IN_PROGRESS')return textOut_('forbidden');
@@ -3744,7 +3755,9 @@ function handleDeleteGrammarFinalFolder_(d) {
 // 단어테스트(VocabResults)와 같은 형태로 결과만 쌓음 -- 채점 자체는 학생 브라우저에서 이미
 // 끝난 뒤 결과만 보고하는 것(정답은 fetchGrammarFinal 응답에 들어있어 브라우저에서 바로 채점).
 function handleSubmitGrammarFinalResult_(d) {
-  var attempt=attemptForLegacySubmissionV2_(d), resultName=d.name || '';
+  var scoped=!!(d.assignment_target_id||d.student_id||d.attempt_id||d.attemptCapability),attempt=attemptForLegacySubmissionV2_(d), resultName=d.name || '';
+  if(scoped&&!attempt)return textOut_('forbidden');
+  if(attempt&&String(attempt[9])!=='IN_PROGRESS')return textOut_('already completed');
   if(attempt){
     var student=studentV2ById_(attempt[2]);
     if(student&&student[2])resultName=student[2];
@@ -4197,6 +4210,7 @@ function handleFetchGrammarSet_(e) {
     question_count:grammarQuestionIdsV1_(sentences).length
   };
   Object.assign(response,attemptContextForFetchV2_(e));
+  response.grammar_progress=grammarProgressForFetchV1_(e);
   var auth = studentAuthFields_('grammarSet', e.parameter.key, ['submitGrammarPractice'], {}, 0);
   Object.keys(auth).forEach(function (k) { response[k] = auth[k]; });
   return response;
@@ -4292,6 +4306,7 @@ function handleFetchGrammarFinal_(e) {
 
   var response = { found: true, label: row[1], questions: questions };
   Object.assign(response,attemptContextForFetchV2_(e));
+  response.grammar_progress=grammarProgressForFetchV1_(e);
   var auth = studentAuthFields_('grammarFinal', e.parameter.key, ['submitGrammarFinalResult'],
     { nums: normalizeNumsScope_(e.parameter.nums) }, 0);
   Object.keys(auth).forEach(function (k) { response[k] = auth[k]; });
