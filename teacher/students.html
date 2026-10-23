@@ -8,6 +8,7 @@
 <title>ELAB · 교사용</title>
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" />
 <link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
+<script src="../shared/auth-config.js?v=public-runtime-1"></script>
 <script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <script>
@@ -154,7 +155,7 @@
     } catch (e) { return false; }
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
-  var DEFAULT_DELIVERY_URL = 'https://example.invalid/apps-script-endpoint';
+  var DEFAULT_DELIVERY_URL = String(window.ELAB_AUTH_CONFIG && window.ELAB_AUTH_CONFIG.endpoint || '');
 
   function normalizeDeliveryUrl(url) {
     var value = String(url || '').trim().replace(/[?#].*$/, '').replace(/\/+$/, '');

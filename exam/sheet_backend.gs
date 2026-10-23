@@ -983,6 +983,12 @@ function handleListDueVocabReviewsV1_(e){
 // First-import extension. No setup/getOrCreate, legacy commit, or student runtime calls.
 // Pin the approved immutable manifest: client-supplied hashes alone are not trusted.
 function vocabularyFirstImportSpecV1_() {
+  var properties = PropertiesService.getScriptProperties();
+  var spreadsheetId = String(properties.getProperty('VOCABULARY_IMPORT_SPREADSHEET_ID') || '').trim();
+  var targetSheetId = Number(properties.getProperty('VOCABULARY_IMPORT_TARGET_SHEET_ID'));
+  var stagingSheetId = Number(properties.getProperty('VOCABULARY_IMPORT_STAGING_SHEET_ID'));
+  vocabularyFirstImportAssertV1_(spreadsheetId && targetSheetId > 0 && stagingSheetId > 0,
+    'FIRST_IMPORT_CONFIG_MISSING');
   return {
     batch_id: 'vocab-first-3244-4321164ed090220d', request_id: 'vocab-first-3244-4321164ed090220d',
     manifest_sha256: 'PUBLIC_IDENTIFIER_REMOVED',
@@ -991,7 +997,7 @@ function vocabularyFirstImportSpecV1_() {
     expected_unique_sense_ids: 3244, expected_levels: {V1:800,V2:822,V3:818,V4:604,V5:200}, chunk_count: 7,
     rows_hash: 'PUBLIC_IDENTIFIER_REMOVED',
     headers_hash: 'PUBLIC_IDENTIFIER_REMOVED',
-    spreadsheet_id: 'PUBLIC_IDENTIFIER_REMOVED', sheet_id: 286442264,
+    spreadsheet_id: spreadsheetId, sheet_id: targetSheetId, staging_sheet_id: stagingSheetId,
     chunk_hashes: [
       'PUBLIC_IDENTIFIER_REMOVED',
       'PUBLIC_IDENTIFIER_REMOVED',
@@ -1228,7 +1234,7 @@ function PUBLIC_IDENTIFIER_REMOVED(d, ss, imports, record, staging, staged, spec
     imports.values[record.row-1][5] === 3000 && !audit.error_code &&
     audit.chunks.slice(0,6).every(function(h,i) { return h === spec.chunk_hashes[i]; }) && audit.chunks[6] === null,
     code);
-  vocabularyFirstImportAssertV1_(staging.sheet.getSheetId() === 1121844961 && staged.length === 3244 &&
+  vocabularyFirstImportAssertV1_(staging.sheet.getSheetId() === spec.staging_sheet_id && staged.length === 3244 &&
     !staging.formulas.some(function(row) { return row.some(Boolean); }) &&
     staged.every(function(row,i) { return row.source_row === i+2 && row.sheet_row === i+2; }) &&
     staging.values.slice(1).every(function(row) { return !row.some(function(v) { return v !== ''; }) || row[1] === spec.batch_id; }), code);
@@ -1304,7 +1310,7 @@ function vocabularyFirstImportRepairV1_(d, ss, imports, record, staging, staged,
     audit.chunks.slice(4).every(function(h) { return h === null; }), code);
   var rows = staged.map(function(row) { return row.values; }), target = staged[1558], chunk = rows.slice(1500);
   vocabularyFirstImportAssertV1_(target.sheet_row === 1560 && target.values[0] === d.sense_id &&
-    staging.sheet.getSheetId() === 1121844961 && staging.sheet.getRange(1560,5).getMergedRanges().length === 0, code);
+    staging.sheet.getSheetId() === spec.staging_sheet_id && staging.sheet.getRange(1560,5).getMergedRanges().length === 0, code);
   [0,1,2].forEach(function(i) { vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows.slice(i*500,(i+1)*500)) === spec.chunk_hashes[i], code); });
   var value = target.values[2], already = value === 'false';
   vocabularyFirstImportAssertV1_(value === false || already, code);
@@ -2664,14 +2670,16 @@ function setupAssignment0DTestData() {
   setupAssignmentsV2_(); var props=PropertiesService.getScriptProperties(), teacherId=getOrCreateDefaultTeacher_(), names=['김테스트1','김테스트2','박테스트'], pins=['9001','9002','9003'], ids=[];
   for(var i=0;i<names.length;i++){var saved=handleSaveStudent_({name:names[i],pin:pins[i],grade:'고1',active:true,request_id:'0D-TEST-STUDENT-'+(i+1)}).getContent();ids.push(saved.indexOf('ok:')===0?saved.split(':')[1]:props.getProperty('ASSIGNMENT_0D_TEST_STUDENT_'+i)||'');props.setProperty('ASSIGNMENT_0D_TEST_STUDENT_'+i,ids[i]);}
   var groupId=props.getProperty('ASSIGNMENT_0D_TEST_GROUP')||Utilities.getUuid();props.setProperty('ASSIGNMENT_0D_TEST_GROUP',groupId);handleSaveGroupV2_({group_id:groupId,name:'고1 테스트반',active:true});handleSetGroupMembersV2_({group_id:groupId,student_ids:ids});
-  if(props.getProperty('ASSIGNMENT_0D_TEST_ASSIGNED')!=='true'){var link='http://127.0.0.1:8765/exam/index.html?session=DEV-0C-SMOKE&hook=https%3A%2F%2Fexample.invalid%2Fapps-script-endpoint';handleCreateAssignmentV2_({group_ids:[groupId],content_type:'READING',content_ref_id:'DEV-0C-SMOKE',title:'[DEV TEST] 오늘 마감 독해',content_link:link,due_at:new Date(Date.now()+3600000).toISOString()});handleCreateAssignmentV2_({student_ids:[ids[0]],content_type:'READING',content_ref_id:'DEV-0C-SMOKE',title:'[DEV TEST] 기한초과 독해',content_link:link,due_at:new Date(Date.now()-3600000).toISOString()});props.setProperty('ASSIGNMENT_0D_TEST_ASSIGNED','true');}
+if(props.getProperty('ASSIGNMENT_0D_TEST_ASSIGNED')!=='true'){var link='http://127.0.0.1:8765/exam/index.html?session=DEV-0C-SMOKE&hook='+encodeURIComponent(ScriptApp.getService().getUrl());handleCreateAssignmentV2_({group_ids:[groupId],content_type:'READING',content_ref_id:'DEV-0C-SMOKE',title:'[DEV TEST] 오늘 마감 독해',content_link:link,due_at:new Date(Date.now()+3600000).toISOString()});handleCreateAssignmentV2_({student_ids:[ids[0]],content_type:'READING',content_ref_id:'DEV-0C-SMOKE',title:'[DEV TEST] 기한초과 독해',content_link:link,due_at:new Date(Date.now()-3600000).toISOString()});props.setProperty('ASSIGNMENT_0D_TEST_ASSIGNED','true');}
   var result={ok:ids.every(Boolean),students:names.map(function(n,j){return{name:n,pin:pins[j],student_id:ids[j]};}),group_id:groupId};console.log(JSON.stringify(result));return result;
 }
 
 function setupAssignment0DFinishTestData() {
   setup();var now=new Date(),teacherId=getOrCreateDefaultTeacher_();
   var vocabId='00000000-0000-4000-8000-0000000000df';
-  upsertRow_(getOrCreateSheet_(VOCAB_SETS_V2_SHEET,VOCAB_SETS_V2_HEADERS),vocabId,[vocabId,teacherId,'DEV0DFVOCAB1','[DEV TEST] 수능기본 Day 12','수능기본/Day 12','http://127.0.0.1:8765/vocab/index.html?session=DEV0DFVOCAB1&d=PUBLIC_IDENTIFIER_REMOVED',true,now,now]);
+  var vocabTestPayload={v:1,s:'DEV0DFVOCAB1',n:'[DEV TEST] 수능기본 Day 12',sn:'',mode:'mc',sec:1,goal:0,exp:0,dm:'hook',dv:ScriptApp.getService().getUrl(),rng:'수능기본 › Day 12',cnt:'4개(전체)',w:[{e:'learn',k:'배우다'},{e:'study',k:'공부하다'},{e:'read',k:'읽다'},{e:'write',k:'쓰다'}],g:'1l2lu6w'};
+  var vocabTestLink='http://127.0.0.1:8765/vocab/index.html?session=DEV0DFVOCAB1&d='+base64UrlEncode_(JSON.stringify(vocabTestPayload));
+  upsertRow_(getOrCreateSheet_(VOCAB_SETS_V2_SHEET,VOCAB_SETS_V2_HEADERS),vocabId,[vocabId,teacherId,'DEV0DFVOCAB1','[DEV TEST] 수능기본 Day 12','수능기본/Day 12',vocabTestLink,true,now,now]);
   upsertRow_(getOrCreateSheet_(GRAMMAR_SHEET,GRAMMAR_HEADERS),'DEV-0DF-GRAMMAR',['DEV-0DF-GRAMMAR','relative_clause','[DEV TEST] 관계사절 연습',JSON.stringify([{text:'The book that I borrowed was interesting.',tags:{},matches:[]}]),now,'']);
   upsertRow_(getOrCreateSheet_(GRAMMAR_FINALS_SHEET,GRAMMAR_FINALS_HEADERS),'DEV-0DF-GRAMMAR-FINAL',['DEV-0DF-GRAMMAR-FINAL','[DEV TEST] 문법 최종 문제',JSON.stringify([{srcLabel:'개발 테스트 1번',text:'The book that I borrowed was interesting.',phrase:'that I borrowed',options:['관계사절','부사절','명사절','분사구문'],correctIdx:0}]),now,'']);
   upsertRow_(getOrCreateSheet_(SENTENCE_SETS_SHEET,SENTENCE_SETS_HEADERS),'DEV-0DF-SENTENCE',['DEV-0DF-SENTENCE','[DEV TEST] 문장구조 연습',JSON.stringify([{id:'dev-sentence-1',text:'Consistent practice helps students improve their English.'}]),now]);
@@ -2687,7 +2695,7 @@ function setupPhase0ETestData() {
   handleSaveGrammarFinal_({setKey:'DEV-0E-GRAMMAR',label:'[0E] 문법 객관식',questions:[{question_id:'00000000-0000-4000-8000-0000000000e3',srcLabel:'0E 1번',text:'The book that I borrowed was useful.',phrase:'that I borrowed',options:['관계사절','부사절','분사구문','명사절'],correctIdx:0,category_keys:['GRAMMAR_RELATIVE_CLAUSE']},{question_id:'00000000-0000-4000-8000-0000000000e4',srcLabel:'0E 2번',text:'The window was broken by Tom.',phrase:'was broken',options:['능동태','수동태','가정법','도치'],correctIdx:1,category_keys:['GRAMMAR_PASSIVE_VOICE']}]});
   handleSaveSentenceSet_({setKey:'DEV-0E-SENTENCE',label:'[0E] 주어·본동사',passages:[{question_id:'00000000-0000-4000-8000-0000000000e5',id:'0e-sentence-1',num:1,text:'Consistent practice helps students improve.',correct_sv:['subj','subj','verb',null,null]}]});
   handleSavePractice_({practiceKey:'DEV-0E-PRACTICE',title:'[0E] 실전 모의고사',range:'1~2번',pageImageKeys:[],answers:[1,2],questionNums:[1,2],questions:[{question_id:'00000000-0000-4000-8000-0000000000e6',text:'0E practice question 1',choices:['1','2','3','4','5'],answer:1,source_question_no:1},{question_id:'00000000-0000-4000-8000-0000000000e7',text:'0E practice question 2',choices:['1','2','3','4','5'],answer:2,source_question_no:2}]});
-  if(props.getProperty('PHASE_0E_ASSIGNMENTS_CREATED')!=='true'){var base='http://127.0.0.1:8765/',hook='https://example.invalid/apps-script-endpoint',vocabId='00000000-0000-4000-8000-0000000000df',vocab=findVocabSetV2_(vocabId);[
+  if(props.getProperty('PHASE_0E_ASSIGNMENTS_CREATED')!=='true'){var base='http://127.0.0.1:8765/',hook=ScriptApp.getService().getUrl(),vocabId='00000000-0000-4000-8000-0000000000df',vocab=findVocabSetV2_(vocabId);[
     ['VOCAB','',vocabId,'[0E] 단어 반복시험',vocab&&vocab[5]],['READING','','DEV-0E-READING','[0E] 독해',base+'exam/index.html?session=DEV-0E-READING&hook='+encodeURIComponent(hook)],['GRAMMAR','FINAL_QUIZ','DEV-0E-GRAMMAR','[0E] 문법',base+'grammar/index.html?finalQuiz=DEV-0E-GRAMMAR&hook='+encodeURIComponent(hook)],['SENTENCE_STRUCTURE','','DEV-0E-SENTENCE','[0E] 문장구조',base+'exam/index.html?study=DEV-0E-SENTENCE&hook='+encodeURIComponent(hook)],['PRACTICE_EXAM','','DEV-0E-PRACTICE','[0E] 실전 모의고사',base+'practice/index.html?session=DEV-0E-PRACTICE&hook='+encodeURIComponent(hook)]
   ].forEach(function(x){handleCreateAssignmentV2_({student_ids:[studentId],content_type:x[0],content_subtype:x[1],content_ref_id:x[2],title:x[3],content_link:x[4]});});props.setProperty('PHASE_0E_ASSIGNMENTS_CREATED','true');}
   var assignments=handleListMyAssignmentsV2_({parameter:{student_id:studentId,assignmentCapability:studentAssignmentLoginFields_(studentId).assignmentCapability}}).assignments.filter(function(a){return String(a.title).indexOf('[0E]')===0;});var result={ok:assignments.length===5,student_id:studentId,name:name,pin:pin,assignments:assignments.map(function(a){return{content_type:a.content_type,assignment_id:a.assignment_id,assignment_target_id:a.assignment_target_id,content_ref_id:a.content_ref_id};})};console.log(JSON.stringify(result));return result;

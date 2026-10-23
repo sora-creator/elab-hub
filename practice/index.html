@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="../shared/theme.css?v=elab-restored-1" />
 <script src="../shared/nav.js?v=assignment-flow-20260830-4"></script>
 <script src="../shared/pdfLibrary.js?v=preserve-reviewed-upload-16"></script>
+<script src="../shared/auth-config.js?v=public-runtime-1"></script>
 <script src="../shared/appsScriptTransport.js?v=p0-transport-1"></script>
 <script src="../exam/js/questionTypes.js?v=reading-v1"></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -155,7 +156,7 @@ function viewerControls(prefix){return{zoomOut:document.getElementById(prefix+'-
    키(mockexam.delivery)를 그대로 씀(같은 origin이라 자동 공유, 한 번만 설정하면 됨).
    만든 실전연습 목록은 exam의 myExams()와 같은 패턴, 별도 키(mockexam.myPractice).
 ===================================================================== */
-const DEFAULT_DELIVERY_URL='https://example.invalid/apps-script-endpoint';
+const DEFAULT_DELIVERY_URL=String(window.ELAB_AUTH_CONFIG&&window.ELAB_AUTH_CONFIG.endpoint||'');
 function deliveryCfg(){
   let c=null;
   try{ c=JSON.parse(localStorage.getItem('mockexam.delivery')||'null'); }catch(e){}

@@ -4,12 +4,17 @@ const fs = require('fs'), path = require('path'), vm = require('vm'), crypto = r
 const backend = fs.readFileSync(path.resolve(__dirname, '../../sheet_backend.gs'), 'utf8');
 function createFirstImportMock(snapshot) {
   const sheets = {}, writes = [], logs = [], operations = [], hooks = {};
-  const properties = { TOKEN: 'local-test-token' }, propertyWrites = [];
+  const properties = {
+    TOKEN: 'local-test-token',
+    VOCABULARY_IMPORT_SPREADSHEET_ID: 'test-spreadsheet-id',
+    VOCABULARY_IMPORT_TARGET_SHEET_ID: '1001',
+    VOCABULARY_IMPORT_STAGING_SHEET_ID: '1002'
+  }, propertyWrites = [];
   const track = (method, sheet, extra = {}) => operations.push({ method, sheet, ...extra });
   let locked = false;
   const textSheets = ['VocabularyImportStagingV2', 'VocabularyDB', 'WordsV2', 'VocabSetsV2', 'VocabSetItemsV2'];
   class Sheet {
-    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.formats = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? 1121844961 : 286442264; this.merged = []; }
+    constructor(name, headers) { this.name = name; this.rows = [Array.from(headers)]; this.formulas = {}; this.formats = {}; this.maxRows = 50000; this.maxColumns = headers.length; this.gid = name === 'VocabularyImportStagingV2' ? Number(properties.VOCABULARY_IMPORT_STAGING_SHEET_ID) : Number(properties.VOCABULARY_IMPORT_TARGET_SHEET_ID); this.merged = []; }
     getName() { return this.name; }
     getSheetId() { track('getSheetId', this.name); return this.gid; }
     appendRow(row) { this.getRange(this.getLastRow()+1,1,1,row.length).setValues([row]); }
@@ -116,7 +121,7 @@ function createFirstImportMock(snapshot) {
       };
     }
   }
-  const ss = { getId: () => 'PUBLIC_IDENTIFIER_REMOVED', getSheetByName: name => sheets[name] || null };
+  const ss = { getId: () => properties.VOCABULARY_IMPORT_SPREADSHEET_ID, getSheetByName: name => sheets[name] || null };
   const ctx = {
     Date, console: { log: (...args) => logs.push(args) },
     PropertiesService: { getScriptProperties: () => ({
