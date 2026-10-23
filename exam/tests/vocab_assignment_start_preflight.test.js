@@ -2,7 +2,7 @@
 const assert=require('assert'),fs=require('fs'),{execFileSync}=require('child_process');
 const {createFirstImportMock}=require('./helpers/vocabulary-first-import-mock.cjs');
 const ids={student_id:'e0bbe9e5-1778-49c3-8301-287f2527a4bf',assignment_id:'f01a4005-ed32-4f0b-9ba1-243892fee8ac',set_id:'3e275abc-0185-4628-befe-a8b5a6eda038'};
-const sense='SEN_F569181B855E',action='PUBLIC_IDENTIFIER_REMOVED';
+const sense='SEN_F569181B855E',action='inspectVocabularyAssignmentStartPreflightV1';
 const tables={StudentsV2:'STUDENTS_V2_HEADERS',AssignmentsV2:'ASSIGNMENTS_V2_HEADERS',AssignmentTargetsV2:'ASSIGNMENT_TARGETS_V2_HEADERS',AttemptsV2:'ATTEMPTS_V2_HEADERS',VocabSetsV2:'VOCAB_SETS_V2_HEADERS',VocabSetItemsV2:'VOCAB_SET_ITEMS_V2_HEADERS',WordsV2:'WORDS_V2_HEADERS',WordAttemptItemsV2:'WORD_ATTEMPT_ITEMS_V2_HEADERS',ReviewItemsV2:'REVIEW_ITEMS_V2_HEADERS',ReviewEventsV2:'REVIEW_EVENTS_V2_HEADERS',HomeworkBatchesV2:'HOMEWORK_BATCHES_V2_HEADERS',HomeworkBatchAssignmentsV2:'HOMEWORK_BATCH_ASSIGNMENTS_V2_HEADERS'};
 function make(){
   const e=createFirstImportMock();
@@ -81,7 +81,7 @@ for(const field of Object.keys(ids))test('invalid '+field+' reads no sheets',()=
 test('500 items all validated, bounded output and field lengths',()=>{const e=make(),template=row(e,'VocabSetItemsV2');e.sheets.VocabSetItemsV2.rows=[e.sheets.VocabSetItemsV2.rows[0],...Array.from({length:500},(_,i)=>{const r=[...template];r[0]='item'+i;r[3]=i+1;r[6]='x'.repeat(2000);return r;})];const out=inspect(e);assert(out.eligible&&out.items_truncated);assert.equal(out.valid_item_count,500);assert.equal(out.items.length,20);assert(out.items.every(i=>i.truncated&&i.word.length===512));assert(Buffer.byteLength(JSON.stringify(out))<25000);e.sheets.VocabSetItemsV2.rows[500][8]='V6';assert(!inspect(e).eligible);});
 test('diagnostic, fetch and start implementations remain unchanged from committed baseline',()=>{
   const old=execFileSync('git',['show','HEAD:exam/sheet_backend.gs'],{encoding:'utf8'}).replace(/\r\n/g,'\n'),now=fs.readFileSync('exam/sheet_backend.gs','utf8').replace(/\r\n/g,'\n');
-  for(const name of ['PUBLIC_IDENTIFIER_REMOVED','handleFetchVocabularySetV1_','handleStartAttemptV2_']){
+  for(const name of ['handleInspectVocabularyAssignmentStartPreflightV1_','handleFetchVocabularySetV1_','handleStartAttemptV2_']){
     const section=s=>{const start=s.indexOf('function '+name+'(');assert(start>=0,name);const end=s.indexOf('\nfunction ',start+1);return s.slice(start,end<0?s.length:end);};
     assert.equal(section(now),section(old),name);
   }

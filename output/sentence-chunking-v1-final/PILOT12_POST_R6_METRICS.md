@@ -1,6 +1,6 @@
 # Pilot12 Post-R6 Metrics
 
-Source: final reviewed 12-record snapshot with dataset fingerprint `PUBLIC_IDENTIFIER_REMOVED`.
+Source: final reviewed 12-record snapshot with dataset fingerprint `a07cb5bfc526b707e21f15033300256c085e03aef2b9dc9aa9780198369d1d7b`.
 
 ## Overall
 

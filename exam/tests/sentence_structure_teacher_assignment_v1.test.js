@@ -26,12 +26,12 @@ sheets.SentenceSets.appendRow(['set-old','Original',JSON.stringify([{sentence_id
 sheets.SentenceSets.appendRow(['set-new','Revised',JSON.stringify([{sentence_id:'two',text:'They study.',structure_level:'S1',subjects:[{primary:[0]}],verbs:[{indexes:[1]}]}]),now]);
 sheets.AssignmentsV2.appendRow([assignment,teacher,'SENTENCE_STRUCTURE','set-old','Original','https://example.test/sentence-structure/index.html?set_key=set-old&hint_level=BASIC&reading_support=beginner',now,'',true,now,now,'','']);
 sheets.AssignmentTargetsV2.appendRow([target,assignment,'student-1','NOT_STARTED','','',true,now,now]);
-let inspected=context.PUBLIC_IDENTIFIER_REMOVED({parameter:{token:'teacher',assignment_id:assignment}});
+let inspected=context.handleGetSentenceStructureAssignmentEditV1_({parameter:{token:'teacher',assignment_id:assignment}});
 assert.strictEqual(inspected.can_edit_content,true);assert.strictEqual(inspected.sentence_count,1);
-let result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,title:'Revised title',content_ref_id:'set-new',content_link:'https://example.test/sentence-structure/index.html?set_key=set-new&hint_level=DETAILED&reading_support=advanced'});
+let result=context.handleUpdateSentenceStructureAssignmentV1_({assignment_id:assignment,title:'Revised title',content_ref_id:'set-new',content_link:'https://example.test/sentence-structure/index.html?set_key=set-new&hint_level=DETAILED&reading_support=advanced'});
 assert.strictEqual(result.body,'ok');assert.strictEqual(context.assignmentByIdV2_(assignment)[3],'set-new');
 sheets.AttemptsV2.appendRow(['attempt-1',target,'student-1',teacher,'SENTENCE_STRUCTURE','',now,'',0,'IN_PROGRESS',1,'',now,now,'',0]);
-inspected=context.PUBLIC_IDENTIFIER_REMOVED({parameter:{token:'teacher',assignment_id:assignment}});assert.strictEqual(inspected.can_edit_content,false);
-result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,title:'Allowed title',due_at:'2026-12-31'});assert.strictEqual(result.body,'ok');
-result=context.PUBLIC_IDENTIFIER_REMOVED({assignment_id:assignment,content_ref_id:'set-old',content_link:'https://example.test/sentence-structure/index.html?set_key=set-old'});assert.strictEqual(result.body,'assignment started');assert.strictEqual(context.assignmentByIdV2_(assignment)[3],'set-new');
-console.log('PUBLIC_IDENTIFIER_REMOVED.test.js: all assertions passed');
+inspected=context.handleGetSentenceStructureAssignmentEditV1_({parameter:{token:'teacher',assignment_id:assignment}});assert.strictEqual(inspected.can_edit_content,false);
+result=context.handleUpdateSentenceStructureAssignmentV1_({assignment_id:assignment,title:'Allowed title',due_at:'2026-12-31'});assert.strictEqual(result.body,'ok');
+result=context.handleUpdateSentenceStructureAssignmentV1_({assignment_id:assignment,content_ref_id:'set-old',content_link:'https://example.test/sentence-structure/index.html?set_key=set-old'});assert.strictEqual(result.body,'assignment started');assert.strictEqual(context.assignmentByIdV2_(assignment)[3],'set-new');
+console.log('sentence_structure_teacher_assignment_v1.test.js: all assertions passed');

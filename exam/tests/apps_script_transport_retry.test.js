@@ -11,7 +11,7 @@ function harness(fetchImpl,traceImpl){
   function read(url,options){return context.window.ELABAppsScript.read(url,Object.assign({onTrace:(event,detail)=>{traces.push({event,detail});if(traceImpl)traceImpl(event,detail)}},options))}
   return{calls,traces,timers,read,api:context.window.ELABAppsScript};
 }
-const url=action=>'https://example.invalid/apps-script-endpoint?action='+action;
+const url=action=>'https://script.google.com/macros/s/test/exec?action='+action;
 function decision(h,rawErrorClass){
   const failed=h.traces.find(x=>x.event==='FETCH_FAILED'),retry=h.traces.find(x=>x.event==='FETCH_RETRY');
   return{rawErrorClass,timeoutTriggered:!!(failed&&failed.detail.timed_out),abortSignalState:!!(h.calls[0]&&h.calls[0].options.signal&&h.calls[0].options.signal.aborted),normalizedErrorType:failed&&failed.detail.code,retryEligible:!!retry,retryDecision:retry?'RETRY':'FINAL',retryDecisionReason:retry?'RETRYABLE_ERROR':'NON_RETRYABLE_OR_LIMIT'};

@@ -3,10 +3,10 @@
 ## Audit basis
 
 - Dataset: `final-holdout8`
-- Fingerprint: `PUBLIC_IDENTIFIER_REMOVED`
-- Export: `PUBLIC_IDENTIFIER_REMOVED.json`
+- Fingerprint: `ea125d88dffa1c8371780f71d12c382cd10a3856c6bcd6c82444c1f9b0f5bedf`
+- Export: `sentence-structure-final-holdout8-20260922-0225.json`
 - Exported at: `2026-09-21T17:25:02.010Z`
-- Export SHA-256: `PUBLIC_IDENTIFIER_REMOVED`
+- Export SHA-256: `B2B1D2B9978202EB251F03A48E1A148AC299F334DD2C568355AE04EFCDE51696`
 - Record order: `58378, 60837, 23009, 2590, 24339, 23568, 24238, 26675`
 - Status: **8/8 GOLD_READY**
 

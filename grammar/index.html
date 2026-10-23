@@ -408,14 +408,14 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  // PUBLIC_IDENTIFIER_REMOVED verbs
+  // ---------------------------------------------------------------- verbs
   const BASE_VERBS = new Set(["accept", "accomplish", "achieve", "acknowledge", "acquire", "adapt", "add", "adjust", "admire", "admit", "adopt", "advance", "advertise", "advise", "affect", "afford", "agree", "aim", "alert", "allow", "analyze", "announce", "annoy", "answer", "anticipate", "apologize", "appeal", "appear", "apply", "appoint", "approach", "approve", "argue", "arrange", "arrest", "arrive", "ask", "assemble", "assess", "assign", "assist", "assume", "assure", "attach", "attack", "attempt", "attend", "attract", "avoid", "award", "balance", "ban", "base", "battle", "be", "beat", "become", "begin", "behave", "believe", "belong", "bend", "bet", "bind", "bite", "blame", "bless", "block", "blow", "boil", "book", "boost", "bother", "bounce", "bow", "branch", "break", "breathe", "breed", "bring", "brush", "build", "bump", "burn", "burst", "bury", "buy", "calculate", "call", "campaign", "capture", "care", "carry", "carve", "catch", "cause", "celebrate", "challenge", "change", "charge", "chase", "chat", "cheat", "check", "cheer", "chew", "choke", "choose", "chop", "claim", "clap", "classify", "clean", "clear", "climb", "clip", "close", "coach", "collapse", "collect", "combine", "come", "command", "commit", "communicate", "compare", "compete", "complain", "complete", "compose", "comprise", "conclude", "conduct", "confess", "confirm", "connect", "conserve", "consider", "construct", "consult", "consume", "contact", "contain", "continue", "contribute", "convert", "convince", "cook", "cool", "cope", "copy", "correct", "correspond", "count", "cover", "crash", "create", "creep", "crush", "cry", "cure", "curve", "cut", "cycle", "damage", "dance", "date", "deal", "decide", "declare", "decorate", "defeat", "defend", "define", "delay", "delete", "deliver", "demand", "demonstrate", "deny", "depend", "deposit", "derive", "descend", "describe", "design", "desire", "despise", "destroy", "detect", "deteriorate", "determine", "develop", "devote", "die", "dig", "disappear", "discover", "discuss", "dislike", "display", "dispose", "dissolve", "distinguish", "distribute", "disturb", "dive", "divide", "do", "dominate", "donate", "doubt", "download", "drag", "drain", "draw", "dream", "dress", "drink", "drive", "drop", "dry", "earn", "ease", "eat", "edit", "educate", "elect", "eliminate", "embarrass", "embrace", "emerge", "emphasize", "employ", "empty", "enable", "encounter", "encourage", "endure", "enforce", "engage", "enhance", "enjoy", "enroll", "ensure", "enter", "entertain", "envy", "equip", "escape", "establish", "estimate", "evaluate", "examine", "exceed", "exchange", "exclude", "excuse", "execute", "exercise", "exhaust", "exhibit", "exist", "expand", "expect", "experience", "experiment", "explain", "explode", "explore", "export", "expose", "express", "extend", "extract", "face", "facilitate", "fade", "fail", "fall", "fasten", "fear", "feature", "feel", "fetch", "fight", "file", "fill", "film", "find", "finish", "fit", "fix", "flee", "float", "flood", "flow", "fly", "focus", "fold", "follow", "forbid", "force", "forecast", "foresee", "forgive", "form", "format", "found", "frame", "free", "freeze", "frighten", "fry", "fulfill", "fund", "gain", "gather", "generate", "get", "give", "glance", "glow", "go", "govern", "grab", "grant", "grasp", "greet", "grip", "grow", "guarantee", "guard", "guess", "guide", "handle", "hang", "happen", "harm", "harvest", "hate", "haunt", "have", "heal", "hear", "heat", "help", "hesitate", "hide", "hike", "hire", "hit", "hold", "honor", "hop", "hope", "hunt", "hurry", "hurt", "identify", "ignore", "illustrate", "imagine", "implement", "imply", "import", "impose", "impress", "improve", "include", "incorporate", "increase", "indicate", "influence", "inform", "inhabit", "inherit", "initiate", "injure", "inspect", "inspire", "install", "instruct", "insult", "insure", "integrate", "intend", "interact", "interfere", "interpret", "interrupt", "introduce", "invade", "invent", "invest", "investigate", "invite", "involve", "isolate", "issue", "join", "jump", "justify", "keep", "kill", "knit", "knock", "know", "label", "lack", "land", "last", "laugh", "launch", "lay", "lead", "lean", "leap", "learn", "leave", "lend", "let", "license", "lift", "light", "like", "limit", "link", "list", "listen", "live", "load", "lock", "log", "look", "loosen", "lose", "love", "lower", "maintain", "make", "manage", "manufacture", "march", "mark", "market", "marry", "match", "matter", "maximize", "mean", "measure", "meet", "melt", "mention", "merge", "migrate", "milk", "mind", "minimize", "mislead", "miss", "mix", "mold", "monitor", "mount", "move", "multiply", "murder", "name", "navigate", "need", "negotiate", "nod", "normalize", "notice", "notify", "nourish", "obey", "object", "observe", "obtain", "occupy", "occur", "offend", "offer", "omit", "open", "operate", "oppose", "order", "organize", "overcome", "overlap", "overlook", "overtake", "owe", "own", "pack", "paint", "park", "participate", "pass", "paste", "patrol", "pause", "pay", "peel", "penetrate", "perceive", "perform", "permit", "persist", "persuade", "phone", "pick", "picture", "pierce", "pile", "pin", "pinch", "pioneer", "pitch", "place", "plan", "plant", "play", "plead", "please", "plug", "plunge", "point", "poison", "poke", "polish", "pop", "pose", "position", "possess", "post", "postpone", "pound", "pour", "practice", "praise", "pray", "preach", "precede", "predict", "prefer", "prepare", "press", "pretend", "prevail", "prevent", "price", "print", "proceed", "process", "proclaim", "produce", "program", "progress", "prohibit", "project", "promise", "promote", "pronounce", "propose", "protect", "protest", "prove", "provide", "provoke", "publish", "pull", "pump", "punch", "punish", "purchase", "pursue", "push", "put", "qualify", "quit", "quote", "race", "radiate", "raise", "range", "rank", "rate", "reach", "react", "read", "realize", "rearrange", "reassure", "rebuild", "recall", "receive", "recognize", "recover", "recruit", "recycle", "redesign", "reduce", "refer", "reflect", "reform", "refresh", "refuse", "regard", "register", "regret", "regulate", "reinforce", "reject", "relate", "relax", "release", "relieve", "rely", "remain", "remark", "remember", "remind", "remove", "render", "renew", "rent", "repair", "repeat", "replace", "reply", "report", "represent", "reproduce", "request", "require", "rescue", "research", "resemble", "resent", "reserve", "reset", "reside", "resign", "resist", "resolve", "resort", "respect", "respond", "restore", "restrict", "resume", "retain", "retire", "retreat", "return", "reveal", "reverse", "review", "revise", "revive", "reward", "rid", "ride", "ring", "rise", "risk", "roast", "rob", "roll", "rot", "rotate", "rub", "ruin", "rule", "run", "rush", "sacrifice", "sail", "satisfy", "save", "say", "scan", "scare", "scatter", "schedule", "scold", "scrape", "scratch", "scream", "screen", "screw", "scrub", "seal", "search", "season", "seat", "secure", "see", "seek", "seem", "seize", "select", "sell", "send", "sense", "separate", "sequence", "serve", "set", "settle", "sew", "shake", "shape", "share", "shed", "shelter", "shift", "shine", "ship", "shock", "shoot", "shorten", "shout", "shove", "show", "shrink", "shrug", "sigh", "sign", "signal", "signify", "simplify", "sing", "sink", "sip", "sit", "site", "situate", "ski", "skip", "slam", "slap", "slice", "slide", "slip", "slow", "smell", "smile", "smoke", "smooth", "snap", "sneak", "sniff", "soak", "soar", "sob", "soften", "solve", "sort", "sound", "spare", "spark", "sparkle", "speak", "specialize", "specify", "speculate", "spell", "spend", "spill", "spin", "spit", "split", "spoil", "spot", "spray", "sprinkle", "spy", "squeeze", "stab", "stack", "stain", "stamp", "stand", "stare", "start", "starve", "state", "stay", "steal", "steer", "stick", "stimulate", "sting", "stir", "stitch", "stock", "stop", "store", "strain", "strap", "strengthen", "stress", "stretch", "strike", "strip", "strive", "stroke", "stroll", "structure", "struggle", "study", "stuff", "stumble", "subdue", "submit", "subscribe", "substitute", "succeed", "suck", "suffer", "suggest", "suit", "sum", "summarize", "summon", "supervise", "supply", "support", "suppose", "suppress", "surf", "surface", "surpass", "surprise", "surrender", "surround", "survey", "survive", "suspect", "suspend", "swallow", "swear", "sweat", "sweep", "swell", "swing", "switch", "symbolize", "sympathize", "synthesize", "tackle", "tag", "take", "talk", "tap", "target", "taste", "teach", "tear", "tease", "telephone", "tell", "temper", "tempt", "tend", "terrify", "test", "testify", "text", "thank", "thaw", "thicken", "thin", "think", "thread", "threaten", "thrill", "thrive", "thrust", "tidy", "tie", "tighten", "tilt", "time", "tip", "tire", "toast", "tolerate", "torture", "toss", "touch", "trace", "track", "trade", "trail", "train", "transfer", "transform", "transmit", "transport", "trap", "travel", "treasure", "treat", "tremble", "trick", "trigger", "trim", "trip", "triumph", "trouble", "trust", "try", "tuck", "tug", "tumble", "tune", "turn", "twist", "type", "undergo", "undermine", "understand", "undertake", "unify", "unite", "unlock", "unpack", "update", "upgrade", "uphold", "upset", "urge", "use", "utilize", "vacate", "value", "vanish", "vary", "venture", "verify", "vibrate", "view", "violate", "visit", "visualize", "voice", "volunteer", "vomit", "vote", "wait", "wake", "walk", "wander", "want", "warm", "warn", "wash", "waste", "watch", "wave", "weaken", "wear", "weave", "weep", "weigh", "welcome", "whisper", "whistle", "widen", "win", "wind", "wipe", "wish", "withdraw", "wither", "withstand", "witness", "wonder", "work", "worry", "wrap", "wreck", "wrestle", "wring", "write", "yell", "yield", "zoom"]);
 
   const IRREGULAR_PAST_PARTICIPLES = new Set(["beaten", "been", "begun", "bent", "bet", "bitten", "bled", "blown", "born", "borne", "bought", "broken", "brought", "built", "burnt", "caught", "chosen", "clung", "come", "cost", "crept", "cut", "dealt", "done", "drawn", "dreamt", "driven", "drunk", "dug", "eaten", "fallen", "fed", "felt", "flown", "forbidden", "forgiven", "forgone", "forgotten", "forsaken", "fought", "found", "frozen", "given", "gone", "gotten", "grown", "had", "heard", "held", "hidden", "hit", "hung", "hurt", "kept", "knelt", "knit", "known", "laid", "leapt", "learnt", "led", "left", "lent", "let", "lit", "lost", "made", "meant", "met", "mistaken", "mown", "overcome", "paid", "proven", "put", "quit", "read", "rid", "ridden", "risen", "run", "rung", "said", "sat", "seen", "sent", "set", "sewn", "shaken", "shed", "shod", "shone", "shot", "shown", "shrunk", "shut", "slain", "slept", "slid", "smelt", "sold", "sought", "sown", "spent", "spilt", "spit", "split", "spoken", "spread", "sprung", "stolen", "stood", "stridden", "striven", "struck", "strung", "stuck", "stung", "stunk", "sung", "sunk", "swept", "swollen", "sworn", "swum", "swung", "taken", "taught", "thought", "thrown", "thrust", "told", "torn", "trodden", "understood", "undertaken", "upheld", "upset", "withdrawn", "withheld", "withstood", "woken", "won", "worn", "wound", "woven", "written", "wrought"]);
 
   const ING_STOPWORDS = new Set(["according", "anything", "bedding", "beginning", "building", "ceiling", "clothing", "darling", "drawing", "during", "ending", "evening", "everything", "feeling", "gathering", "housing", "king", "meaning", "meeting", "morning", "nothing", "offering", "opening", "outstanding", "painting", "pudding", "reading", "ring", "setting", "sibling", "something", "spring", "string", "surrounding", "thing", "things", "training", "understanding", "warning", "wedding", "wing", "writing"]);
 
-  // PUBLIC_IDENTIFIER_REMOVED extraction
+  // ------------------------------------------------------------ extraction
   const MARKER_RE_SPLIT = /[❶-❿⓫-⓴]/;
   const MARKER_RE_MATCH = /[❶-❿⓫-⓴]/g;
   const KOREAN_RE = /[가-힣]/;
@@ -473,7 +473,7 @@
     return pieces.length ? pieces : [text];
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED tagger
+  // ----------------------------------------------------------------- tagger
   function isBaseVerb(word) {
     return BASE_VERBS.has(word.toLowerCase());
   }
@@ -504,7 +504,7 @@
     return sentence.slice(start, Math.min(end + (pad || 0), sentence.length)).trim();
   }
 
-  // ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
+  // ---- to부정사 --------------------------------------------------------
   const TO_RE = /\bto\s+(?:not\s+|never\s+|fully\s+|really\s+)?([A-Za-z]+)\b/g;
   function ruleToInfinitive(sentence) {
     const hits = [];
@@ -618,7 +618,7 @@
     return ruleRelativeClause(sentence).filter(function(hit){ return String(hit.note || '').indexOf('관계부사') !== -1; });
   }
 
-  // ---- 수동태 (passive voice) PUBLIC_IDENTIFIER_REMOVED
+  // ---- 수동태 (passive voice) -------------------------------------------
   const PASSIVE_RE = /\b(is|are|was|were|am|be|been|being)\s+(?:not\s+|never\s+|also\s+)?([A-Za-z]+)\b/g;
   function rulePassiveVoice(sentence) {
     const hits = [];
@@ -632,7 +632,7 @@
     return hits;
   }
 
-  // ---- 동명사 (gerund) PUBLIC_IDENTIFIER_REMOVED
+  // ---- 동명사 (gerund) ---------------------------------------------------
   const GERUND_SUBJECT_RE = /^([A-Z][a-z]+ing)\s+(is|was|has|makes|means|helps|leads|takes|requires)\b/;
   const GERUND_PREP_RE = /\b(by|of|for|in|on|about|without|instead of|besides|from)\s+([a-z]+ing)\b/g;
   const GERUND_VERB_RE = /\b(enjoy|enjoys|enjoyed|consider|considers|considered|avoid|avoids|avoided|finish|finishes|finished|mind|minds|minded|suggest|suggests|suggested|recommend|recommends|recommended|keep|keeps|kept|practice|practices|practiced|imagine|imagines|imagined|deny|denies|denied|quit|quits|resist|resists|resisted|risk|risks|risked|give up|gave up|stop|stops|stopped|involve|involves|involved)\s+([a-z]+ing)\b/g;
@@ -684,7 +684,7 @@
     return hits;
   }
 
-  // ---- 도치구문 (inversion) PUBLIC_IDENTIFIER_REMOVED
+  // ---- 도치구문 (inversion) ----------------------------------------------
   const INVERSION_START_RE = /^(Never|Rarely|Seldom|Little|Hardly|Scarcely|Not only|No sooner|Nowhere|Not until|Only (?:then|after|when|by|in|through|later|recently)[^,]*)\b[^.!?]*\b(do|does|did|is|are|was|were|has|have|had|will|would|can|could|should|might)\b/;
   const SO_SUCH_INVERSION_RE = /^(So|Such)\s+(?!it\b|he\b|she\b|they\b|we\b|I\b|you\b|there\b)[a-zA-Z]+\b[^.!?]*\b(is|are|was|were|did|does|do)\b/;
   function ruleInversion(sentence) {
@@ -765,7 +765,7 @@
     return hits;
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED rules registry
+  // ---------------------------------------------------------- rules registry
   // Add a new grammar point by appending to this array -- the browser UI
   // reads this list to build its checkboxes automatically, so no HTML
   // changes are needed to add more categories later.
@@ -811,10 +811,10 @@
 (function () {
   'use strict';
 
-  // PUBLIC_IDENTIFIER_REMOVED shared hub 유틸
+  // ---------------------------------------------------- shared hub 유틸
   function uid(n) {
     n = n || 10;
-    var c = 'PUBLIC_IDENTIFIER_REMOVED';
+    var c = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     var s = '';
     for (var i = 0; i < n; i++) s += c[Math.floor(Math.random() * c.length)];
     return s;
@@ -874,7 +874,7 @@
     return out;
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED 끊어읽기 공용 유틸
+  // -------------------------------------------------- 끊어읽기 공용 유틸
   // 교사용(직독직해 자동생성 미리보기)과 학생용(끊어읽기 채점) 양쪽에서 같이 쓴다 —
   // "문법 구조의 경계 = 의미단위 경계"라는 같은 전제를 공유해야 미리보기와 실제 학생
   // 화면의 끊어읽기가 어긋나지 않는다.
@@ -916,7 +916,7 @@
     return { words: words, gaps: gaps };
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED 학생 모드: 최종본 구분문제 테스트
+  // -------------------------------------------------- 학생 모드: 최종본 구분문제 테스트
   // ?finalQuiz=SETKEY&hook=... 로 들어오면(teacher/students.html 배정 카드 경유) 교사가
   // 검토·업로드한 최종본 문제로 단어테스트와 같은 형식의 객관식 시험을 봄 — 오답은 맞출
   // 때까지 큐 맨 뒤로 다시 넣고, 최초 시도 정답률로 채점, 결과는 선생님 시트로 전송.
@@ -1091,7 +1091,7 @@
     return;
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED 학생 모드
+  // ------------------------------------------------------------ 학생 모드
   // ?study=SETKEY&hook=... 로 들어오면 교사용 업로드/검색 화면 대신
   // 배정된 문법 문장으로 연습(영상 · 구분문제 · 끊어읽기 · 해석 제출)을 하는 화면을 띄우고,
   // 나머지 교사용 초기화는 건너뜀.
@@ -1369,7 +1369,7 @@
       ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED import (spaCy JSON)
+  // ------------------------------------------------------- import (spaCy JSON)
   function sentenceClassificationKey(sentence) {
     var text = String(sentence.text || '').replace(/\s+/g, ' ').trim().toLowerCase();
     var tags = sentence.tags || {};
@@ -1442,7 +1442,7 @@
     }
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED exam list
+  // ------------------------------------------------------------ exam list
   function renderExamList() {
     var db = loadDB();
     var wrap = document.getElementById('examListWrap');
@@ -1501,7 +1501,7 @@
     }
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED local Python bridge
+  // ------------------------------------------ local Python bridge
   var LOCAL_BRIDGE = location.hostname === '127.0.0.1' && location.port === '8766'
     ? location.origin : 'http://127.0.0.1:8766';
   var pendingPreviewToken = '', pendingPreviewExam = null, pendingGrammarPreviews=[];
@@ -1667,7 +1667,7 @@
   document.getElementById('btnLocalVerify').addEventListener('click',function(){verifyLocal(false)});
   populateLocalVerifyExams();checkLocalBridge().then(syncGrammarPdfLibrary);
 
-  // PUBLIC_IDENTIFIER_REMOVED search
+  // --------------------------------------------------------------- search
   var lastResults = [];
   var lastSelectedIds = []; // 구분문제 txt 다운로드용 — 검색 시점의 선택 문법 목록(옵션 순서 고정)
   var ruleById = {};
@@ -1849,7 +1849,7 @@
     shareBox.style.display = 'block';
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED 학생 공유
+  // ---------------------------------------------------------- 학생 공유
   var directGrammarQuestionCount = 0;
   function addDirectGrammarQuestion_(seed) {
     seed=seed||{};directGrammarQuestionCount++;
@@ -2079,7 +2079,7 @@
     URL.revokeObjectURL(url);
   }
 
-  // PUBLIC_IDENTIFIER_REMOVED init
+  // ------------------------------------------------------------------ init
   (function initSettings() {
     var cfg = ghDeliveryCfg();
     document.getElementById('gh-url').value = cfg.url || '';
@@ -2092,7 +2092,7 @@
     });
   })();
 
-  // PUBLIC_IDENTIFIER_REMOVED tabs
+  // ------------------------------------------------------------------ tabs
   document.querySelectorAll('.gtab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.gtab-btn').forEach(function (b) { b.classList.remove('gtab-active'); });
@@ -2108,7 +2108,7 @@
     });
   });
 
-  // PUBLIC_IDENTIFIER_REMOVED 공유한 세트 관리
+  // ------------------------------------------------------ 공유한 세트 관리
   async function loadGrammarSets() {
     var cfg = ghDeliveryCfg();
     var wrap = document.getElementById('setsListWrap');
@@ -2194,7 +2194,7 @@
   document.getElementById('btnLoadSets').addEventListener('click', loadGrammarSets);
   document.getElementById('btnLoadSubmissions').addEventListener('click', loadGrammarSubmissions);
 
-  // PUBLIC_IDENTIFIER_REMOVED 최종본 업로드(PPT 파싱)
+  // ---------------------------------------------------- 최종본 업로드(PPT 파싱)
   var FINAL_CIRCLED = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
 
   // "구분문제 PPT 다운로드"가 만든 pptx를 그대로(또는 검토 후 슬라이드 삭제/수정한 채로)

@@ -63,7 +63,7 @@
 /* =====================================================================
    공통 유틸 (exam/index.html 관습 재사용)
 ===================================================================== */
-function uid(n){ n=n||10; const c='PUBLIC_IDENTIFIER_REMOVED'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function uid(n){ n=n||10; const c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 // 모듈 간 이동 바 -- exam/index.html의 elabNav와 동일한 마크업+클래스(shared/theme.css의 .eb-nav)를
@@ -490,7 +490,7 @@ const PracticePublishStep = {
       // 고해상도 전체 페이지를 보내기 전에 현재 웹앱 배포/토큰으로 쓰기가 가능한지 짧게 확인한다.
       // 이 단계가 실패하면 같은 원인으로 모든 페이지를 오래 재시도하지 않는다.
       const probeKey='practice-upload-probe-'+practiceKey;
-      const probeDataUrl='data:image/png;base64,PUBLIC_IDENTIFIER_REMOVED+A8AAQUBAScY42YAAAAASUVORK5CYII=';
+      const probeDataUrl='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=';
       let uploadChannelReady=false;
       for(let probeAttempt=0;probeAttempt<2&&!uploadChannelReady;probeAttempt++){
         draft.publish.message='저장 서버 연결 확인 중...';

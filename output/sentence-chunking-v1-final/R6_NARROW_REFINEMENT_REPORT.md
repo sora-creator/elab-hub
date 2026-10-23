@@ -43,5 +43,5 @@ The retained proposals are `wanted｜to` and `try｜to`. The suppressed proposal
 - FOUNDATION: unchanged
 - BEGINNER: unchanged
 - V5 expressions: unchanged
-- Teacher canonical SHA-256: `PUBLIC_IDENTIFIER_REMOVED`
+- Teacher canonical SHA-256: `d4553ca72e70a65b11568918587b879250e77f63a2a6e00e741b2c16f0acfa9b`
 - Teacher canonical semantic/byte-equivalent: PASS

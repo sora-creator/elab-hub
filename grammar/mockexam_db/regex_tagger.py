@@ -57,7 +57,7 @@ def _clip(sentence, start, end, pad=0):
     return sentence[start:min(end + pad, len(sentence))].strip()
 
 
-# ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
+# ---- to부정사 --------------------------------------------------------------
 TO_RE = re.compile(r"\bto\s+(?:not\s+|never\s+|fully\s+|really\s+)?([A-Za-z]+)\b")
 TO_NOUN_HEAD_RE = re.compile(r"\b(?:want|hope|decide|plan|need|try|learn|begin|start|like|love|prefer|intend|expect|promise|agree|refuse|choose|afford|manage|attempt|wish|ask|tell|encourage|allow|enable|require|force)\s+$", re.IGNORECASE)
 TO_ADJECTIVE_HEAD_RE = re.compile(r"\b(?:opportunity|chance|ability|way|time|reason|need|effort|decision|plan|right|thing|place|method|means|desire|request|proposal)\s+$", re.IGNORECASE)
@@ -78,7 +78,7 @@ def rule_to_infinitive(sentence):
     return hits
 
 
-# ---- 분사구문 (participial clause) PUBLIC_IDENTIFIER_REMOVED
+# ---- 분사구문 (participial clause) -----------------------------------------
 SENT_INITIAL_RE = re.compile(r"^([A-Z][a-zA-Z]+),?\s")
 MID_COMMA_RE = re.compile(r",\s+([A-Za-z]+)\b")
 WITH_RE = re.compile(
@@ -153,7 +153,7 @@ def rule_past_participle(sentence):
     return []
 
 
-# ---- 관계사절 (relative clause) PUBLIC_IDENTIFIER_REMOVED
+# ---- 관계사절 (relative clause) --------------------------------------------
 REL_PRONOUN_RE = re.compile(r"\b(who|whom|whose|which|that)\b", re.IGNORECASE)
 REL_ADVERB_RE = re.compile(r"\b(the|a|an)\s+\w+\s+(where|when|why)\b")
 
@@ -177,7 +177,7 @@ def rule_relative_clause(sentence):
     return hits
 
 
-# ---- 수동태 (passive voice) PUBLIC_IDENTIFIER_REMOVED
+# ---- 수동태 (passive voice) -------------------------------------------------
 PASSIVE_RE = re.compile(r"\b(is|are|was|were|am|be|been|being)\s+(?:not\s+|never\s+|also\s+)?([A-Za-z]+)\b")
 
 
@@ -189,7 +189,7 @@ def rule_passive_voice(sentence):
     return hits
 
 
-# ---- 동명사 (gerund) PUBLIC_IDENTIFIER_REMOVED
+# ---- 동명사 (gerund) ---------------------------------------------------------
 GERUND_SUBJECT_RE = re.compile(r"^([A-Z][a-z]+ing)\s+(is|was|has|makes|means|helps|leads|takes|requires)\b")
 GERUND_PREP_RE = re.compile(r"\b(by|of|for|in|on|about|without|instead of|besides|from)\s+([a-z]+ing)\b")
 GERUND_VERB_RE = re.compile(
@@ -238,7 +238,7 @@ def rule_comparative(sentence):
     return hits
 
 
-# ---- 도치구문 (inversion) PUBLIC_IDENTIFIER_REMOVED
+# ---- 도치구문 (inversion) -----------------------------------------------------
 INVERSION_START_RE = re.compile(
     r"^(Never|Rarely|Seldom|Little|Hardly|Scarcely|Not only|No sooner|Nowhere|Not until|"
     r"Only (?:then|after|when|by|in|through|later|recently)[^,]*)\b[^.!?]*\b"
@@ -285,7 +285,7 @@ def rule_subjunctive(sentence):
     return hits
 
 
-# ---- 강조구문 (it ~ that emphasis) PUBLIC_IDENTIFIER_REMOVED
+# ---- 강조구문 (it ~ that emphasis) --------------------------------------------
 EMPHATIC_RE = re.compile(r"\bIt\s+(is|was)\s+.{2,40}?\s+that\b")
 
 
@@ -328,7 +328,7 @@ def rule_modal_perfect(sentence):
     return hits
 
 
-# PUBLIC_IDENTIFIER_REMOVED rules registry
+# ---------------------------------------------------------------- rules registry
 # Add a new grammar point by appending here -- ingest.py/query.py iterate
 # this list generically, so no other code needs to change.
 GRAMMAR_RULES = [

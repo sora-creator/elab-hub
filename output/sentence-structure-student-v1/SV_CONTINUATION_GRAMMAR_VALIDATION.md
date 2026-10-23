@@ -34,7 +34,7 @@ Surface token patterns are not used to invent clauses. This is especially import
 - Cambridge Dictionary, [That-clauses](https://dictionary.cambridge.org/grammar/british-grammar/that-clauses)
 - Cambridge Dictionary, [Verbs followed by a that-clause](https://dictionary.cambridge.org/grammar/british-grammar/that-clause)
 - Cambridge Dictionary, [Relative pronouns](https://dictionary.cambridge.org/grammar/british-grammar/relative-pronouns/)
-- Cambridge Dictionary, [Defining and non-defining relative clauses](https://dictionary.cambridge.org/grammar/british-grammar/PUBLIC_IDENTIFIER_REMOVED)
+- Cambridge Dictionary, [Defining and non-defining relative clauses](https://dictionary.cambridge.org/grammar/british-grammar/relative-clauses-defining-and-non-defining)
 - Cambridge Dictionary, [Verb phrases](https://dictionary.cambridge.org/grammar/british-grammar/verb-phrases)
 - Cambridge Dictionary, [Clauses](https://dictionary.cambridge.org/grammar/british-grammar/clauses-)
 

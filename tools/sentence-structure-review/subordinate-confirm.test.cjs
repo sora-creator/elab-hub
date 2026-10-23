@@ -12,7 +12,7 @@ async function idle(page){await page.evaluate(()=>ReviewAdapter.whenIdle());}
 async function source(page){await page.locator('.pdf-custom-status.matched').waitFor({timeout:20000});await page.click('[data-source-one-click]');await idle(page);}
 async function instrument(page){await page.evaluate(()=>{window.__confirmTrace=[];window.__idbPutCount=0;const confirm=ReviewCore.confirmClause;ReviewCore.confirmClause=function(row,id){window.__confirmTrace.push({sentence_id:row.sentence_id,clause_id:id});return confirm(row,id);};const put=IDBObjectStore.prototype.put;IDBObjectStore.prototype.put=function(){window.__idbPutCount++;return put.apply(this,arguments);};});}
 const goldCount=doc=>doc.records.filter(r=>r.teacher.gold_approved).length;
-function teacherContract(value){const t=JSON.parse(JSON.stringify(value));for(const c of t.teacher_clauses){delete c.auto_acceptable_subject_candidates;c.PUBLIC_IDENTIFIER_REMOVED||=[];for(const p of c.teacher_predicates){delete p.verb_span_candidates;p.teacher_ignored_verb_span_candidate_ids||=[];}}return t;}
+function teacherContract(value){const t=JSON.parse(JSON.stringify(value));for(const c of t.teacher_clauses){delete c.auto_acceptable_subject_candidates;c.teacher_acceptable_subject_candidate_ignored_ids||=[];for(const p of c.teacher_predicates){delete p.verb_span_candidates;p.teacher_ignored_verb_span_candidate_ids||=[];}}return t;}
 (async()=>{
   const browser=await chromium.launch({headless:true}),errors=[],checks=[];
   const check=(name,value)=>{assert.ok(value,name);checks.push(name);};

@@ -123,7 +123,7 @@ class App(tk.Tk):
         self._build_ui()
         self.after(100, self._poll_queue)
 
-    # PUBLIC_IDENTIFIER_REMOVED UI
+    # ---------------------------------------------------------------- UI
     def _build_ui(self):
         self.action_buttons = []
 
@@ -154,7 +154,7 @@ class App(tk.Tk):
         self.log_text.pack(fill="both", expand=True, padx=6, pady=6)
         tk.Button(log_frame, text="로그 지우기", command=self.clear_log).pack(anchor="e", padx=6, pady=(0, 6))
 
-    # PUBLIC_IDENTIFIER_REMOVED 탭 ①: PDF 분석
+    # ---------------------------------------------------- 탭 ①: PDF 분석
     def _build_ingest_tab(self):
         f = self.tab_ingest
         top = tk.Frame(f)
@@ -240,7 +240,7 @@ class App(tk.Tk):
         self._last_job_kind = "ingest"
         self._run_sequence(jobs, need_api=False)
 
-    # PUBLIC_IDENTIFIER_REMOVED 탭 ②: Claude 검증
+    # ---------------------------------------------------- 탭 ②: Claude 검증
     def _build_verify_tab(self):
         f = self.tab_verify
 
@@ -447,7 +447,7 @@ class App(tk.Tk):
         self._last_job_kind = "verify"
         self._run_sequence([args], need_api=True)
 
-    # PUBLIC_IDENTIFIER_REMOVED 공통 실행
+    # -------------------------------------------------------------- 공통 실행
     def open_settings(self):
         dlg = SettingsDialog(self, self.config_data)
         self.wait_window(dlg)

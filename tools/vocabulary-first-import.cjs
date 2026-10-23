@@ -5,13 +5,13 @@ const path = require('path');
 const crypto = require('crypto');
 const XLSX = require('xlsx');
 const directory = path.resolve(__dirname, '../outputs/vocabulary-reclassification/vocab-3-first-import');
-const PREIMPORT_SHA = 'PUBLIC_IDENTIFIER_REMOVED';
-const MANIFEST_SHA = 'PUBLIC_IDENTIFIER_REMOVED';
+const PREIMPORT_SHA = '4321164ed090220d9fc6022f954a4cb39b97972d835f4212a1e0f94ca8ccba17';
+const MANIFEST_SHA = 'b240ba5c5dcee204ba515c8f13b8bd689717d9e32a8248fd2fad0abdceb8ce9b';
 const sha = value => crypto.createHash('sha256').update(value).digest('hex');
 const hash = value => sha(JSON.stringify(value));
 function check(condition, code) { if (!condition) throw new Error(code); }
 function loadFirstImport() {
-  const file = path.join(directory, 'PUBLIC_IDENTIFIER_REMOVED.xlsx');
+  const file = path.join(directory, 'ELAB_Vocabulary_Curriculum_3244_PREIMPORT.xlsx');
   const manifestFile = path.join(directory, 'VOCABULARY_FIRST_IMPORT_3244_MANIFEST.json');
   const bytes = fs.readFileSync(file), manifestBytes = fs.readFileSync(manifestFile);
   check(sha(bytes) === PREIMPORT_SHA, 'PREIMPORT_HASH_MISMATCH');

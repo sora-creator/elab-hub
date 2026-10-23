@@ -23,6 +23,6 @@ const {chromium}=require('playwright');
       assert.deepStrictEqual(errors,[]);
       await page.close();
     }
-    console.log('PUBLIC_IDENTIFIER_REMOVED.test.js: all assertions passed');
+    console.log('sentence_structure_teacher_assignment_ui.test.js: all assertions passed');
   }finally{await browser.close()}
 })().catch(error=>{console.error(error);process.exitCode=1});

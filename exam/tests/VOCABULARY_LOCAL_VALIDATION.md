@@ -4,7 +4,7 @@
 
 - 최종 입력: `outputs/vocab-final-3200/ELAB_운영용_정규어휘DB_3200.xlsx`
 - 운영 staging: `vocab-import-1788704841156` (테스트에서 접근하지 않음)
-- XLSX SHA-256: `PUBLIC_IDENTIFIER_REMOVED`
+- XLSX SHA-256: `9016fedba2d326a6385d2f5c31bbfdf31aa38696a3f23c3ea4fd2d22b2f7bdb5`
 - 운영 배포, Google Sheet 접근, 운영 staging/commit은 수행하지 않는다.
 
 ## 수정·추가 파일

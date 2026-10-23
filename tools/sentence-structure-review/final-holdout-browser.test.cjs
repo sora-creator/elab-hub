@@ -14,7 +14,7 @@ const pages=[3,3,8,7,2,7,3,2];
   check('default URL loads Pilot50',await page.locator('.queue-item').count()===50&&await page.evaluate(()=>ReviewAdapter.getDataset().id==='pilot50'));
   const pilotExport=await page.evaluate(()=>ReviewCore.exportDoc(ReviewAdapter.getDocument()));
   const pilotDb=await page.evaluate(()=>ReviewAdapter.getIndexedDbName());
-  check('Pilot uses legacy IndexedDB namespace',pilotDb==='elab.teacher-review.indexeddb.v1.PUBLIC_IDENTIFIER_REMOVED');
+  check('Pilot uses legacy IndexedDB namespace',pilotDb==='elab.teacher-review.indexeddb.v1.1401f7aa57f90bf763cdee8bffa9284a633a0a0be37add71187af8a9de7e26bb');
   await page.goto(base+'?dataset=final-holdout8');await page.waitForLoadState('networkidle');await page.locator('.queue-item').first().waitFor();
   check('Holdout loads exactly 8 in exact order',await page.locator('.queue-item').count()===8&&JSON.stringify(await page.locator('.queue-item').evaluateAll(xs=>xs.map(x=>x.dataset.open)))===JSON.stringify(ids));
   check('Holdout starts Gold 0/8',await page.evaluate(()=>ReviewCore.progress(ReviewAdapter.getDocument()).gold===0&&ReviewAdapter.getDocument().records.every(r=>ReviewCore.status(r)!=='GOLD_READY')));

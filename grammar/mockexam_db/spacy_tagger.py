@@ -60,7 +60,7 @@ def _subtree_span(token):
     return _span_text(list(token.subtree))
 
 
-# ---- to부정사 PUBLIC_IDENTIFIER_REMOVED
+# ---- to부정사 ----------------------------------------------------------------
 _NOUN_INFINITIVE_HEADS = {
     'agree', 'afford', 'allow', 'ask', 'attempt', 'begin', 'choose', 'decide',
     'encourage', 'expect', 'fail', 'force', 'forget', 'help', 'hope', 'intend',
@@ -171,7 +171,7 @@ def _find_past_participle(doc):
     ]
 
 
-# ---- 관계사절 PUBLIC_IDENTIFIER_REMOVED
+# ---- 관계사절 -------------------------------------------------------------------
 def _is_to_infinitive_clause(tok):
     """spaCy mislabels noun-modifying to-infinitives (e.g. 'reasons to do them')
     with dep_ == 'relcl' even though there's no relative pronoun. Detect the
@@ -207,7 +207,7 @@ def _find_relative_clause(doc):
     return hits
 
 
-# ---- 수동태 PUBLIC_IDENTIFIER_REMOVED
+# ---- 수동태 ---------------------------------------------------------------------
 def _find_passive_voice(doc):
     hits = []
     for tok in doc:
@@ -224,7 +224,7 @@ def _find_passive_voice(doc):
     return deduped
 
 
-# ---- 동명사 PUBLIC_IDENTIFIER_REMOVED
+# ---- 동명사 ----------------------------------------------------------------------
 _GERUND_DEPS = (
     'nsubj', 'dobj', 'obj', 'pobj', 'attr', 'nsubjpass',
     'xcomp', 'pcomp', 'csubj', 'csubjpass', 'conj',
@@ -252,7 +252,7 @@ def _find_gerund(doc):
     return hits
 
 
-# ---- 명사절 접속사 PUBLIC_IDENTIFIER_REMOVED
+# ---- 명사절 접속사 ------------------------------------------------------------------
 def _find_noun_clause(doc):
     hits = []
     for tok in doc:

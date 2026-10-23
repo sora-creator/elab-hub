@@ -84,4 +84,4 @@ Thumbs.db
 
 # One-off Vocabulary staging discard utilities (local only)
 exam/tests/discard_staging_manual.test.js
-tools/apps-script/PUBLIC_IDENTIFIER_REMOVED.gs
+tools/apps-script/discardSupersededVocabularyStagingV1Manual.gs

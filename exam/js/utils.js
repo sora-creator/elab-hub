@@ -2,7 +2,7 @@
    공통 유틸 (VocaTest 관습 재사용)
    exam/index.html 리팩터링 1단계 — 의존성 없는 순수 헬퍼만 모음
 ===================================================================== */
-function uid(n){ n=n||10; const c='PUBLIC_IDENTIFIER_REMOVED'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
+function uid(n){ n=n||10; const c='abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'; let s=''; for(let i=0;i<n;i++) s+=c[Math.floor(Math.random()*c.length)]; return s; }
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
 
 // 지문 도표·그림 업로드용 -- 원본을 그대로 base64로 넣으면 localStorage(약 5~10MB 한도)가

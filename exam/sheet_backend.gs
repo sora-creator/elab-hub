@@ -991,21 +991,21 @@ function vocabularyFirstImportSpecV1_() {
     'FIRST_IMPORT_CONFIG_MISSING');
   return {
     batch_id: 'vocab-first-3244-4321164ed090220d', request_id: 'vocab-first-3244-4321164ed090220d',
-    manifest_sha256: 'PUBLIC_IDENTIFIER_REMOVED',
-    preimport_sha256: 'PUBLIC_IDENTIFIER_REMOVED',
+    manifest_sha256: 'b240ba5c5dcee204ba515c8f13b8bd689717d9e32a8248fd2fad0abdceb8ce9b',
+    preimport_sha256: '4321164ed090220d9fc6022f954a4cb39b97972d835f4212a1e0f94ca8ccba17',
     schema_version: 'ELAB_VOCAB_FIRST_IMPORT_MANIFEST_V1', expected_total: 3244,
     expected_unique_sense_ids: 3244, expected_levels: {V1:800,V2:822,V3:818,V4:604,V5:200}, chunk_count: 7,
-    rows_hash: 'PUBLIC_IDENTIFIER_REMOVED',
-    headers_hash: 'PUBLIC_IDENTIFIER_REMOVED',
+    rows_hash: '80ea3056754cc952c800529f6135245eccf21e5fbb330af4845f7970b4366b01',
+    headers_hash: '9973f80107a571ae46591ac10307e3ee3c6b2a497e56584c64b44051e449ec29',
     spreadsheet_id: spreadsheetId, sheet_id: targetSheetId, staging_sheet_id: stagingSheetId,
     chunk_hashes: [
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED',
-      'PUBLIC_IDENTIFIER_REMOVED'
+      '706c4cd6ad5155f6941b3dfc39781c34b7c9b714793be711d0eb4bd2e18d42e3',
+      '2b7d5fe08590c8d18882a0f6ecf8861c9218df1698a05fea4b8ce8d615723cee',
+      'e3e5a33885df99941b666663e8c2ce709528f10dcf0c1f0e1754aecfdf01f886',
+      '55d5e97ee6ca5d84aaceb63589306d7c58f287348a9862021c5ebc1469e0a56e',
+      'baf023ad35a0ca9b2d20bdf1fde882ff6f5768291d4629a84a9aa190a8f28834',
+      '5c31ee906510fea2c32dd167b92480c5bdad173ea041cef8ad5c9ad5dd90fef2',
+      'b933a242377769524361fed0ea8d0c8480a07ef57c5f807c7adf1dd4d1cdbeaa'
     ]
   };
 }
@@ -1050,7 +1050,7 @@ function vocabularyFirstImportAuditV1_(imports, spec) {
 }
 function vocabularyFirstImportSaveAuditV1_(imports, record, audit) {
   var row = record ? imports.values[record.row - 1].slice(0, 26) : Array(26).fill('');
-  row[0] = audit.batch_id; row[2] = 'PUBLIC_IDENTIFIER_REMOVED.xlsx';
+  row[0] = audit.batch_id; row[2] = 'ELAB_Vocabulary_Curriculum_3244_PREIMPORT.xlsx';
   row[3] = audit.status; row[4] = audit.expected_total; row[5] = audit.actual_rows || 0;
   row[8] = audit.error_code ? 1 : 0; row[9] = audit.created_at;
   if (audit.status === 'COMPLETED') row[11] = audit.finished_at;
@@ -1211,7 +1211,7 @@ function vocabularyFirstImportTextWriteV1_(range, rows) {
 }
 // Incident-specific, no client-selected destinations or replacement values.
 // Exact strings are pinned from the SHA-verified PREIMPORT, not report excerpts.
-function PUBLIC_IDENTIFIER_REMOVED() {
+function vocabularyFirstImportApostropheTargetsV1_() {
   return [
     {cell:'S3204',source_row:3204,sense_id:'SEN_543D1DA76B91',field:'selection_reason',
       before:"자신감 있는'과 구별되는 문맥적 의미로 학습 가치가 있음.",
@@ -1221,7 +1221,7 @@ function PUBLIC_IDENTIFIER_REMOVED() {
       after:"'A를 ~로 여기다'의 중요한 다의어 용법으로 별도 학습 가치가 큼."}
   ];
 }
-function PUBLIC_IDENTIFIER_REMOVED(d, ss, imports, record, staging, staged, spec, dry) {
+function vocabularyFirstImportApostropheRepairV1_(d, ss, imports, record, staging, staged, spec, dry) {
   var code = 'APOSTROPHE_REPAIR_STATE_CONFLICT', audit = record && record.audit;
   vocabularyFirstImportAssertV1_(d.approval === 'REPAIR_FIRST_IMPORT_LEADING_APOSTROPHE', 'EXPLICIT_REPAIR_APPROVAL_REQUIRED');
   var keys = ['action','token','approval','dry_run','batch_id','request_id','manifest_sha256','preimport_sha256',
@@ -1241,7 +1241,7 @@ function PUBLIC_IDENTIFIER_REMOVED(d, ss, imports, record, staging, staged, spec
   var rows = staged.map(function(row) { return row.values; }), seen = Object.create(null);
   rows.forEach(function(row) { vocabularyFirstImportAssertV1_(!seen[row[0]], 'DUPLICATE_SENSE_ID'); seen[row[0]] = true; });
   for (var i=0;i<6;i++) vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(rows.slice(i*500,(i+1)*500)) === spec.chunk_hashes[i], code);
-  var targets = PUBLIC_IDENTIFIER_REMOVED(), afterCount = 0;
+  var targets = vocabularyFirstImportApostropheTargetsV1_(), afterCount = 0;
   targets.forEach(function(t) {
     var row = staged[t.source_row-2], value = row.values[18];
     vocabularyFirstImportAssertV1_(row.values[0] === t.sense_id &&
@@ -1252,7 +1252,7 @@ function PUBLIC_IDENTIFIER_REMOVED(d, ss, imports, record, staging, staged, spec
   vocabularyFirstImportAssertV1_(afterCount !== 1, 'PARTIAL_REPAIR_STATE');
   var currentHash = vocabularyFirstImportHashV1_(rows.slice(3000));
   vocabularyFirstImportAssertV1_(currentHash === (afterCount === 2 ? spec.chunk_hashes[6] :
-    'PUBLIC_IDENTIFIER_REMOVED'), code);
+    '01cd69c0b9103519fe2aac86abf01cab423ffc4a6bdc15ae89d783d8bb9c3f46'), code);
   var repaired = rows.map(function(row) { return row.slice(); });
   targets.forEach(function(t) { repaired[t.source_row-2][18] = t.after; });
   vocabularyFirstImportRowsCheckV1_(repaired,spec);
@@ -1319,7 +1319,7 @@ function vocabularyFirstImportRepairV1_(d, ss, imports, record, staging, staged,
   var accepted = audit.actual_rows === 2000 && counted === 2000 && audit.chunks[3] === spec.chunk_hashes[3];
   vocabularyFirstImportAssertV1_(pending || (already && accepted), code);
   var currentHash = vocabularyFirstImportHashV1_(chunk);
-  vocabularyFirstImportAssertV1_(currentHash === (already ? spec.chunk_hashes[3] : 'PUBLIC_IDENTIFIER_REMOVED'), code);
+  vocabularyFirstImportAssertV1_(currentHash === (already ? spec.chunk_hashes[3] : '73ad014b341b06c658557d86b1ec5dc8d463b666b642d6fdcb0f1d96fe8fcb8d'), code);
   var repairedRows = rows.map(function(row) { return row.slice(); }); repairedRows[1558][2] = 'false';
   vocabularyFirstImportAssertV1_(vocabularyFirstImportHashV1_(repairedRows.slice(1500)) === spec.chunk_hashes[3], code);
   var allHash = vocabularyFirstImportHashV1_(repairedRows);
@@ -1415,7 +1415,7 @@ function handleVocabularyFirstImportV1_(d) {
     var staging = vocabularyFirstImportReadV1_(ss,VOCABULARY_IMPORT_STAGING_V2_SHEET,VOCABULARY_IMPORT_STAGING_V2_HEADERS,'STAGING_SCHEMA_MISMATCH');
     var staged = vocabularyFirstImportStagedV1_(staging,spec);
     if (operation === 'repair') return vocabularyFirstImportRepairV1_(d,ss,imports,record,staging,staged,spec,dry);
-    if (operation === 'repairApostrophe') return PUBLIC_IDENTIFIER_REMOVED(d,ss,imports,record,staging,staged,spec,dry);
+    if (operation === 'repairApostrophe') return vocabularyFirstImportApostropheRepairV1_(d,ss,imports,record,staging,staged,spec,dry);
     if (operation === 'stage') {
       vocabularyFirstImportAssertV1_(!audit || /^(STAGING|STAGED|VALIDATED|COMPLETED)$/.test(audit.status), 'BATCH_CLOSED');
       var index = d.chunk_index, count = index === 6 ? 244 : 500;
@@ -2043,7 +2043,7 @@ function handleInspectVocabularySetSchemasV1_(e){
   }catch(err){return{ok:false,error:err.vocabularyCode||'SCHEMA_DIAGNOSTIC_FAILED'};}
 }
 // VOCAB-7P: administrative evidence only; never enters launch/fetch/creation paths.
-function PUBLIC_IDENTIFIER_REMOVED(e){
+function handleInspectVocabularyAssignmentStartPreflightV1_(e){
   var p=e&&e.parameter||{};
   if(typeof p.token!=='string'||!p.token||p.token!==getToken_())return{ok:false,eligible:false,error:'UNAUTHORIZED'};
   var out={ok:true,status:'NO_GO',eligible:false,reasons:[]};
@@ -2149,8 +2149,8 @@ function sentenceStructureAssignmentEditStateV1_(assignmentId) {
   var hint=sentenceHintLevelFromLinkV2_(a[2],a[5])||'BASIC',support=sentenceReadingSupportFromLinkV2_(a[2],a[5])||'beginner',completed=targets.filter(function(t){return t.status==='COMPLETED';}).length,inProgress=targets.filter(function(t){return t.status==='IN_PROGRESS';}).length;
   return{assignment_id:a[0],content_type:a[2],content_ref_id:a[3],title:a[4],content_link:a[5],due_at:a[7]||'',hint_level:hint,reading_support:support,targets:targets,attempt_count:attemptCount,can_edit_content:!started,sentence_count:passages.length,passages:passages,progress_label:completed===targets.length&&targets.length?'완료':(inProgress||started?'진행 중':'미시작')};
 }
-function PUBLIC_IDENTIFIER_REMOVED(e){if(e.parameter.token!==getToken_())return{error:'no token'};var state=sentenceStructureAssignmentEditStateV1_(e.parameter.assignment_id);return state||{error:'not found'};}
-function PUBLIC_IDENTIFIER_REMOVED(d){
+function handleGetSentenceStructureAssignmentEditV1_(e){if(e.parameter.token!==getToken_())return{error:'no token'};var state=sentenceStructureAssignmentEditStateV1_(e.parameter.assignment_id);return state||{error:'not found'};}
+function handleUpdateSentenceStructureAssignmentV1_(d){
   var state=sentenceStructureAssignmentEditStateV1_(d.assignment_id);if(!state)return textOut_('not found');
   var a=assignmentByIdV2_(d.assignment_id),nextRef=String(d.content_ref_id||a[3]),nextLink=String(d.content_link||a[5]),oldHint=sentenceHintLevelFromLinkV2_(a[2],a[5])||'BASIC',nextHint=sentenceHintLevelFromLinkV2_(a[2],nextLink)||oldHint,oldSupport=sentenceReadingSupportFromLinkV2_(a[2],a[5])||'beginner',nextSupport=sentenceReadingSupportFromLinkV2_(a[2],nextLink)||oldSupport,changesContent=nextRef!==String(a[3])||nextHint!==oldHint||nextSupport!==oldSupport;
   if(changesContent&&!state.can_edit_content)return textOut_('assignment started');
@@ -2938,7 +2938,7 @@ function doPost(e) {
   if (d.action === 'upgradeVocabularySetSchemasV1') return textOut_(JSON.stringify(handleUpgradeVocabularySetSchemasV1_(d)));
   if (d.action === 'saveVocabSetV2') return handleSaveVocabSetV2_(d);
   if (d.action === 'updateAssignmentV2') return handleUpdateAssignmentV2_(d);
-  if (d.action === 'updateSentenceStructureAssignmentV1') return PUBLIC_IDENTIFIER_REMOVED(d);
+  if (d.action === 'updateSentenceStructureAssignmentV1') return handleUpdateSentenceStructureAssignmentV1_(d);
   if (d.action === 'deleteAssignmentV2') return handleDeleteAssignmentV2_(d);
   if (d.action === 'cancelAssignmentTargetV2') return handleCancelAssignmentTargetV2_(d);
   if (d.action === 'updateAssignmentStatus') return handleUpdateAssignmentStatus_(d);
@@ -3797,12 +3797,12 @@ function doGet(e) {
   if (action === 'listGroupsV2') return jsonpOut_(cb, handleListGroupsV2_(e));
   if (action === 'getAssignmentWorkspaceV2') return jsonpOut_(cb, handleGetAssignmentWorkspaceV2_(e));
   if (action === 'listAssignmentsV2') return jsonpOut_(cb, handleListAssignmentsV2_(e));
-  if (action === 'getSentenceStructureAssignmentEditV1') return jsonpOut_(cb, PUBLIC_IDENTIFIER_REMOVED(e));
+  if (action === 'getSentenceStructureAssignmentEditV1') return jsonpOut_(cb, handleGetSentenceStructureAssignmentEditV1_(e));
   if (action === 'listDueVocabReviewsV1') return jsonpOut_(cb, handleListDueVocabReviewsV1_(e));
   if (action === 'getVocabularyImportStatusV1') return jsonpOut_(cb, handleGetVocabularyImportStatusV1_(e));
   if (action === 'inspectVocabularyStagingStateV1') return jsonpOut_(cb, handleInspectVocabularyStagingStateV1_(e));
   if (action === 'inspectVocabularySetSchemasV1') return jsonpOut_(cb, handleInspectVocabularySetSchemasV1_(e));
-  if (action === 'PUBLIC_IDENTIFIER_REMOVED') return jsonpOut_(cb, PUBLIC_IDENTIFIER_REMOVED(e));
+  if (action === 'inspectVocabularyAssignmentStartPreflightV1') return jsonpOut_(cb, handleInspectVocabularyAssignmentStartPreflightV1_(e));
   if (action === 'listVocabularyDbV1') return jsonpOut_(cb, handleListVocabularyDbV1_(e));
   if (action === 'getVocabularyDbItemV1') return jsonpOut_(cb, handleGetVocabularyDbItemV1_(e));
   if (action === 'listVocabularySensesV1') return jsonpOut_(cb, handleListVocabularySensesV1_(e));
