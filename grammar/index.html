@@ -112,7 +112,7 @@
   }
   .gtab-btn:hover { background:#f8fafc; color:var(--text); }
   .gtab-btn.gtab-active { background:var(--eb-primary-600); color:#fff; }
-  body[data-elab-page="grammar"] .gtab-btn { flex:1 1 0!important; }
+  body[data-elab-page="grammar"] .gtab-btn { flex:1 1 150px!important; }
   textarea {
     padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px;
     font-size: 14px; background: #fff; color: var(--text); font-family: inherit; resize: vertical;
@@ -186,7 +186,36 @@
   .grammar-legend-item { display:inline-flex; align-items:center; gap:5px; color:var(--eb-text-muted); font-size:11px; font-weight:700; }
   .grammar-legend-dot { width:9px; height:9px; border-radius:2px; }
   .local-fallback { margin-top:12px; color:#64748b; font-size:13px; }
-  @media(max-width:760px){.local-form{grid-template-columns:1fr 1fr}.local-form .local-file{grid-column:1/-1}}
+  .theory-builder-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; }
+  .theory-builder-grid .field { min-width:0; }
+  .theory-builder-grid input,.theory-builder-grid select,.theory-builder-grid textarea { width:100%; }
+  .theory-section { border:1px solid var(--border); border-radius:10px; padding:16px; margin-bottom:14px; background:#fff; }
+  .theory-section-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+  .theory-section-head h3 { margin:0; font-size:15px; }
+  .theory-kicker { color:var(--blue-dark); font-size:11px; font-weight:800; letter-spacing:.04em; text-transform:uppercase; }
+  .theory-example-card,.theory-selected-card,.theory-library-card { border:1px solid var(--border); border-radius:10px; padding:14px; margin-bottom:10px; background:#f8fafc; }
+  .theory-example-actions { display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; margin-bottom:10px; }
+  .theory-example-actions button { padding:5px 9px; font-size:12px; }
+  .theory-preview { border:1px solid #bfdbfe; border-radius:12px; padding:20px; background:linear-gradient(180deg,#f8fbff 0,#fff 100%); overflow-wrap:anywhere; }
+  .theory-preview h3 { margin:0 0 6px; font-size:20px; }
+  .theory-preview h4 { margin:18px 0 6px; color:var(--blue-dark); font-size:14px; }
+  .theory-preview p { margin:0; white-space:pre-wrap; }
+  .theory-preview .theory-summary { color:var(--muted); }
+  .theory-preview .theory-example { border-left:3px solid var(--blue); padding:10px 12px; margin-top:10px; background:#fff; }
+  .theory-preview mark { background:#fef08a; padding:0 2px; border-radius:3px; }
+  .theory-student-shell { max-width:760px; margin:0 auto; }
+  .theory-student-lesson { padding:24px; }
+  .theory-content-block { margin-top:18px; padding:14px 16px; border:1px solid var(--border); border-radius:10px; background:#fff; }
+  .theory-content-block h4 { margin-top:0; }
+  .theory-form-block { border-color:#bfdbfe; background:#eff6ff; }
+  .theory-complete-card { display:flex; align-items:center; justify-content:space-between; gap:14px; }
+  .theory-complete-card button { flex-shrink:0; }
+  .theory-complete-state { color:var(--green); font-weight:800; }
+  .theory-library-meta { color:var(--muted); font-size:12px; margin:5px 0 10px; }
+  .theory-library-actions { display:flex; flex-wrap:wrap; gap:8px; }
+  .theory-search-select { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
+  .theory-search-select input { margin-top:5px; }
+  @media(max-width:760px){.local-form{grid-template-columns:1fr 1fr}.local-form .local-file{grid-column:1/-1}.theory-builder-grid{grid-template-columns:1fr}.theory-section{padding:14px}.theory-preview{padding:16px}.theory-student-lesson{padding:18px}.theory-content-block{padding:12px 13px}.theory-complete-card{align-items:stretch;flex-direction:column}.theory-complete-card button{width:100%}}
 </style>
 </head>
 <body>
@@ -201,8 +230,9 @@
     <p>모의고사 PDF를 넣으면, 분사구문 / to부정사가 쓰인 문장만 뽑아드려요. 설치 없이 이 화면에서 바로 됩니다.</p>
   </div>
 
-  <div class="tab-bar" style="display:flex; gap:6px; margin-bottom:16px; padding:6px; border:1px solid var(--border); border-radius:10px; background:#fff">
+  <div class="tab-bar" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:16px; padding:6px; border:1px solid var(--border); border-radius:10px; background:#fff">
     <button data-gtab="accurate" class="gtab-btn gtab-active">문법 문장 찾기</button>
+    <button data-gtab="theory" class="gtab-btn">이론 만들기</button>
     <button data-gtab="finals" class="gtab-btn">최종본 관리</button>
     <button data-gtab="manage" class="gtab-btn">공유한 세트 · 제출현황</button>
     <button data-gtab="settings" class="gtab-btn">설정</button>
@@ -229,6 +259,56 @@
       </div>
       <div class="local-actions"><label><input type="checkbox" id="localVerifyAll"> 선택 문법 전체 검증</label><label><input type="checkbox" id="localRecheck"> 이미 검증한 문장도 다시 검증</label><button id="btnLocalPreview" class="secondary">대상 미리보기</button><button id="btnLocalVerify">검증 실행</button></div>
       <div id="localVerifyStatus" class="status"></div><pre id="localVerifyLog" class="local-log" style="display:none"></pre>
+    </div>
+  </div>
+
+  <div id="gtabPanel-theory" class="gtab-panel" style="display:none">
+    <div class="card">
+      <h2>이론 만들기</h2>
+      <div class="help-text" style="margin-top:0">PDF 없이도 핵심 설명과 예문만으로 Theory를 만들 수 있습니다. 시험 문장은 선택사항입니다.</div>
+
+      <div class="theory-section">
+        <div class="theory-section-head"><div><div class="theory-kicker">Step 1</div><h3>문법 개념 선택</h3></div></div>
+        <div class="theory-builder-grid">
+          <div class="field"><label for="theoryGrammarId">문법 개념</label><select id="theoryGrammarId"><option value="">문법 개념을 선택하세요</option></select></div>
+          <div class="field"><label for="theoryTitle">제목</label><input id="theoryTitle" type="text" maxlength="160" placeholder="예: 조동사 + have + p.p."></div>
+        </div>
+      </div>
+
+      <div class="theory-section">
+        <div class="theory-section-head"><div><div class="theory-kicker">Step 2</div><h3>핵심 설명</h3></div></div>
+        <div class="field" style="margin-bottom:12px"><label for="theorySummary">한 줄 설명</label><input id="theorySummary" type="text" maxlength="500" placeholder="학생이 먼저 읽을 짧은 요약"></div>
+        <div class="theory-builder-grid">
+          <div class="field"><label for="theoryConcept">핵심 개념</label><textarea id="theoryConcept" rows="4" maxlength="2000"></textarea></div>
+          <div class="field"><label for="theoryForm">핵심 형태</label><textarea id="theoryForm" rows="4" maxlength="2000"></textarea></div>
+          <div class="field"><label for="theoryMeaning">해석</label><textarea id="theoryMeaning" rows="4" maxlength="2000"></textarea></div>
+          <div class="field"><label for="theoryCaution">주의할 점</label><textarea id="theoryCaution" rows="4" maxlength="2000"></textarea></div>
+        </div>
+      </div>
+
+      <div class="theory-section">
+        <div class="theory-section-head"><div><div class="theory-kicker">Step 3</div><h3>대표 예문</h3></div><button id="btnAddTheoryExample" type="button" class="secondary">+ 예문 추가</button></div>
+        <div class="help-text" style="margin-top:0">영어 문장과 해석을 입력하고, 강조할 문법 부분은 문장 안의 텍스트 그대로 적으세요. 예문은 2~5개를 권장하며 최소 1개가 필요합니다.</div>
+        <div id="theoryExamples"></div>
+      </div>
+
+      <div class="theory-section">
+        <div class="theory-section-head"><div><div class="theory-kicker">Step 4 · 선택</div><h3>실제 시험 문장</h3></div><button id="btnTheoryGoSearch" type="button" class="secondary">시험 문장 찾기</button></div>
+        <div class="help-text" style="margin-top:0">시험 문장은 선택사항입니다. 문법 문장 찾기에서 체크한 문장만 추가됩니다.</div>
+        <div id="theorySelectedSentences"><div class="empty">선택한 시험 문장이 없습니다.</div></div>
+      </div>
+
+      <div class="theory-section">
+        <div class="theory-section-head"><div><div class="theory-kicker">Step 5</div><h3>미리보기 및 저장</h3></div></div>
+        <div class="row"><button id="btnTheoryPreview" type="button" class="secondary">미리보기</button><button id="btnSaveTheory" type="button">이론 저장</button></div>
+        <div id="theoryPreview" class="theory-preview" hidden></div>
+        <div id="theoryStatus" class="status"></div>
+      </div>
+    </div>
+
+    <div class="card" id="theoryLibrarySection">
+      <div class="theory-section-head"><div><h2 style="margin:0">Theory 목록</h2><div class="help-text" style="margin:4px 0 0">Theory 내용이 저장된 세트만 표시합니다.</div></div><button id="btnLoadTheoryLibrary" type="button" class="secondary">새로고침</button></div>
+      <div id="theoryLibrary"><div class="empty">새로고침을 눌러주세요.</div></div>
     </div>
   </div>
 
@@ -361,6 +441,7 @@
       <button id="btnExport" class="secondary" style="display:none">결과 txt로 저장</button>
       <button id="btnExportMcq" class="secondary" style="display:none">📋 구분문제 txt 다운로드</button>
       <button id="btnExportPptx" class="secondary" style="display:none">🖼️ 구분문제 PPT 다운로드</button>
+      <button id="btnAddSelectedToTheory" class="secondary" style="display:none">선택한 문장을 Theory에 추가</button>
     </div>
     <div id="searchResults"></div>
     <div id="shareBox" style="display:none; margin-top:16px; padding-top:16px; border-top:1px solid var(--border)">
@@ -1148,15 +1229,16 @@
           stBody.innerHTML = '<div class="empty">공유된 문법 자료를 찾을 수 없어요.</div>';
           return;
         }
-        document.getElementById('stTitle').textContent = '📖 ' + r.tagLabel;
         var sentences = r.sentences || [];
-        if (sentences.length === 0) {
+        var isTheory = r.content_subtype === 'THEORY';
+        var hasStructuredTheory = isTheory && r.theory_content != null;
+        document.getElementById('stTitle').textContent = hasStructuredTheory ? '문법 미니수업' : '📖 ' + r.tagLabel;
+        if (!hasStructuredTheory && sentences.length === 0) {
           stBody.innerHTML = '<div class="empty">문장이 없어요.</div>';
           return;
         }
 
         var optionIds = (r.tag || '').split(',').filter(Boolean);
-        var isTheory = r.content_subtype === 'THEORY';
         var grammarProgress = r.grammar_progress || { question_items:[], completed:false };
         var grammarReadOnly = grammarProgress.completed === true;
         var savedGrammarByQuestion = {};
@@ -1167,6 +1249,24 @@
         var embedSrc = youtubeEmbedSrc(r.videoUrl);
         if (embedSrc) {
           videoHtml = '<div class="video-embed"><iframe src="' + embedSrc + '" allowfullscreen></iframe></div>';
+        }
+
+        function attemptPayload(action) { return {action:action,studentCapability:r.attemptCapability||'',attemptCapability:r.attemptCapability||'',assignment_target_id:studyParams.get('assignment_target_id')||'',student_id:studyParams.get('student_id')||'',attempt_id:r.attempt_id||'',setKey:studyKey}; }
+        function bindTheoryCompletion_() {
+          var completeButton=document.getElementById('btnTheoryComplete');
+          if(!completeButton)return;
+          completeButton.addEventListener('click',async function(){var button=this,originalText=button.textContent,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){if(hasStructuredTheory)button.remove();else button.style.display='none';var state=document.getElementById('theoryCompleteStatus');state.textContent=hasStructuredTheory?'✓ 이론 학습 완료':'✅ 완료';state.style.display='inline';}else{button.disabled=false;button.textContent=originalText;alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
+        }
+
+        if (hasStructuredTheory) {
+          stBody.textContent='';
+          var shell=document.createElement('div');shell.className='theory-student-shell';
+          var lesson=document.createElement('article');lesson.className='card theory-preview theory-student-lesson';lesson.dataset.theoryRenderer='c-type';renderTheoryPreview_(r.theory_content,lesson);shell.appendChild(lesson);
+          if(embedSrc){var video=document.createElement('div');video.className='video-embed';var iframe=document.createElement('iframe');iframe.src=embedSrc;iframe.title='문법 설명 영상';iframe.allowFullscreen=true;video.appendChild(iframe);shell.appendChild(video)}
+          var completeCard=document.createElement('div');completeCard.className='card theory-complete-card';var completeText=document.createElement('div');var completeTitle=document.createElement('b');completeTitle.textContent='학습을 마쳤나요?';completeText.appendChild(completeTitle);var completeHelp=document.createElement('div');completeHelp.className='help-text';completeHelp.style.margin='4px 0 0';completeHelp.textContent='내용을 확인한 뒤 완료해 주세요.';completeText.appendChild(completeHelp);completeCard.appendChild(completeText);
+          var completeState=document.createElement('span');completeState.id='theoryCompleteStatus';completeState.className='theory-complete-state';completeState.textContent='✓ 이론 학습 완료';completeState.style.display=grammarReadOnly?'inline':'none';completeCard.appendChild(completeState);
+          if(!grammarReadOnly&&r.attempt_id){var completeButton=document.createElement('button');completeButton.type='button';completeButton.id='btnTheoryComplete';completeButton.textContent='이론 학습 완료';completeCard.appendChild(completeButton)}
+          shell.appendChild(completeCard);stBody.appendChild(shell);bindTheoryCompletion_();return;
         }
 
         var nameHtml = '<div class="card" style="margin-bottom:16px">' +
@@ -1230,8 +1330,7 @@
           });
         }
 
-        function attemptPayload(action) { return {action:action,studentCapability:r.attemptCapability||'',attemptCapability:r.attemptCapability||'',assignment_target_id:studyParams.get('assignment_target_id')||'',student_id:studyParams.get('student_id')||'',attempt_id:r.attempt_id||'',setKey:studyKey}; }
-        if (isTheory && document.getElementById('btnTheoryComplete')) document.getElementById('btnTheoryComplete').addEventListener('click', async function(){var button=this,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){button.style.display='none';document.getElementById('theoryCompleteStatus').style.display='inline';}else{button.disabled=false;button.textContent='이론수업 완료';alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
+        if (isTheory) bindTheoryCompletion_();
 
         // 구분문제: 클릭 즉시 정오 표시(간단한 개념확인이라 학생에게 바로 보여줌)
         stBody.querySelectorAll('[data-mcq]').forEach(function (btn) {
@@ -1672,6 +1771,7 @@
   var lastSelectedIds = []; // 구분문제 txt 다운로드용 — 검색 시점의 선택 문법 목록(옵션 순서 고정)
   var ruleById = {};
   RULES.forEach(function (r) { ruleById[r.id] = r; });
+  document.getElementById('theoryGrammarId').innerHTML = '<option value="">문법 개념을 선택하세요</option>' + RULES.map(function (rule) { return '<option value="' + escapeHtml(rule.id) + '">' + escapeHtml(rule.label) + '</option>'; }).join('');
 
   function highlight(text, phrases) {
     var escaped = escapeHtml(text);
@@ -1699,6 +1799,7 @@
     var exportMcqBtn = document.getElementById('btnExportMcq');
     var exportPptxBtn = document.getElementById('btnExportPptx');
     var shareBox = document.getElementById('shareBox');
+    var theorySelectBtn = document.getElementById('btnAddSelectedToTheory');
     lastSelectedIds = selectedIds;
 
     if (selectedIds.length === 0) {
@@ -1707,6 +1808,7 @@
       exportMcqBtn.style.display = 'none';
       exportPptxBtn.style.display = 'none';
       shareBox.style.display = 'none';
+      theorySelectBtn.style.display = 'none';
       return;
     }
 
@@ -1756,6 +1858,7 @@
           });
           results.push({
             examLabel: e.year + '년 ' + monthLabel(e.month) + ' ' + e.grade + ' (' + (e.backend === 'spacy' ? 'spaCy' : 'regex') + ')',
+            examName: e.name || e.title || '',
             examYear: e.year,
             examMonth: e.month,
             examGrade: e.grade,
@@ -1802,6 +1905,7 @@
       exportMcqBtn.style.display = 'none';
       exportPptxBtn.style.display = 'none';
       shareBox.style.display = 'none';
+      theorySelectBtn.style.display = 'none';
       return;
     }
 
@@ -1833,20 +1937,150 @@
           }).join('') + '</div>';
       }
 
-      return '<div class="result-item">' +
+      return '<div class="theory-search-select"><input type="checkbox" data-theory-result-index="' + idx + '" aria-label="Theory에 추가할 문장 선택"><div class="result-item" style="flex:1;min-width:0">' +
         '<div class="qno">[' + r.examLabel + ' · ' + escapeHtml(r.questionNo) + ']</div>' +
         '<div class="tag-badges">' + badges + '</div>' +
         '<div>' + highlight(r.text, r.hits) + '</div>' +
         mcqPreviewHtml +
-        '</div>';
+        '</div></div>';
     }).join('');
     out.innerHTML = html;
     exportBtn.style.display = 'inline-block';
     var hasMcq = selectedIds.length >= 2 && lastResults.some(function (r) { return r.phraseItems && r.phraseItems.length > 0; });
     exportMcqBtn.style.display = hasMcq ? 'inline-block' : 'none';
     exportPptxBtn.style.display = hasMcq ? 'inline-block' : 'none';
+    theorySelectBtn.style.display = 'inline-block';
     suggestGrammarClassification_(selectedIds);
     shareBox.style.display = 'block';
+  }
+
+  // ---------------------------------------------------------- Teacher Theory Builder
+  var theoryDirty = false;
+  var theorySavePending = false;
+  var theoryExamSelections = [];
+  var theoryBypassNavigationConfirm = false;
+
+  function setTheoryDirty_() { theoryDirty = true; }
+  function switchGrammarTab_(name, bypassConfirm) {
+    var button = document.querySelector('.gtab-btn[data-gtab="' + name + '"]');
+    if (!button) return;
+    theoryBypassNavigationConfirm = !!bypassConfirm;
+    button.click();
+    theoryBypassNavigationConfirm = false;
+  }
+  function theoryValue_(id) { return String(document.getElementById(id).value || '').trim(); }
+  function theoryStatus_(type, message) {
+    var status = document.getElementById('theoryStatus');
+    status.className = 'status show ' + type;
+    status.textContent = message;
+  }
+  function addTheoryExample_(seed) {
+    seed = seed || {};
+    var card = document.createElement('div');
+    card.className = 'theory-example-card';
+    card.innerHTML = '<div class="theory-example-actions"><button type="button" class="secondary" data-theory-move="up">위로</button><button type="button" class="secondary" data-theory-move="down">아래로</button><button type="button" class="danger" data-theory-remove>삭제</button></div>' +
+      '<div class="theory-builder-grid"><div class="field"><label>영어 문장</label><textarea data-theory-example="english" rows="3" maxlength="1000"></textarea></div>' +
+      '<div class="field"><label>해석</label><textarea data-theory-example="korean" rows="3" maxlength="1000"></textarea></div>' +
+      '<div class="field"><label>핵심 문법 부분</label><input data-theory-example="highlight" type="text" maxlength="200" placeholder="예: must have forgotten"></div>' +
+      '<div class="field"><label>추가 설명 (선택)</label><input data-theory-example="note" type="text" maxlength="1000"></div></div>';
+    ['english','korean','highlight','note'].forEach(function (key) { card.querySelector('[data-theory-example="' + key + '"]').value = seed[key] || ''; });
+    card.addEventListener('input', setTheoryDirty_);
+    card.querySelector('[data-theory-remove]').addEventListener('click', function () { card.remove(); setTheoryDirty_(); });
+    card.querySelector('[data-theory-move="up"]').addEventListener('click', function () { if (card.previousElementSibling) { card.parentNode.insertBefore(card, card.previousElementSibling); setTheoryDirty_(); } });
+    card.querySelector('[data-theory-move="down"]').addEventListener('click', function () { if (card.nextElementSibling) { card.parentNode.insertBefore(card.nextElementSibling, card); setTheoryDirty_(); } });
+    document.getElementById('theoryExamples').appendChild(card);
+  }
+  function theoryExamples_() {
+    return Array.from(document.querySelectorAll('.theory-example-card')).map(function (card) {
+      var english = String(card.querySelector('[data-theory-example="english"]').value || '').trim();
+      var highlightText = String(card.querySelector('[data-theory-example="highlight"]').value || '').trim();
+      var highlights = [];
+      if (highlightText) {
+        var start = english.indexOf(highlightText), item = { text:highlightText };
+        if (start !== -1) { item.start = start; item.end = start + highlightText.length; }
+        highlights.push(item);
+      }
+      return { english:english, korean:String(card.querySelector('[data-theory-example="korean"]').value || '').trim(), highlight:highlights, note:String(card.querySelector('[data-theory-example="note"]').value || '').trim() };
+    });
+  }
+  function theoryBlocks_() {
+    return [['concept','theoryConcept'],['form','theoryForm'],['meaning','theoryMeaning'],['caution','theoryCaution']].map(function (item) {
+      return { type:item[0], text:theoryValue_(item[1]) };
+    }).filter(function (block) { return !!block.text; });
+  }
+  function theoryContent_() {
+    return { version:1, grammar_id:theoryValue_('theoryGrammarId'), title:theoryValue_('theoryTitle'), short_summary:theoryValue_('theorySummary'), blocks:theoryBlocks_(), examples:theoryExamples_(), exam_sentences:theoryExamSelections.map(function (item) { return item.snapshot; }), linked_practice_ref:null, cta_text:null };
+  }
+  function validateTheoryBuilder_(content) {
+    if (!content.grammar_id) return '문법 개념을 선택해주세요.';
+    if (!content.title) return '제목을 입력해주세요.';
+    if (!content.blocks.length) return '핵심 설명을 하나 이상 입력해주세요.';
+    if (!content.examples.length || content.examples.some(function (example) { return !example.english; })) return '대표 예문을 하나 이상 추가해주세요.';
+    return '';
+  }
+  function appendTheoryHighlightedText_(parent, english, highlightItems) {
+    var ranges=(highlightItems||[]).map(function(item){
+      var text=String(item&&item.text||''),start=Number.isInteger(item&&item.start)?item.start:-1,end=Number.isInteger(item&&item.end)?item.end:-1;
+      var valid=start>=0&&end>start&&end<=english.length&&(!text||english.slice(start,end)===text);
+      if(!valid&&text){start=english.indexOf(text);end=start+text.length;valid=start>=0;}
+      return valid?{start:start,end:end}:null;
+    }).filter(Boolean).sort(function(a,b){return a.start-b.start||a.end-b.end});
+    var cursor=0;ranges.forEach(function(range){if(range.start<cursor)return;parent.appendChild(document.createTextNode(english.slice(cursor,range.start)));var mark=document.createElement('mark');mark.textContent=english.slice(range.start,range.end);parent.appendChild(mark);cursor=range.end;});
+    parent.appendChild(document.createTextNode(english.slice(cursor)));
+  }
+  function renderTheoryPreview_(content, target) {
+    target.textContent = '';
+    var title = document.createElement('h3'); title.textContent = content.title; target.appendChild(title);
+    if (content.short_summary) { var summary=document.createElement('p'); summary.className='theory-summary'; summary.textContent=content.short_summary; target.appendChild(summary); }
+    var blockNames={concept:'① 핵심 개념',form:'② 핵심 형태',meaning:'③ 의미',caution:'④ 주의할 점'};
+    (content.blocks||[]).forEach(function (block) { if(!block||!block.text||!blockNames[block.type])return;var section=document.createElement('section');section.className='theory-content-block'+(block.type==='form'?' theory-form-block':'');var h=document.createElement('h4');h.textContent=blockNames[block.type];section.appendChild(h);var p=document.createElement('p');p.textContent=block.text;section.appendChild(p);target.appendChild(section); });
+    if ((content.examples||[]).length) { var eh=document.createElement('h4');eh.textContent='⑤ 대표 예문';target.appendChild(eh); }
+    content.examples.forEach(function (example) { var box=document.createElement('div');box.className='theory-example';var en=document.createElement('p');appendTheoryHighlightedText_(en,example.english,example.highlight);box.appendChild(en);if(example.korean){var ko=document.createElement('p');ko.className='theory-summary';ko.textContent=example.korean;box.appendChild(ko)}if(example.note){var note=document.createElement('p');note.className='theory-summary';note.textContent=example.note;box.appendChild(note)}target.appendChild(box); });
+    if ((content.exam_sentences||[]).length) { var xh=document.createElement('h4');xh.textContent='⑥ 실제 시험에서는 이렇게 나와요';target.appendChild(xh);content.exam_sentences.forEach(function(sentence){var box=document.createElement('div');box.className='theory-example';var source=sentence.source||{},year=String(source.year||''),month=String(source.month||''),question=String(sentence.question_no||'');if(/^\d{4}$/.test(year))year+='년';if(/^\d{1,2}$/.test(month))month+='월';if(/^\d+$/.test(question))question+='번';var main=[year,month,String(source.grade||'')].filter(Boolean).join(' '),metaParts=[main,question,String(source.exam_name||'')].filter(Boolean);if(metaParts.length){var meta=document.createElement('div');meta.className='theory-library-meta';meta.textContent=metaParts.join(' · ');box.appendChild(meta)}var p=document.createElement('p');appendTheoryHighlightedText_(p,String(sentence.english||''),sentence.detected_hit?[{text:sentence.detected_hit.text}]:[]);box.appendChild(p);target.appendChild(box)}); }
+    target.hidden = false;
+  }
+  function renderTheorySelectedSentences_() {
+    var wrap = document.getElementById('theorySelectedSentences');
+    wrap.textContent = '';
+    if (!theoryExamSelections.length) { var empty=document.createElement('div');empty.className='empty';empty.textContent='선택한 시험 문장이 없습니다.';wrap.appendChild(empty);return; }
+    theoryExamSelections.forEach(function (item,index) { var card=document.createElement('div');card.className='theory-selected-card';var meta=document.createElement('div');meta.className='theory-library-meta';meta.textContent=[item.snapshot.source.year,item.snapshot.source.month,item.snapshot.source.grade,item.snapshot.question_no].filter(Boolean).join(' · ');card.appendChild(meta);var p=document.createElement('p');p.textContent=item.snapshot.english;card.appendChild(p);var remove=document.createElement('button');remove.type='button';remove.className='danger';remove.textContent='제외';remove.addEventListener('click',function(){theoryExamSelections.splice(index,1);renderTheorySelectedSentences_();setTheoryDirty_()});card.appendChild(remove);wrap.appendChild(card); });
+  }
+  function theorySelectionFromResult_(result) {
+    var grammarId = theoryValue_('theoryGrammarId'), tagIds = Object.keys(result.tagsForShare || {}).filter(function (id) { return (result.tagsForShare[id] || []).length; });
+    var detectedId = tagIds.indexOf(grammarId) !== -1 ? grammarId : tagIds[0];
+    if (!detectedId) return null;
+    var hit = result.tagsForShare[detectedId][0], snapshot={source:{year:String(result.examYear||''),month:String(result.examMonth||''),grade:String(result.examGrade||''),exam_name:String(result.examName||'')},question_no:String(result.questionNo||''),english:String(result.text||''),detected_hit:{grammar_id:detectedId,text:String(hit.text||'')},explanation:''};
+    var tags={};Object.keys(result.tagsForShare||{}).forEach(function(tagId){tags[tagId]=(result.tagsForShare[tagId]||[]).map(function(sourceHit){return Object.assign({},sourceHit,{question_id:crypto.randomUUID?crypto.randomUUID():uid(32)})})});
+    return { key:snapshot.english+'|'+snapshot.question_no, snapshot:snapshot, sentence:{text:snapshot.english,matches:(result.hits||[]).slice(),tags:tags,source_question_no:result.questionNo||''} };
+  }
+  function addSelectedResultsToTheory_() {
+    var checked = Array.from(document.querySelectorAll('[data-theory-result-index]:checked')), added=0, skipped=0;
+    checked.forEach(function (input) { var item=theorySelectionFromResult_(lastResults[Number(input.dataset.theoryResultIndex)]||{});if(!item){skipped++;return}if(!theoryExamSelections.some(function(x){return x.key===item.key})){theoryExamSelections.push(item);added++} });
+    if (!checked.length) { window.alert('Theory에 추가할 문장을 선택해주세요.'); return; }
+    if (!added && skipped) { window.alert('탐지 구절이 확인된 문장만 추가할 수 있습니다.'); return; }
+    renderTheorySelectedSentences_();setTheoryDirty_();switchGrammarTab_('theory',true);
+    if (skipped) theoryStatus_('info', skipped + '개 문장은 확인된 탐지 구절이 없어 제외했습니다.');
+  }
+  function theoryCompatibilitySentences_() { return theoryExamSelections.map(function (item) { return item.sentence; }); }
+  function assignmentUrlForTheory_(setKey) { return '../teacher/assignments.html?content_type=GRAMMAR&content_ref_id=' + encodeURIComponent(setKey) + '&content_subtype=THEORY'; }
+  async function saveTheory_() {
+    if (theorySavePending) return;
+    var content=theoryContent_(),error=validateTheoryBuilder_(content);if(error){theoryStatus_('error',error);return}
+    var cfg=ghDeliveryCfg();if(!cfg.url||!cfg.token){theoryStatus_('error','설정에서 Apps Script 주소와 토큰을 먼저 저장해주세요.');return}
+    theorySavePending=true;var button=document.getElementById('btnSaveTheory');button.disabled=true;var setKey=uid(12);
+    try {
+      theoryStatus_('info','Theory를 저장하고 확인하는 중입니다.');
+      await hookPost(cfg.url,{action:'saveGrammarSet',token:cfg.token,setKey:setKey,tag:content.grammar_id,tagLabel:content.title,sentences:theoryCompatibilitySentences_(),theoryContent:content});
+      var confirmation=await confirmGrammarSetSaved(cfg.url,setKey);
+      if(confirmation.status!=='FOUND'){theoryStatus_(confirmation.status==='ERROR'?'error':'info',confirmation.status==='ERROR'?'Theory 저장 확인에 실패했어요.':'저장 확인이 지연되고 있어요. 잠시 후 Theory 목록에서 확인해 주세요.');return}
+      theoryDirty=false;var status=document.getElementById('theoryStatus');status.className='status show success';status.textContent='';var message=document.createElement('div');message.textContent='Theory가 저장되었습니다.';status.appendChild(message);var actions=document.createElement('div');actions.className='theory-library-actions';actions.style.marginTop='10px';var list=document.createElement('button');list.type='button';list.className='secondary';list.textContent='Theory 목록 보기';list.addEventListener('click',function(){loadTheoryLibrary_();document.getElementById('theoryLibrarySection').scrollIntoView({behavior:'smooth'})});actions.appendChild(list);var assign=document.createElement('a');assign.className='secondary';assign.textContent='과제 배정하기';assign.href=assignmentUrlForTheory_(setKey);assign.style.cssText='display:inline-block;padding:9px 14px;border-radius:8px;text-decoration:none';actions.appendChild(assign);status.appendChild(actions);
+    } finally { theorySavePending=false;button.disabled=false; }
+  }
+  async function loadTheoryLibrary_() {
+    var cfg=ghDeliveryCfg(),wrap=document.getElementById('theoryLibrary');if(!cfg.url||!cfg.token){wrap.textContent='설정에서 Apps Script 주소와 토큰을 먼저 저장해주세요.';return}wrap.textContent='불러오는 중...';
+    var response=await jsonpFetch(cfg.url+'?action=listGrammarSets&token='+encodeURIComponent(cfg.token)),sets=response&&response.sets?response.sets.filter(function(set){return set.has_theory_content===true}):null;
+    wrap.textContent='';if(!sets){wrap.textContent='Theory 목록을 불러오지 못했어요.';return}if(!sets.length){wrap.textContent='저장된 Theory가 없습니다.';return}
+    sets.forEach(function(set){var card=document.createElement('div');card.className='theory-library-card';var title=document.createElement('b');title.textContent=set.theory_title||set.tagLabel||set.tag;card.appendChild(title);var meta=document.createElement('div');meta.className='theory-library-meta';meta.textContent=[set.tagLabel||set.tag,'예문 '+Number(set.theory_example_count||0)+'개','시험 문장 '+Number(set.theory_exam_sentence_count||0)+'개',formatDateTime(set.createdAt)].join(' · ');card.appendChild(meta);var actions=document.createElement('div');actions.className='theory-library-actions';var preview=document.createElement('button');preview.type='button';preview.className='secondary';preview.textContent='미리보기';var previewWrap=document.createElement('div');previewWrap.className='theory-preview';previewWrap.hidden=true;preview.addEventListener('click',async function(){preview.disabled=true;var detail=await jsonpFetch(cfg.url+'?action=fetchGrammarSet&key='+encodeURIComponent(set.setKey));preview.disabled=false;if(detail&&detail.found&&detail.theory_content)renderTheoryPreview_(detail.theory_content,previewWrap);else{previewWrap.hidden=false;previewWrap.textContent='Theory 내용을 불러오지 못했어요.'}});actions.appendChild(preview);var assign=document.createElement('a');assign.className='secondary';assign.textContent='과제 배정';assign.href=assignmentUrlForTheory_(set.setKey);assign.style.cssText='display:inline-block;padding:9px 14px;border-radius:8px;text-decoration:none';actions.appendChild(assign);card.appendChild(actions);card.appendChild(previewWrap);wrap.appendChild(card)});
   }
 
   // ---------------------------------------------------------- 학생 공유
@@ -2095,13 +2329,15 @@
   // ------------------------------------------------------------------ tabs
   document.querySelectorAll('.gtab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
+      var current = document.querySelector('.gtab-btn.gtab-active');
+      if (!theoryBypassNavigationConfirm && theoryDirty && current && current.dataset.gtab === 'theory' && btn.dataset.gtab !== 'theory' && !window.confirm('작성 중인 Theory 내용이 저장되지 않았습니다. 다른 화면으로 이동할까요?')) return;
       document.querySelectorAll('.gtab-btn').forEach(function (b) { b.classList.remove('gtab-active'); });
       document.querySelectorAll('.gtab-panel').forEach(function (p) { p.style.display = 'none'; });
       btn.classList.add('gtab-active');
       document.getElementById('gtabPanel-' + btn.dataset.gtab).style.display = '';
       // 저장된 모의고사 목록·문장 찾기는 두 입력 방법 탭에는 계속 필요하지만
       // 설정/공유관리 탭에서는 안 쓰이므로 그때만 숨김
-      var hideShared = btn.dataset.gtab === 'settings' || btn.dataset.gtab === 'manage' || btn.dataset.gtab === 'finals';
+      var hideShared = btn.dataset.gtab === 'settings' || btn.dataset.gtab === 'manage' || btn.dataset.gtab === 'finals' || btn.dataset.gtab === 'theory';
       document.getElementById('gtabSharedResults').style.display = hideShared ? 'none' : '';
       if (btn.dataset.gtab === 'manage') loadGrammarSets();
       if (btn.dataset.gtab === 'finals') loadFinalsAndFolders();
@@ -2705,6 +2941,14 @@
   document.getElementById('btnExportMcq').addEventListener('click', handleExportMcq);
   document.getElementById('btnExportPptx').addEventListener('click', handleExportPptx);
   document.getElementById('btnShare').addEventListener('click', handleShare);
+  document.getElementById('btnAddSelectedToTheory').addEventListener('click', addSelectedResultsToTheory_);
+  document.getElementById('btnAddTheoryExample').addEventListener('click', function () { addTheoryExample_({}); setTheoryDirty_(); });
+  document.getElementById('btnTheoryGoSearch').addEventListener('click', function () { switchGrammarTab_('accurate', true); document.getElementById('searchResults').scrollIntoView({behavior:'smooth'}); });
+  document.getElementById('btnTheoryPreview').addEventListener('click', function () { var content=theoryContent_(),error=validateTheoryBuilder_(content);if(error){theoryStatus_('error',error);return}renderTheoryPreview_(content,document.getElementById('theoryPreview')); });
+  document.getElementById('btnSaveTheory').addEventListener('click', saveTheory_);
+  document.getElementById('btnLoadTheoryLibrary').addEventListener('click', loadTheoryLibrary_);
+  document.getElementById('gtabPanel-theory').addEventListener('input', setTheoryDirty_);
+  document.getElementById('theoryGrammarId').addEventListener('change', function () { var rule=ruleById[this.value];if(rule&&!theoryValue_('theoryTitle'))document.getElementById('theoryTitle').value=rule.label;setTheoryDirty_(); });
   document.getElementById('btnSelectAllTags').addEventListener('click', function () {
     document.querySelectorAll('.tagCheck').forEach(function (cb) { cb.checked = true; });
   });
@@ -2714,6 +2958,7 @@
 
   renderExamList();
   populateSearchExamSelect();
+  addTheoryExample_({});
 })();
 </script>
 </body>

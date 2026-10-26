@@ -30,7 +30,7 @@
  * - ExamResults: date / examKey / name / score / totalTimeMs / answersJson / timesJson
  * - Students: name / pin / createdAt
  * - Assignments: name / updatedAt / vocabLabel / vocabLink / examLabel / examLink / grammarLabel / grammarLink
- * - GrammarSets: setKey / tag / tagLabel / sentencesJson / createdAt / videoUrl
+ * - GrammarSets: setKey / tag / tagLabel / sentencesJson / createdAt / videoUrl / theoryContentJson
  * - VocabResults: date / name / range / score / timeStr / wrong / count / qtype / attempt / known
  *   (VocaTest(vocab/index.html)가 결과 전송 시 이 백엔드로도 함께 보낼 수 있음 — 통합 대시보드용)
  * - GrammarSubmissions: date / setKey / name / sentenceIndex / sentenceText / interpretation /
@@ -140,7 +140,7 @@ var REVIEW_ITEMS_V2_SHEET = 'ReviewItemsV2';
 var REVIEW_ITEMS_V2_HEADERS = ['review_item_id', 'student_id', 'teacher_id', 'item_type', 'item_ref_id', 'subskill_key', 'first_wrong_at', 'last_wrong_at', 'wrong_count', 'last_correct_at', 'consecutive_correct', 'review_count', 'last_review_at', 'next_review_at', 'status', 'active', 'created_at', 'updated_at'];
 var REVIEW_EVENTS_V2_SHEET = 'ReviewEventsV2';
 var REVIEW_EVENTS_V2_HEADERS = ['event_id', 'review_item_id', 'attempt_id', 'source_item_id', 'outcome', 'wrong_delta', 'created_at'];
-var GRAMMAR_HEADERS = ['setKey', 'tag', 'tagLabel', 'sentencesJson', 'createdAt', 'videoUrl'];
+var GRAMMAR_HEADERS = ['setKey', 'tag', 'tagLabel', 'sentencesJson', 'createdAt', 'videoUrl', 'theoryContentJson'];
 var VOCAB_RESULTS_SHEET = 'VocabResults';
 var VOCAB_RESULTS_HEADERS = ['date', 'name', 'range', 'score', 'timeStr', 'wrong', 'count', 'qtype', 'attempt', 'known'];
 var GRAMMAR_SUBMISSIONS_SHEET = 'GrammarSubmissions';
@@ -200,7 +200,7 @@ function setup() {
   getOrCreateSheet_(RESULTS_SHEET, RESULTS_HEADERS);
   getOrCreateSheet_(STUDENTS_SHEET, STUDENTS_HEADERS);
   getOrCreateSheet_(ASSIGNMENTS_SHEET, ASSIGNMENTS_HEADERS);
-  getOrCreateSheet_(GRAMMAR_SHEET, GRAMMAR_HEADERS);
+  ensureSheetHeaders_(getOrCreateSheet_(GRAMMAR_SHEET, GRAMMAR_HEADERS), GRAMMAR_HEADERS);
   getOrCreateSheet_(VOCAB_RESULTS_SHEET, VOCAB_RESULTS_HEADERS);
   getOrCreateSheet_(GRAMMAR_SUBMISSIONS_SHEET, GRAMMAR_SUBMISSIONS_HEADERS);
   getOrCreateSheet_(GRAMMAR_FINALS_SHEET, GRAMMAR_FINALS_HEADERS);
@@ -3572,11 +3572,88 @@ function handleSubmitSentenceStructureStudentV1_(d){
   return textOut_('ok:'+attempt[0]+':'+progress.results.length);
 }
 
-// {action:'saveGrammarSet', token, setKey, tag, tagLabel, sentences:[{text,matches:[...],tags:{...},translationDraft,chunkGloss:[{en,ko}]}]}
+var THEORY_CONTENT_V1_MAX_JSON_LENGTH = 40000;
+function theoryContentObjectV1_(value, allowedKeys, label) {
+  if (!value || Object.prototype.toString.call(value) !== '[object Object]') throw new Error(label + ' must be an object');
+  Object.keys(value).forEach(function(key) {
+    if (allowedKeys.indexOf(key) === -1) throw new Error(label + ' has an unexpected field');
+  });
+  return value;
+}
+function theoryContentTextV1_(value, label, maxLength, required) {
+  if (value == null && !required) return '';
+  if (typeof value !== 'string') throw new Error(label + ' must be text');
+  var text=value.trim();
+  if (required && !text) throw new Error(label + ' is required');
+  if (text.length > maxLength) throw new Error(label + ' is too long');
+  if (/[<>]/.test(text) || /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/.test(text)) throw new Error(label + ' must be plain text');
+  return text;
+}
+function sanitizeTheoryContentV1_(raw) {
+  raw=theoryContentObjectV1_(raw,['version','grammar_id','title','short_summary','blocks','examples','exam_sentences','linked_practice_ref','cta_text'],'theoryContent');
+  if (raw.version !== 1) throw new Error('unsupported theory content version');
+  if (!Array.isArray(raw.blocks) || raw.blocks.length > 12) throw new Error('invalid theory blocks');
+  if (!Array.isArray(raw.examples) || raw.examples.length > 10) throw new Error('invalid theory examples');
+  if (!Array.isArray(raw.exam_sentences) || raw.exam_sentences.length > 30) throw new Error('invalid theory exam sentences');
+  if (raw.linked_practice_ref != null || raw.cta_text != null) throw new Error('practice linking is not supported in TheoryContentV1');
+  var out={
+    version:1,
+    grammar_id:theoryContentTextV1_(raw.grammar_id,'grammar_id',80,true),
+    title:theoryContentTextV1_(raw.title,'title',160,true),
+    short_summary:theoryContentTextV1_(raw.short_summary,'short_summary',500,false),
+    blocks:raw.blocks.map(function(block) {
+      block=theoryContentObjectV1_(block,['type','text'],'block');
+      var type=theoryContentTextV1_(block.type,'block.type',20,true);
+      if (['concept','form','meaning','caution'].indexOf(type) === -1) throw new Error('invalid theory block type');
+      return {type:type,text:theoryContentTextV1_(block.text,'block.text',2000,true)};
+    }),
+    examples:raw.examples.map(function(example) {
+      example=theoryContentObjectV1_(example,['english','korean','highlight','note'],'example');
+      var english=theoryContentTextV1_(example.english,'example.english',1000,true);
+      if (!Array.isArray(example.highlight) || example.highlight.length > 10) throw new Error('invalid example highlight');
+      var highlight=example.highlight.map(function(item) {
+        item=theoryContentObjectV1_(item,['text','start','end'],'highlight');
+        var text=theoryContentTextV1_(item.text,'highlight.text',200,true),hasStart=item.start != null,hasEnd=item.end != null,outItem={text:text};
+        if (hasStart !== hasEnd) throw new Error('highlight offsets must be paired');
+        if (hasStart) {
+          if (!Number.isInteger(item.start) || !Number.isInteger(item.end) || item.start < 0 || item.end <= item.start || item.end > english.length || english.slice(item.start,item.end) !== text) throw new Error('invalid highlight offsets');
+          outItem.start=item.start;outItem.end=item.end;
+        }
+        return outItem;
+      });
+      return {english:english,korean:theoryContentTextV1_(example.korean,'example.korean',1000,false),highlight:highlight,note:theoryContentTextV1_(example.note,'example.note',1000,false)};
+    }),
+    exam_sentences:raw.exam_sentences.map(function(sentence) {
+      sentence=theoryContentObjectV1_(sentence,['source','question_no','english','detected_hit','explanation'],'exam_sentence');
+      var source=theoryContentObjectV1_(sentence.source||{},['year','month','grade','exam_name'],'exam_sentence.source');
+      var hit=theoryContentObjectV1_(sentence.detected_hit,['grammar_id','text'],'exam_sentence.detected_hit');
+      return {source:{year:theoryContentTextV1_(source.year,'source.year',20,false),month:theoryContentTextV1_(source.month,'source.month',20,false),grade:theoryContentTextV1_(source.grade,'source.grade',40,false),exam_name:theoryContentTextV1_(source.exam_name,'source.exam_name',200,false)},question_no:theoryContentTextV1_(sentence.question_no,'question_no',50,false),english:theoryContentTextV1_(sentence.english,'exam_sentence.english',2000,true),detected_hit:{grammar_id:theoryContentTextV1_(hit.grammar_id,'detected_hit.grammar_id',80,true),text:theoryContentTextV1_(hit.text,'detected_hit.text',200,true)},explanation:theoryContentTextV1_(sentence.explanation,'exam_sentence.explanation',1500,false)};
+    }),
+    linked_practice_ref:null,
+    cta_text:null
+  };
+  if (JSON.stringify(out).length > THEORY_CONTENT_V1_MAX_JSON_LENGTH) throw new Error('theory content is too large');
+  return out;
+}
+function validateTheoryContentV1_(raw) {
+  try { return {valid:true,value:sanitizeTheoryContentV1_(raw),error:''}; }
+  catch (error) { return {valid:false,value:null,error:String(error&&error.message||error)}; }
+}
+function parseTheoryContentV1_(raw) {
+  if (raw == null || String(raw).trim() === '') return null;
+  try { var parsed=typeof raw === 'string'?JSON.parse(raw):raw,result=validateTheoryContentV1_(parsed);return result.valid?result.value:null; }
+  catch (error) { return null; }
+}
+
+// {action:'saveGrammarSet', token, setKey, tag, tagLabel, sentences:[{text,matches:[...],tags:{...},translationDraft,chunkGloss:[{en,ko}]}], theoryContent?}
 // videoUrl은 여기서 안 보내면(재공유 시 sentences만 새로 보낼 때) 기존 값을 그대로 유지한다 —
+// theoryContent도 명시적으로 보낼 때만 갱신한다. exam_sentences는 학생 설명용 snapshot이고,
+// sentences는 QuestionsV2와 P0 호환용이다. 둘은 서로 대체하지 않는다.
 // saveGrammarVideo와 saveGrammarSet가 서로의 필드를 덮어쓰지 않게 하기 위한 merge 방식
 // (handleSaveAssignment_와 같은 패턴).
 function handleSaveGrammarSet_(d) {
+  var hasTheoryContent=Object.prototype.hasOwnProperty.call(d,'theoryContent'),theoryResult=hasTheoryContent?validateTheoryContentV1_(d.theoryContent):null;
+  if (theoryResult && !theoryResult.valid) return textOut_('invalid theory content');
   setupQuestionMetadataV2_();
   var optionIds=String(d.tag||'').split(',').filter(Boolean),sentences=d.sentences||[];
   sentences.forEach(function(sentence,sentenceIndex){
@@ -3592,14 +3669,17 @@ function handleSaveGrammarSet_(d) {
     });
   });
   var sh = getOrCreateSheet_(GRAMMAR_SHEET, GRAMMAR_HEADERS);
+  ensureSheetHeaders_(sh, GRAMMAR_HEADERS);
   var rowIdx = findRowByKey_(sh, d.setKey);
   var existing = rowIdx === -1 ? null : sh.getRange(rowIdx, 1, 1, GRAMMAR_HEADERS.length).getValues()[0];
   var videoUrl = Object.prototype.hasOwnProperty.call(d, 'videoUrl') ? (d.videoUrl || '') : (existing ? existing[5] : '');
+  var theoryContentJson = hasTheoryContent ? JSON.stringify(theoryResult.value) : (existing ? existing[6] || '' : '');
   upsertRow_(sh, d.setKey, [
     d.setKey, d.tag || '', d.tagLabel || '',
     JSON.stringify(sentences),
     new Date(),
-    videoUrl
+    videoUrl,
+    theoryContentJson
   ]);
   return textOut_('ok');
 }
@@ -4212,10 +4292,12 @@ function handleFetchGrammarSet_(e) {
   var sentences = [];
   try { sentences = JSON.parse(row[3] || '[]'); } catch (err) {}
   sentences.forEach(function (s) { delete s.translationDraft; delete s.chunkGloss; });
+  var theoryContent=parseTheoryContentV1_(row[6]);
   var response = {
     found: true, tag: row[1], tagLabel: row[2], sentences: sentences,
     videoUrl: row[5] || '', content_subtype:subtype,
-    question_count:grammarQuestionIdsV1_(sentences).length
+    question_count:grammarQuestionIdsV1_(sentences).length,
+    theory_content:theoryContent
   };
   Object.assign(response,attemptContextForFetchV2_(e));
   response.grammar_progress=grammarProgressForFetchV1_(e);
@@ -4232,9 +4314,14 @@ function handleListGrammarSets_(e) {
   var values = sh.getDataRange().getValues();
   var out = [];
   for (var i = 1; i < values.length; i++) {
+    var theoryContent=parseTheoryContentV1_(values[i][6]);
     out.push({
       setKey: values[i][0], tag: values[i][1], tagLabel: values[i][2],
-      createdAt: values[i][4], videoUrl: values[i][5] || ''
+      createdAt: values[i][4], videoUrl: values[i][5] || '',
+      has_theory_content:theoryContent!==null,
+      theory_title:theoryContent?theoryContent.title:'',
+      theory_example_count:theoryContent?theoryContent.examples.length:0,
+      theory_exam_sentence_count:theoryContent?theoryContent.exam_sentences.length:0
     });
   }
   out.sort(function (a, b) { return new Date(b.createdAt) - new Date(a.createdAt); });
