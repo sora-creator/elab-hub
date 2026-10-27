@@ -211,11 +211,14 @@
   .theory-complete-card { display:flex; align-items:center; justify-content:space-between; gap:14px; }
   .theory-complete-card button { flex-shrink:0; }
   .theory-complete-state { color:var(--green); font-weight:800; }
+  .theory-practice-cta { display:inline-flex; align-items:center; justify-content:center; flex-shrink:0; min-height:42px; padding:9px 14px; border-radius:9px; background:var(--blue); color:#fff; font-weight:800; text-decoration:none; }
+  .theory-practice-cta:hover,.theory-practice-cta:focus-visible { background:var(--blue-dark); outline:2px solid #bfdbfe; outline-offset:2px; }
+  .theory-practice-unavailable { color:var(--muted); font-size:13px; }
   .theory-library-meta { color:var(--muted); font-size:12px; margin:5px 0 10px; }
   .theory-library-actions { display:flex; flex-wrap:wrap; gap:8px; }
   .theory-search-select { display:flex; align-items:flex-start; gap:8px; margin-bottom:8px; }
   .theory-search-select input { margin-top:5px; }
-  @media(max-width:760px){.local-form{grid-template-columns:1fr 1fr}.local-form .local-file{grid-column:1/-1}.theory-builder-grid{grid-template-columns:1fr}.theory-section{padding:14px}.theory-preview{padding:16px}.theory-student-lesson{padding:18px}.theory-content-block{padding:12px 13px}.theory-complete-card{align-items:stretch;flex-direction:column}.theory-complete-card button{width:100%}}
+  @media(max-width:760px){.local-form{grid-template-columns:1fr 1fr}.local-form .local-file{grid-column:1/-1}.theory-builder-grid{grid-template-columns:1fr}.theory-section{padding:14px}.theory-preview{padding:16px}.theory-student-lesson{padding:18px}.theory-content-block{padding:12px 13px}.theory-complete-card{align-items:stretch;flex-direction:column}.theory-complete-card button,.theory-practice-cta{width:100%}}
 </style>
 </head>
 <body>
@@ -1252,10 +1255,19 @@
         }
 
         function attemptPayload(action) { return {action:action,studentCapability:r.attemptCapability||'',attemptCapability:r.attemptCapability||'',assignment_target_id:studyParams.get('assignment_target_id')||'',student_id:studyParams.get('student_id')||'',attempt_id:r.attempt_id||'',setKey:studyKey}; }
+        function linkedPracticeUrl_(launch) {
+          if(!launch||launch.available!==true||!hook||!launch.content_ref_id||!launch.assignment_target_id||!launch.student_id||!launch.launch_capability||String(launch.student_id)!==String(studyParams.get('student_id')||''))return'';
+          var url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('study',launch.content_ref_id);url.searchParams.set('hook',hook);url.searchParams.set('assignment_target_id',launch.assignment_target_id);url.searchParams.set('student_id',launch.student_id);url.searchParams.set('assignmentCapability',launch.launch_capability);return url.href;
+        }
+        function renderLinkedPracticeCta_(launch) {
+          var card=document.getElementById('theoryCompletionCard');if(!card)return;var old=card.querySelector('[data-linked-practice]');if(old)old.remove();if(!launch)return;
+          var url=linkedPracticeUrl_(launch);if(url){var link=document.createElement('a');link.className='theory-practice-cta';link.dataset.linkedPractice='available';link.textContent='연습문제 풀기';link.href=url;card.appendChild(link);return}
+          var unavailable=document.createElement('span');unavailable.className='theory-practice-unavailable';unavailable.dataset.linkedPractice='unavailable';unavailable.textContent='연습문제가 아직 배정되지 않았어요.';card.appendChild(unavailable);
+        }
         function bindTheoryCompletion_() {
           var completeButton=document.getElementById('btnTheoryComplete');
           if(!completeButton)return;
-          completeButton.addEventListener('click',async function(){var button=this,originalText=button.textContent,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){if(hasStructuredTheory)button.remove();else button.style.display='none';var state=document.getElementById('theoryCompleteStatus');state.textContent=hasStructuredTheory?'✓ 이론 학습 완료':'✅ 완료';state.style.display='inline';}else{button.disabled=false;button.textContent=originalText;alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
+          completeButton.addEventListener('click',async function(){var button=this,originalText=button.textContent,payload=attemptPayload('completeGrammarActivityV1');button.disabled=true;button.textContent='완료 처리 중...';var ok=await hookPost(hook,payload),verified=ok?await verifyGrammarCompletion(hook,payload):{complete:false};if(verified.complete){if(hasStructuredTheory)button.remove();else button.style.display='none';var state=document.getElementById('theoryCompleteStatus');state.textContent=hasStructuredTheory?'✓ 이론 학습 완료':'✅ 완료';state.style.display='inline';var title=document.getElementById('theoryCompleteTitle');if(title)title.textContent='이론 학습을 완료했어요.';renderLinkedPracticeCta_(verified.linked_practice_launch);}else{button.disabled=false;button.textContent=originalText;alert('일부 결과가 저장되지 않았습니다. 다시 시도해주세요.');}});
         }
 
         if (hasStructuredTheory) {
@@ -1263,10 +1275,10 @@
           var shell=document.createElement('div');shell.className='theory-student-shell';
           var lesson=document.createElement('article');lesson.className='card theory-preview theory-student-lesson';lesson.dataset.theoryRenderer='c-type';renderTheoryPreview_(r.theory_content,lesson);shell.appendChild(lesson);
           if(embedSrc){var video=document.createElement('div');video.className='video-embed';var iframe=document.createElement('iframe');iframe.src=embedSrc;iframe.title='문법 설명 영상';iframe.allowFullscreen=true;video.appendChild(iframe);shell.appendChild(video)}
-          var completeCard=document.createElement('div');completeCard.className='card theory-complete-card';var completeText=document.createElement('div');var completeTitle=document.createElement('b');completeTitle.textContent='학습을 마쳤나요?';completeText.appendChild(completeTitle);var completeHelp=document.createElement('div');completeHelp.className='help-text';completeHelp.style.margin='4px 0 0';completeHelp.textContent='내용을 확인한 뒤 완료해 주세요.';completeText.appendChild(completeHelp);completeCard.appendChild(completeText);
+          var completeCard=document.createElement('div');completeCard.id='theoryCompletionCard';completeCard.className='card theory-complete-card';var completeText=document.createElement('div');var completeTitle=document.createElement('b');completeTitle.id='theoryCompleteTitle';completeTitle.textContent=grammarReadOnly?'이론 학습을 완료했어요.':'학습을 마쳤나요?';completeText.appendChild(completeTitle);var completeHelp=document.createElement('div');completeHelp.className='help-text';completeHelp.style.margin='4px 0 0';completeHelp.textContent=grammarReadOnly?'완료한 내용은 읽기 전용으로 유지됩니다.':'내용을 확인한 뒤 완료해 주세요.';completeText.appendChild(completeHelp);completeCard.appendChild(completeText);
           var completeState=document.createElement('span');completeState.id='theoryCompleteStatus';completeState.className='theory-complete-state';completeState.textContent='✓ 이론 학습 완료';completeState.style.display=grammarReadOnly?'inline':'none';completeCard.appendChild(completeState);
           if(!grammarReadOnly&&r.attempt_id){var completeButton=document.createElement('button');completeButton.type='button';completeButton.id='btnTheoryComplete';completeButton.textContent='이론 학습 완료';completeCard.appendChild(completeButton)}
-          shell.appendChild(completeCard);stBody.appendChild(shell);bindTheoryCompletion_();return;
+          shell.appendChild(completeCard);stBody.appendChild(shell);if(grammarReadOnly)renderLinkedPracticeCta_(r.linked_practice_launch);bindTheoryCompletion_();return;
         }
 
         var nameHtml = '<div class="card" style="margin-bottom:16px">' +
@@ -1309,7 +1321,7 @@
             '</div>';
         }).join('');
 
-        var theoryCompleteHtml = isTheory && grammarReadOnly ? '<div class="card"><span id="theoryCompleteStatus" class="practice-submitted">✅ 이론수업 완료</span></div>' : (isTheory && r.attempt_id ? '<div class="card"><button type="button" id="btnTheoryComplete">이론수업 완료</button><span id="theoryCompleteStatus" class="practice-submitted" style="display:none">✅ 완료</span></div>' : '');
+        var theoryCompleteHtml = isTheory && grammarReadOnly ? '<div class="card" id="theoryCompletionCard"><span id="theoryCompleteStatus" class="practice-submitted">✅ 이론수업 완료</span></div>' : (isTheory && r.attempt_id ? '<div class="card" id="theoryCompletionCard"><button type="button" id="btnTheoryComplete">이론수업 완료</button><span id="theoryCompleteStatus" class="practice-submitted" style="display:none">✅ 완료</span></div>' : '');
         stBody.innerHTML = videoHtml + nameHtml +
           '<div class="result-count">' + sentences.length + '개 문장</div>' + sentencesHtml + theoryCompleteHtml;
 
@@ -1330,7 +1342,7 @@
           });
         }
 
-        if (isTheory) bindTheoryCompletion_();
+        if (isTheory) { if(grammarReadOnly)renderLinkedPracticeCta_(r.linked_practice_launch);bindTheoryCompletion_(); }
 
         // 구분문제: 클릭 즉시 정오 표시(간단한 개념확인이라 학생에게 바로 보여줌)
         stBody.querySelectorAll('[data-mcq]').forEach(function (btn) {

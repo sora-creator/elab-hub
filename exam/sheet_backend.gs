@@ -104,7 +104,7 @@ var GROUPS_V2_HEADERS = ['group_id', 'teacher_id', 'name', 'active', 'created_at
 var GROUP_MEMBERS_V2_SHEET = 'GroupMembersV2';
 var GROUP_MEMBERS_V2_HEADERS = ['group_member_id', 'group_id', 'student_id', 'joined_at', 'left_at', 'active'];
 var ASSIGNMENTS_V2_SHEET = 'AssignmentsV2';
-var ASSIGNMENTS_V2_HEADERS = ['assignment_id', 'teacher_id', 'content_type', 'content_ref_id', 'title', 'content_link', 'assigned_at', 'due_at', 'active', 'created_at', 'updated_at', 'content_subtype', 'request_id'];
+var ASSIGNMENTS_V2_HEADERS = ['assignment_id', 'teacher_id', 'content_type', 'content_ref_id', 'title', 'content_link', 'assigned_at', 'due_at', 'active', 'created_at', 'updated_at', 'content_subtype', 'request_id', 'linked_practice_assignment_id'];
 var ASSIGNMENT_TARGETS_V2_SHEET = 'AssignmentTargetsV2';
 var ASSIGNMENT_TARGETS_V2_HEADERS = ['assignment_target_id', 'assignment_id', 'student_id', 'status', 'started_at', 'completed_at', 'active', 'created_at', 'updated_at'];
 var HOMEWORK_BATCHES_V2_SHEET = 'HomeworkBatchesV2';
@@ -873,6 +873,30 @@ function selectedStudentIdsV2_(teacherId, directIds, groupIds) {
   (groupIds||[]).forEach(function(gid){var g=groupByIdV2_(gid);if(!g||String(g[1])!==teacherId||!boolValue_(g[3],true))return;for(var i=1;i<members.length;i++)if(String(members[i][1])===String(gid)&&boolValue_(members[i][5],true)&&assertTeacherOwnsStudent_(teacherId,members[i][2]))selected[String(members[i][2])]=true;});
   return Object.keys(selected);
 }
+function linkedPracticeAssignmentIdV1_(value){return value===null||value===undefined?'':String(value).trim();}
+function validateLinkedPracticeAssignmentV1_(teacherId,type,subtype,linkedAssignmentId,studentIds){
+  var linkedId=linkedPracticeAssignmentIdV1_(linkedAssignmentId);
+  if(!linkedId)return '';
+  if(String(type)!=='GRAMMAR'||String(subtype)!=='THEORY')return 'LINKED_PRACTICE_THEORY_ONLY';
+  var linked=assignmentByIdV2_(linkedId);
+  if(!linked)return 'LINKED_PRACTICE_ASSIGNMENT_NOT_FOUND';
+  if(String(linked[1])!==String(teacherId))return 'LINKED_PRACTICE_SCOPE_MISMATCH';
+  if(String(linked[2])!=='GRAMMAR')return 'LINKED_PRACTICE_INVALID_TYPE';
+  if(['BASIC_PRACTICE','MIXED_PRACTICE','LESSON_PRACTICE'].indexOf(String(linked[11]||''))===-1)return 'LINKED_PRACTICE_INVALID_SUBTYPE';
+  if(!boolValue_(linked[8],true))return 'LINKED_PRACTICE_INACTIVE';
+  var required={},covered={},targets=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues();
+  (studentIds||[]).forEach(function(studentId){required[String(studentId)]=true;});
+  for(var i=1;i<targets.length;i++)if(String(targets[i][1])===linkedId&&boolValue_(targets[i][6],true)&&String(targets[i][3]||'')!=='CANCELLED')covered[String(targets[i][2])]=true;
+  var ids=Object.keys(required);for(var j=0;j<ids.length;j++)if(!covered[ids[j]])return 'LINKED_PRACTICE_TARGET_COVERAGE_MISSING';
+  return '';
+}
+function grammarTheoryLinkEditStateV1_(assignment){
+  var targetRows=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),targetIds={},studentIds=[],started=false;
+  for(var i=1;i<targetRows.length;i++)if(String(targetRows[i][1])===String(assignment[0])&&boolValue_(targetRows[i][6],true)){targetIds[String(targetRows[i][0])]=true;studentIds.push(String(targetRows[i][2]));if(String(targetRows[i][3]||'NOT_STARTED')!=='NOT_STARTED'||targetRows[i][4])started=true;}
+  var attemptRows=getOrCreateSheet_(ATTEMPTS_V2_SHEET,ATTEMPTS_V2_HEADERS).getDataRange().getValues();
+  for(var j=1;j<attemptRows.length;j++)if(targetIds[String(attemptRows[j][1])]){started=true;break;}
+  return{started:started,student_ids:studentIds};
+}
 function lessonDateV2_(value){var raw=String(value||'');if(/^\d{4}-\d{2}-\d{2}/.test(raw))return raw.slice(0,10);var d=value?new Date(value):new Date();if(isNaN(d.getTime()))d=new Date();return d.toISOString().slice(0,10);}
 function vocabSetWordIdsV2_(vocabSetId){var rows=getOrCreateSheet_(VOCAB_SET_ITEMS_V2_SHEET,VOCAB_SET_ITEMS_V2_HEADERS).getDataRange().getValues(),items=[];for(var i=1;i<rows.length;i++)if(String(rows[i][1])===String(vocabSetId))items.push({word_id:String(rows[i][2]),item_order:Number(rows[i][3])||0});items.sort(function(a,b){return a.item_order-b.item_order;});return items.map(function(x){return x.word_id;});}
 function vocabSnapshotV2_(assignment){var out={content_type:assignment[2],content_subtype:assignment[11]||'',title:assignment[4]||''};if(String(assignment[2])!=='VOCAB')return out;var v=findVocabSetByIdOrSessionV2_(assignment[3]);if(!v)return out;out.vocab_set_id=v[0];out.book_source=v[9]||v[4]||'';out.day_set=v[10]||'';out.range_start=v[11]||'';out.range_end=v[12]||'';out.display_range=v[13]||[out.book_source,out.day_set,(out.range_start&&out.range_end?out.range_start+'~'+out.range_end:'')].filter(Boolean).join(' · ')||v[3]||'';out.set_kind=v[14]||'';out.catalog_id=v[16]||'';out.set_number=Number(v[17])||'';out.source_folders_json=v[18]||'';out.word_ids=vocabSetWordIdsV2_(v[0]);out.word_count=out.word_ids.length;return out;}
@@ -886,8 +910,10 @@ function handleCreateAssignmentV2_(d) {
   if(['VOCAB','GRAMMAR','SENTENCE_STRUCTURE','READING','PRACTICE_EXAM'].indexOf(type)===-1)return textOut_('bad content type');
   var subtype=String(d.content_subtype||'').toUpperCase();if(type==='VOCAB'&&!subtype)subtype='INITIAL';
   if(type==='GRAMMAR'&&['THEORY','BASIC_PRACTICE','MIXED_PRACTICE','LESSON_PRACTICE','FINAL_QUIZ'].indexOf(subtype)===-1)return textOut_('bad content subtype');
-  getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS).appendRow([id,teacherId,type,d.content_ref_id||'',d.title||'',d.content_link||'',now,d.due_at||'',true,now,now,subtype,String(d.request_id||'')]);
-  var targets=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS),assignment=[id,teacherId,type,d.content_ref_id||'',d.title||'',d.content_link||'',now,d.due_at||'',true,now,now,subtype,String(d.request_id||'')]; students.forEach(function(studentId){targets.appendRow([Utilities.getUuid(),id,studentId,'NOT_STARTED','','',true,now,now]);var batch=findOrCreateHomeworkBatchV2_(teacherId,studentId,d.lesson_date||now,d.homework_title||'',now);linkAssignmentToHomeworkBatchV2_(batch,assignment,studentId);});
+  var linkedPracticeId=linkedPracticeAssignmentIdV1_(d.linked_practice_assignment_id),linkError=validateLinkedPracticeAssignmentV1_(teacherId,type,subtype,linkedPracticeId,students);if(linkError)return textOut_(linkError);
+  var assignment=[id,teacherId,type,d.content_ref_id||'',d.title||'',d.content_link||'',now,d.due_at||'',true,now,now,subtype,String(d.request_id||''),linkedPracticeId];
+  getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS).appendRow(assignment);
+  var targets=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS); students.forEach(function(studentId){targets.appendRow([Utilities.getUuid(),id,studentId,'NOT_STARTED','','',true,now,now]);var batch=findOrCreateHomeworkBatchV2_(teacherId,studentId,d.lesson_date||now,d.homework_title||'',now);linkAssignmentToHomeworkBatchV2_(batch,assignment,studentId);});
   CacheService.getScriptCache().remove('teacher-student-list-v1');
   return textOut_('ok:'+id+':'+students.length);
 }
@@ -921,7 +947,8 @@ function handleCreateAssignmentsBatchV2_(d) {
         contentRef=String(vocabSet[0]);contentLink=String(vocabSet[5]||contentLink||'');
         if(!vocabSet[2]||!contentLink)return textOut_('bad vocab link');
       }
-      assignmentRows.push([Utilities.getUuid(),teacherId,type,contentRef,item.title||'',contentLink,now,d.due_at||'',true,now,now,subtype,requestId]);
+      var linkedPracticeId=linkedPracticeAssignmentIdV1_(item.linked_practice_assignment_id),linkError=validateLinkedPracticeAssignmentV1_(teacherId,type,subtype,linkedPracticeId,students);if(linkError)return textOut_(linkError);
+      assignmentRows.push([Utilities.getUuid(),teacherId,type,contentRef,item.title||'',contentLink,now,d.due_at||'',true,now,now,subtype,requestId,linkedPracticeId]);
     }
     perf.assignment_build_ms=Date.now()-mark;mark=Date.now();
     for(var s=0;s<assignmentRows.length;s++)snapshots[s]=JSON.stringify(vocabSnapshotV2_(assignmentRows[s]));
@@ -2133,8 +2160,12 @@ function handleSaveVocabSetV2_(d) {
   }finally{lock.releaseLock();}
 }
 function handleUpdateAssignmentV2_(d) {
-  var teacherId=getOrCreateDefaultTeacher_(), a=assignmentByIdV2_(d.assignment_id);if(!a||String(a[1])!==teacherId)return textOut_('forbidden');
-  a[4]=d.title!==undefined?d.title:a[4];a[7]=d.due_at!==undefined?d.due_at:a[7];a[8]=d.active!==undefined?boolValue_(d.active,true):a[8];a[10]=new Date();upsertRow_(getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),a[0],a);CacheService.getScriptCache().remove('teacher-student-list-v1');return textOut_('ok');
+  var hasLinkedPractice=Object.prototype.hasOwnProperty.call(d,'linked_practice_assignment_id'),lock=hasLinkedPractice?LockService.getScriptLock():null;if(lock)lock.waitLock(30000);
+  try{
+    var teacherId=getOrCreateDefaultTeacher_(),a=assignmentByIdV2_(d.assignment_id);if(!a||String(a[1])!==teacherId)return textOut_('forbidden');
+    if(hasLinkedPractice){var current=linkedPracticeAssignmentIdV1_(a[13]),next=linkedPracticeAssignmentIdV1_(d.linked_practice_assignment_id);if(next!==current){if(String(a[2])!=='GRAMMAR'||String(a[11])!=='THEORY')return textOut_('LINKED_PRACTICE_THEORY_ONLY');var state=grammarTheoryLinkEditStateV1_(a);if(state.started)return textOut_('LINKED_PRACTICE_LOCKED_AFTER_START');var linkError=validateLinkedPracticeAssignmentV1_(teacherId,a[2],a[11],next,state.student_ids);if(linkError)return textOut_(linkError);a[13]=next;}}
+    a[4]=d.title!==undefined?d.title:a[4];a[7]=d.due_at!==undefined?d.due_at:a[7];a[8]=d.active!==undefined?boolValue_(d.active,true):a[8];a[10]=new Date();upsertRow_(getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS),a[0],a);CacheService.getScriptCache().remove('teacher-student-list-v1');return textOut_('ok');
+  }finally{if(lock)lock.releaseLock();}
 }
 function sentenceStructureAssignmentEditStateV1_(assignmentId) {
   var teacherId=getOrCreateDefaultTeacher_(),a=assignmentByIdV2_(assignmentId);
@@ -2355,6 +2386,17 @@ function grammarProgressForFetchV1_(e) {
   items.sort(function(a,b){return a.sequence-b.sequence;});
   return {attempt_id:attempt[0],attempt_status:attempt[9],attempt_no:attempt[10],completed:String(attempt[9])==='COMPLETED',score:attempt[14],question_items:items};
 }
+function linkedPracticeLaunchForTheoryV1_(theoryTarget,theoryAssignment,studentId,completed){
+  if(!completed||!theoryTarget||!theoryAssignment||String(theoryAssignment[2])!=='GRAMMAR'||String(theoryAssignment[11])!=='THEORY'||String(theoryTarget[1])!==String(theoryAssignment[0])||String(theoryTarget[2])!==String(studentId)||String(theoryTarget[3])!=='COMPLETED'||!boolValue_(theoryTarget[6],true)||!boolValue_(theoryAssignment[8],true))return null;
+  var linkedId=linkedPracticeAssignmentIdV1_(theoryAssignment[13]);if(!linkedId)return null;
+  var practice=assignmentByIdV2_(linkedId),subtype=practice?String(practice[11]||''):'';
+  if(!practice||String(practice[1])!==String(theoryAssignment[1])||String(practice[2])!=='GRAMMAR'||['BASIC_PRACTICE','MIXED_PRACTICE','LESSON_PRACTICE'].indexOf(subtype)===-1||!boolValue_(practice[8],true)||!assignmentContentAvailableV2_(practice[2],practice[3],subtype))return{available:false,reason:'PRACTICE_UNAVAILABLE'};
+  var rows=getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),matches=[];
+  for(var i=1;i<rows.length;i++)if(String(rows[i][1])===linkedId&&String(rows[i][2])===String(studentId)&&boolValue_(rows[i][6],true)&&String(rows[i][3]||'')!=='CANCELLED')matches.push(rows[i]);
+  if(matches.length!==1)return{available:false,reason:'PRACTICE_TARGET_UNAVAILABLE'};
+  var target=matches[0],capability=createStudentCapability_('assignmentTarget',String(target[0]),['updateAssignmentStatus','launchAssignment','startAttemptV2'],{student_id:String(studentId)},practice[7]?new Date(practice[7]).getTime()+30*86400000:0);
+  return{available:true,content_ref_id:String(practice[3]),content_subtype:subtype,assignment_target_id:String(target[0]),student_id:String(studentId),launch_capability:capability};
+}
 function handleCompleteGrammarActivityV1_(d) {
   var attempt=requireAttemptScopeV2_(d);
   if(!attempt||String(attempt[4])!=='GRAMMAR'||String(attempt[9])!=='IN_PROGRESS')return textOut_('forbidden');
@@ -2470,7 +2512,9 @@ function handleVerifyAttemptCompletionV2_(e){
   var attemptComplete=String(attempt[9])==='COMPLETED',targetComplete=String(target[3])==='COMPLETED',itemCount=0;
   if(String(attempt[4])==='VOCAB'){var words=getOrCreateSheet_(WORD_ATTEMPT_ITEMS_V2_SHEET,WORD_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues();for(var w=1;w<words.length;w++)if(String(words[w][1])===attemptId)itemCount++;}
   else{var questions=getOrCreateSheet_(QUESTION_ATTEMPT_ITEMS_V2_SHEET,QUESTION_ATTEMPT_ITEMS_V2_HEADERS).getDataRange().getValues();for(var q=1;q<questions.length;q++)if(String(questions[q][1])===attemptId)itemCount++;}
-  return{ok:true,attempt_found:true,target_found:true,attempt_status:String(attempt[9]),target_status:String(target[3]),content_type:String(attempt[4]),content_subtype:String(attempt[5]||''),item_count:itemCount,complete:attemptComplete&&targetComplete,reason:attemptComplete&&targetComplete?'':(!attemptComplete&&targetComplete?'ATTEMPT_INCOMPLETE':attemptComplete&&!targetComplete?'TARGET_INCOMPLETE':'INCOMPLETE_ITEMS')};
+  var complete=attemptComplete&&targetComplete,response={ok:true,attempt_found:true,target_found:true,attempt_status:String(attempt[9]),target_status:String(target[3]),content_type:String(attempt[4]),content_subtype:String(attempt[5]||''),item_count:itemCount,complete:complete,reason:complete?'':(!attemptComplete&&targetComplete?'ATTEMPT_INCOMPLETE':attemptComplete&&!targetComplete?'TARGET_INCOMPLETE':'INCOMPLETE_ITEMS')};
+  if(complete&&String(attempt[4])==='GRAMMAR'&&String(attempt[5])==='THEORY'){var assignment=assignmentByIdV2_(target[1]);response.linked_practice_launch=linkedPracticeLaunchForTheoryV1_(target,assignment,studentId,true);}
+  return response;
 }
 
 function verifyDataIntegrityV2(){
@@ -4118,7 +4162,7 @@ function handleListGroupsV2_(e) {
 }
 function handleListAssignmentsV2_(e, assignmentRows, assignmentTargetRows, workspaceTeacherId) {
   if(e.parameter.token!==getToken_())return {error:'no token'};var teacherId=workspaceTeacherId||getOrCreateDefaultTeacher_(),assignments=assignmentRows||getOrCreateSheet_(ASSIGNMENTS_V2_SHEET,ASSIGNMENTS_V2_HEADERS).getDataRange().getValues(),targets=assignmentTargetRows||getOrCreateSheet_(ASSIGNMENT_TARGETS_V2_SHEET,ASSIGNMENT_TARGETS_V2_HEADERS).getDataRange().getValues(),out=[];
-  for(var i=1;i<assignments.length;i++){if(String(assignments[i][1])!==teacherId)continue;var rows=[];for(var j=1;j<targets.length;j++)if(String(targets[j][1])===String(assignments[i][0]))rows.push({assignment_target_id:targets[j][0],student_id:targets[j][2],status:targets[j][3],active:boolValue_(targets[j][6],true)});out.push({assignment_id:assignments[i][0],content_type:assignments[i][2],content_ref_id:assignments[i][3],title:assignments[i][4],content_link:assignments[i][5],assigned_at:assignments[i][6],due_at:assignments[i][7],active:boolValue_(assignments[i][8],true),content_subtype:assignments[i][11]||'',request_id:assignments[i][12]||'',targets:rows});}return {assignments:out};
+  for(var i=1;i<assignments.length;i++){if(String(assignments[i][1])!==teacherId)continue;var rows=[];for(var j=1;j<targets.length;j++)if(String(targets[j][1])===String(assignments[i][0]))rows.push({assignment_target_id:targets[j][0],student_id:targets[j][2],status:targets[j][3],active:boolValue_(targets[j][6],true)});out.push({assignment_id:assignments[i][0],content_type:assignments[i][2],content_ref_id:assignments[i][3],title:assignments[i][4],content_link:assignments[i][5],assigned_at:assignments[i][6],due_at:assignments[i][7],active:boolValue_(assignments[i][8],true),content_subtype:assignments[i][11]||'',request_id:assignments[i][12]||'',linked_practice_assignment_id:assignments[i][13]?String(assignments[i][13]):null,targets:rows});}return {assignments:out};
 }
 function handleVerifyAssignmentBatchV2_(e){
   if(e.parameter.token!==getToken_())return{error:'no token'};
@@ -4130,7 +4174,7 @@ function handleVerifyAssignmentBatchV2_(e){
   var batchIds={};for(var b=1;b<batches.length;b++)if(String(batches[b][1])===String(teacherId)&&boolValue_(batches[b][6],true))batchIds[String(batches[b][0])]=true;
   var linkCount=0;for(var l=1;l<links.length;l++)if(assignmentIds[String(links[l][2])]&&targetStudents[String(links[l][3])]&&batchIds[String(links[l][1])])linkCount++;
   var requiredTargets=expectedAssignments*expectedTargets,complete=saved.length===expectedAssignments&&targetCount===requiredTargets&&linkCount===requiredTargets;
-  return{found:saved.length>0,complete:complete,request_id:requestId,assignment_count:saved.length,target_count:targetCount,homework_link_count:linkCount,expected_assignment_count:expectedAssignments,expected_target_count:requiredTargets,assignments:saved.map(function(row){return{assignment_id:row[0],content_type:row[2],content_ref_id:row[3],title:row[4],content_link:row[5],assigned_at:row[6],due_at:row[7],active:boolValue_(row[8],true),content_subtype:row[11]||'',request_id:row[12]||''};})};
+  return{found:saved.length>0,complete:complete,request_id:requestId,assignment_count:saved.length,target_count:targetCount,homework_link_count:linkCount,expected_assignment_count:expectedAssignments,expected_target_count:requiredTargets,assignments:saved.map(function(row){return{assignment_id:row[0],content_type:row[2],content_ref_id:row[3],title:row[4],content_link:row[5],assigned_at:row[6],due_at:row[7],active:boolValue_(row[8],true),content_subtype:row[11]||'',request_id:row[12]||'',linked_practice_assignment_id:row[13]?String(row[13]):null};})};
 }
 function assignmentContentSummaryRows_(sheetName, headers, columnCount, perf) {
   var started=Date.now(),sheet=getOrCreateSheet_(sheetName,headers),lastRow=sheet.getLastRow(),rows=lastRow>1?sheet.getRange(2,1,lastRow-1,columnCount).getValues():[];
@@ -4301,6 +4345,7 @@ function handleFetchGrammarSet_(e) {
   };
   Object.assign(response,attemptContextForFetchV2_(e));
   response.grammar_progress=grammarProgressForFetchV1_(e);
+  if(targetId&&subtype==='THEORY')response.linked_practice_launch=linkedPracticeLaunchForTheoryV1_(target,assignment,String(e.parameter.student_id||''),!!(response.grammar_progress&&response.grammar_progress.completed));
   var auth = studentAuthFields_('grammarSet', e.parameter.key, ['submitGrammarPractice'], {}, 0);
   Object.keys(auth).forEach(function (k) { response[k] = auth[k]; });
   return response;
